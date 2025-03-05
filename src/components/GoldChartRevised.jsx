@@ -361,15 +361,17 @@ const GoldChart = ({
         time: {
           unit: timeframe === '7d' 
             ? 'day' 
-            : timeframe === '30d' 
-              ? 'week' 
+            : timeframe === '1m' 
+              ? 'day' 
               : 'month',
           displayFormats: {
             day: 'dd MMM',
             week: 'dd MMM',
             month: 'MMM yyyy'
           },
-          tooltipFormat: 'dd MMMM yyyy'
+          tooltipFormat: 'dd MMMM yyyy',
+          // For '1m' timeframe, show more ticks (approximately every 3-4 days)
+          stepSize: timeframe === '1m' ? 3 : undefined
         },
         adapters: {
           date: {
@@ -385,6 +387,7 @@ const GoldChart = ({
             size: 11
           },
           autoSkip: true,
+          maxTicksLimit: timeframe === '1m' ? 10 : (timeframe === '7d' ? 7 : undefined),
           maxRotation: 30,
           minRotation: 0,
           source: 'auto'
