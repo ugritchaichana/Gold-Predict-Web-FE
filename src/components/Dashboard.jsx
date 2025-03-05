@@ -16,15 +16,21 @@ const DataCategories = {
 };
 
 const TimeFrames = {
-  '7d': '7 วัน',
-  '1m': '1 เดือน',
-  '1y': '1 ปี',
-  'all': 'ทั้งหมด'
+  '7d': '7 Days',
+  '1m': '1 Month',
+  '1y': '1 Year',
+  'all': 'All'
+};
+
+// Define time frame labels in English
+const timeframeLabels = {
+  '7d': '7 Days',
+  '1m': '1 Month',
 };
 
 export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
-  const [timeframe, setTimeframe] = useState('7d');
+  const [timeframe, setTimeframe] = useState('1m');
   const [goldThData, setGoldThData] = useState([]);
   const [goldUsData, setGoldUsData] = useState([]);
   const [usdthbData, setUsdthbData] = useState([]);
@@ -166,7 +172,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row gap-4">
         <Card className="flex-1">
           <CardHeader className="pb-2">
-            <CardDescription>ราคาล่าสุด</CardDescription>
+            <CardDescription>Latest Price</CardDescription>
             <div className="flex items-center justify-between">
               <CardTitle className="text-2xl md:text-3xl">
                 {loading ? (
@@ -174,7 +180,7 @@ export default function Dashboard() {
                 ) : getLatestPrice() !== null ? (
                   formatCurrency(getLatestPrice(), selectedCategory === DataCategories.GOLD_US ? 'USD' : 'THB')
                 ) : (
-                  'ไม่มีข้อมูล'
+                  'No data'
                 )}
               </CardTitle>
               <Badge 
@@ -194,7 +200,7 @@ export default function Dashboard() {
             </div>
             {latestDate && (
               <CardDescription>
-                อัปเดต: {formatDate(latestDate)}
+                Updated: {formatDate(latestDate)}
               </CardDescription>
             )}
           </CardHeader>
@@ -203,10 +209,10 @@ export default function Dashboard() {
         <Card className="flex-1">
           <CardHeader className="pb-4">
             <div className="flex justify-between items-center">
-              <CardTitle>ประเภทข้อมูล</CardTitle>
+              <CardTitle>Data Type</CardTitle>
               {selectedCategory === DataCategories.GOLD_TH && predictData?.length > 0 && (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
-                  มีข้อมูลการทำนาย
+                  Prediction data available
                 </Badge>
               )}
             </div>
@@ -221,8 +227,8 @@ export default function Dashboard() {
                     className="flex-1"
                     disabled={loading}
                   >
-                    {category === DataCategories.GOLD_TH ? 'ทองคำไทย' : 
-                     category === DataCategories.GOLD_US ? 'ทองคำสากล' : 'USD/THB'}
+                    {category === DataCategories.GOLD_TH ? 'Gold TH' : 
+                     category === DataCategories.GOLD_US ? 'Gold US' : 'USD/THB'}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -234,7 +240,7 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>กราฟแสดงข้อมูล</CardTitle>
+            <CardTitle>Data Chart</CardTitle>
             <div className="flex gap-2">
               {Object.entries(TimeFrames).map(([key, label]) => (
                 <Button
@@ -261,7 +267,7 @@ export default function Dashboard() {
                   className="mt-4" 
                   onClick={() => window.location.reload()}
                 >
-                  ลองใหม่
+                  Try Again
                 </Button>
               </div>
             ) : (
@@ -282,8 +288,8 @@ export default function Dashboard() {
               <div className="flex items-start gap-2">
                 <InfoIcon className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-medium">ข้อมูลการทำนาย</p>
-                  <p className="text-sm opacity-90">ข้อมูลการทำนายราคาทองคำไทยในอนาคต 7 วันแสดงเป็นเส้นสีฟ้าบนกราฟ การทำนายอาจคลาดเคลื่อนได้ ไม่ควรใช้เป็นข้อมูลหลักในการตัดสินใจลงทุน</p>
+                  <p className="font-medium">Prediction Data</p>
+                  <p className="text-sm opacity-90">Gold price prediction data for the next 7 days is shown as a blue line on the graph. Predictions may be inaccurate and should not be used as the primary basis for investment decisions.</p>
                 </div>
               </div>
             </div>

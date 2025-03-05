@@ -15,7 +15,7 @@ import {
 import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-date-fns';
 import { format, isValid } from 'date-fns';
-import { th } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,7 +106,7 @@ const GoldChart = ({
       if (!actualData || actualData.length === 0) {
         return (
           <div className="flex justify-center items-center h-full w-full">
-            <p className="text-gray-500">ไม่พบข้อมูล</p>
+            <p className="text-gray-500">No data found</p>
           </div>
         );
       }
@@ -143,7 +143,7 @@ const GoldChart = ({
 
       const datasets = [
         {
-          label: `${selectedCategory} ล่าสุด`,
+          label: `${selectedCategory} Latest`,
           data: validActualData,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -192,13 +192,13 @@ const GoldChart = ({
         // Log overlapping dates
         const overlapCount = validPredictData.length - filteredPredictData.length;
         if (overlapCount > 0) {
-          console.log(`พบและกรองข้อมูลทำนายที่ซ้ำซ้อนกับข้อมูลจริง ${overlapCount} รายการ`);
+          console.log(`Found and filtered ${overlapCount} overlapping prediction records with actual data`);
         }
 
         // Add prediction dataset if available - CONNECTED TO ACTUAL DATA
         if (filteredPredictData.length > 0) {
           datasets.push({
-            label: 'การทำนาย',
+            label: 'Prediction',
             data: filteredPredictData,
             borderColor: '#4CAF50',
             backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -292,61 +292,44 @@ const GoldChart = ({
           title: (context) => {
             try {
               if (!context || !context.length || !context[0].parsed || !context[0].raw) {
-                return 'ไม่มีข้อมูล';
+                return 'No data';
               }
               
-              // แสดง raw data เพื่อการแก้ไขปัญหา
+              // Display raw data for debugging
               console.log('Tooltip context:', context[0]);
               
-              // ตรวจสอบทั้ง raw.x และ parsed.x
-              let dateValue;
-              
-              // ถ้ามี parsed.x ที่เป็นเลข timestamp ให้ใช้ค่านั้นก่อน
-              if (context[0].parsed && context[0].parsed.x) {
-                dateValue = new Date(context[0].parsed.x);
-                console.log('Using parsed date:', dateValue);
-              } 
-              // ถ้าไม่มี parsed.x ให้ใช้ raw.x
-              else if (context[0].raw && context[0].raw.x) {
-                dateValue = new Date(context[0].raw.x);
-                console.log('Using raw date:', dateValue);
+              // Extract date from x value
+              const date = context[0].raw.x;
+              if (!date || !isValid(new Date(date))) {
+                return 'Invalid date';
               }
               
-              if (!dateValue || !isValid(dateValue)) {
-                console.error('Invalid date in tooltip:', context[0]);
-                return 'วันที่ไม่ถูกต้อง';
-              }
-              
-              // แสดงวันที่ในรูปแบบ "DD MMMM YYYY" ภาษาไทย
-              return format(dateValue, 'dd MMMM yyyy', { locale: th });
-            } catch (err) {
-              console.error('Error formatting tooltip title:', err);
-              return 'ข้อผิดพลาดวันที่';
+              // Format date as "DD MMMM YYYY" in specified locale
+              // Changed from Thai to English locale
+              return format(new Date(date), 'dd MMMM yyyy');
+            } catch (error) {
+              console.error('Error formatting tooltip date:', error);
+              return 'Date error';
             }
           },
           label: (context) => {
-            try {
-              if (!context || !context.dataset || context.parsed.y === undefined) {
-                return 'ไม่มีข้อมูล';
-              }
-              
-              const label = context.dataset.label || '';
-              const value = context.parsed.y;
-              const currency = chartData.currency;
-              
-              // Special case for USDTHB exchange rate
-              let formattedValue;
-              if (selectedCategory === DataCategories.USDTHB) {
-                formattedValue = value.toFixed(2);
-              } else {
-                formattedValue = formatCurrency(value, currency);
-              }
-              
-              return `${label}: ${formattedValue}`;
-            } catch (err) {
-              console.error('Error formatting tooltip label:', err);
-              return 'ข้อผิดพลาดข้อมูล';
+            if (!context.dataset || !context.parsed) {
+              return 'No data';
             }
+            
+            const label = context.dataset.label || '';
+            const value = context.parsed.y;
+            const currency = chartData.currency;
+            
+            // Special case for USDTHB exchange rate
+            let formattedValue;
+            if (selectedCategory === DataCategories.USDTHB) {
+              formattedValue = value.toFixed(2);
+            } else {
+              formattedValue = formatCurrency(value, currency);
+            }
+            
+            return `${label}: ${formattedValue}`;
           }
         }
       },
@@ -390,7 +373,7 @@ const GoldChart = ({
         },
         adapters: {
           date: {
-            locale: th
+            locale: enUS
           }
         },
         grid: {
@@ -464,7 +447,7 @@ const GoldChart = ({
           onClick={resetZoom}
           className="text-xs"
         >
-          รีเซ็ตซูม
+          Zoom Reset
         </Button>
       </div>
       <div className="h-full">
@@ -475,8 +458,8 @@ const GoldChart = ({
             options={options} 
           />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">ไม่พบข้อมูล</p>
+          <div className="flex flex-col min-h-[350px] w-full justify-center items-center">
+            <p className="text-muted-foreground">No data found</p>
           </div>
         )}
       </div>

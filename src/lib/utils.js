@@ -11,19 +11,30 @@ export function cn(...inputs) {
 }
 
 /**
- * Formats a number to a currency string.
- * @param {number} value - The number to format.
+ * Formats a currency value to a locale string.
+ * @param {number|string} value - The value to format.
  * @param {string} currency - The currency code.
  * @param {string} locale - The locale for formatting.
  * @returns {string} - The formatted currency string.
  */
-export function formatCurrency(value, currency = 'THB', locale = 'th-TH') {
+export function formatCurrency(value, currency = 'THB', locale = 'en-US') {
   if (value === undefined || value === null) return '-';
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
+  
+  try {
+    // Convert value to number
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // Format as currency
+    return new Intl.NumberFormat(locale, { 
+      style: 'currency', 
+      currency, 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numValue);
+  } catch (err) {
+    console.error('Error formatting currency:', err);
+    return '-';
+  }
 }
 
 /**
@@ -32,7 +43,7 @@ export function formatCurrency(value, currency = 'THB', locale = 'th-TH') {
  * @param {string} locale - The locale for formatting.
  * @returns {string} - The formatted date string.
  */
-export function formatDate(date, locale = 'th-TH') {
+export function formatDate(date, locale = 'en-US') {
   if (!date) return '-';
   
   try {

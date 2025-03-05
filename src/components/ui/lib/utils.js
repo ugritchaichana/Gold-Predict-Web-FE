@@ -17,7 +17,7 @@ export function cn(...inputs) {
  * @param {string} locale - The locale for formatting.
  * @returns {string} - The formatted currency string.
  */
-export function formatCurrency(value, currency = 'THB', locale = 'th-TH') {
+export function formatCurrency(value, currency = 'THB', locale = 'en-US') {
   if (value === undefined || value === null) return '-';
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -32,7 +32,7 @@ export function formatCurrency(value, currency = 'THB', locale = 'th-TH') {
  * @param {string} locale - The locale for formatting.
  * @returns {string} - The formatted date string.
  */
-export function formatDate(date, locale = 'th-TH') {
+export function formatDate(date, locale = 'en-US') {
   if (!date) return '-';
   
   try {

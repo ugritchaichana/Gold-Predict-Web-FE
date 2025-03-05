@@ -47,14 +47,12 @@ const GoldDataDropdown = ({ selectedCategory, onCategoryChange }) => {
 };
 
 // Timeframe dropdown component
-const TIMEFRAMES = [
-  { id: "1d", label: "1 วัน", description: "ข้อมูลย้อนหลัง 1 วัน" },
-  { id: "1w", label: "1 สัปดาห์", description: "ข้อมูลย้อนหลัง 1 สัปดาห์" },
-  { id: "1m", label: "1 เดือน", description: "ข้อมูลย้อนหลัง 1 เดือน" },
-  { id: "3m", label: "3 เดือน", description: "ข้อมูลย้อนหลัง 3 เดือน" },
-  { id: "6m", label: "6 เดือน", description: "ข้อมูลย้อนหลัง 6 เดือน" },
-  { id: "1y", label: "1 ปี", description: "ข้อมูลย้อนหลัง 1 ปี" },
-  { id: "all", label: "ทั้งหมด", description: "ข้อมูลทั้งหมดที่มี" },
+const timePeriods = [
+  { id: "1d", label: "1 Day", description: "Data from the last 1 day" },
+  { id: "1w", label: "1 Week", description: "Data from the last 1 week" },
+  { id: "1m", label: "1 Month", description: "Data from the last 1 month" },
+  { id: "3m", label: "3 Months", description: "Data from the last 3 months" },
+  { id: "6m", label: "6 Months", description: "Data from the last 6 months" },
 ];
 
 export const TimeframeDropdown = ({ selectedTimeframe, onTimeframeChange }) => {
@@ -62,7 +60,7 @@ export const TimeframeDropdown = ({ selectedTimeframe, onTimeframeChange }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
-          {TIMEFRAMES.find(tf => tf.id === selectedTimeframe)?.label || "เลือกช่วงเวลา"}
+          {timePeriods.find(tf => tf.id === selectedTimeframe)?.label || "Select Time Period"}
           <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
@@ -70,7 +68,7 @@ export const TimeframeDropdown = ({ selectedTimeframe, onTimeframeChange }) => {
         <DropdownMenuLabel>ช่วงเวลา</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={selectedTimeframe} onValueChange={onTimeframeChange}>
-          {TIMEFRAMES.map((timeframe) => (
+          {timePeriods.map((timeframe) => (
             <DropdownMenuRadioItem key={timeframe.id} value={timeframe.id} className="cursor-pointer">
               <div>
                 <div>{timeframe.label}</div>
