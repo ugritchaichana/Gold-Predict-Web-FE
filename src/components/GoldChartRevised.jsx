@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,7 +17,7 @@ import 'chartjs-adapter-date-fns';
 import { format, isValid } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Register ChartJS plugins
@@ -66,7 +66,7 @@ const GoldChart = ({
   }, [timeframe, selectedCategory]);
 
   // Process data for the chart based on selected category
-  const chartData = useMemo(() => {
+  const chartData = (() => {
     if (loading || !goldThData?.length) {
       return { labels: [], datasets: [] };
     }
@@ -231,10 +231,10 @@ const GoldChart = ({
       console.error('Error preparing chart data:', error);
       return { labels: [], datasets: [], currency: 'THB' };
     }
-  }, [goldThData, goldUsData, usdthbData, predictData, selectedCategory, loading]);
+  })();
 
   // Chart options with zoom capability
-  const options = useMemo(() => ({
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
     animation: {
@@ -244,7 +244,9 @@ const GoldChart = ({
     interaction: {
       mode: 'nearest',
       intersect: false,
-      axis: 'x'
+      axis: 'x',
+      // Show pointer only for 7d and 1m timeframes
+      includeInvisible: (timeframe === '7d' || timeframe === '1m') && chartData.datasets[0]?.data.length <= 100
     },
     elements: {
       line: {
@@ -426,7 +428,7 @@ const GoldChart = ({
         beginAtZero: false
       }
     }
-  }), [timeframe, chartData, resetCount]);
+  };
 
   // Function to reset zoom
   const resetZoom = () => {
@@ -470,4 +472,4 @@ const GoldChart = ({
   );
 };
 
-export default GoldChart; 
+export default GoldChart;

@@ -358,6 +358,7 @@ const GoldChart = ({ darkMode }) => {
             size: 12
           },
           usePointStyle: true,
+          pointStyle: 'circle',
           boxWidth: 6
         }
       },
