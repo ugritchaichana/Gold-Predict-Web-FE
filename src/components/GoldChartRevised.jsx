@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -16,9 +16,10 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-date-fns';
 import { format, isValid } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchGoldTH, fetchPredictionsWithParams } from '@/services/apiService';
 
 // Register ChartJS plugins
 ChartJS.register(
@@ -50,8 +51,6 @@ const TimeFrames = {
 // Main component
 const GoldChart = ({
   goldThData,
-  goldUsData,
-  usdthbData,
   predictData,
   selectedCategory,
   timeframe,
@@ -61,7 +60,7 @@ const GoldChart = ({
   const [resetCount, setResetCount] = useState(0);
 
   // Reset zoom when changing timeframe or category
-  React.useEffect(() => {
+  useEffect(() => {
     resetZoom();
   }, [timeframe, selectedCategory]);
 
@@ -79,14 +78,6 @@ const GoldChart = ({
       switch (selectedCategory) {
         case DataCategories.GOLD_TH:
           actualData = goldThData;
-          currency = 'THB';
-          break;
-        case DataCategories.GOLD_US:
-          actualData = goldUsData;
-          currency = 'USD';
-          break;
-        case DataCategories.USDTHB:
-          actualData = usdthbData;
           currency = 'THB';
           break;
         default:
@@ -111,21 +102,15 @@ const GoldChart = ({
         );
       }
 
-      console.log("actualData before processing:", actualData);
-      console.log("actualData type:", selectedCategory);
-      console.log("predictData before processing:", predictData);
-
       // Filter and map actualData for the chart
       const validActualData = actualData
         .filter(item => {
-          // Handle both gold data (created_at) and currency data (date)
           const hasValidDate = (item && (item.created_at || item.date));
           const hasValidPrice = (item && item.price && !isNaN(parseFloat(item.price)));
           return hasValidDate && hasValidPrice;
         })
         .map(item => {
           try {
-            // Use created_at for gold data or date for currency data
             const dateValue = item.created_at || item.date;
             return {
               x: new Date(dateValue).toISOString().split('T')[0],
@@ -139,8 +124,6 @@ const GoldChart = ({
         })
         .filter(item => item !== null);
 
-      console.log("validActualData after processing:", validActualData);
-
       const datasets = [
         {
           label: `${selectedCategory} Latest`,
@@ -148,8 +131,8 @@ const GoldChart = ({
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           borderWidth: 2,
-          pointRadius: 2,
-          pointHoverRadius: 4,
+          pointRadius: 0, // Disable points
+          pointHoverRadius: 0, // Disable hover points
           tension: 0.3,
           fill: false,
           spanGaps: true,
@@ -160,11 +143,9 @@ const GoldChart = ({
         }
       ];
 
-      console.log("Chart.js actual dataset:", datasets[0]);
-
       // Add prediction data if available and Gold TH is selected
       if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
-        // Process prediction data
+        // Process prediction data - include all data without filtering
         const validPredictData = predictData
           .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
           .map(item => {
@@ -180,47 +161,31 @@ const GoldChart = ({
           })
           .filter(item => item !== null);
 
-        console.log("validPredictData before filtering overlaps:", validPredictData);
-
-        // Filter out prediction data that has the same date as actual data
-        // Give priority to actual data
-        const actualDataDates = new Set(validActualData.map(item => item.x));
-        const filteredPredictData = validPredictData.filter(item => !actualDataDates.has(item.x));
-        
-        console.log("filteredPredictData after removing overlaps:", filteredPredictData);
-
-        // Log overlapping dates
-        const overlapCount = validPredictData.length - filteredPredictData.length;
-        if (overlapCount > 0) {
-          console.log(`Found and filtered ${overlapCount} overlapping prediction records with actual data`);
-        }
-
-        // Add prediction dataset if available - CONNECTED TO ACTUAL DATA
-        if (filteredPredictData.length > 0) {
+        // Add prediction dataset using all data points from the API
+        if (validPredictData.length > 0) {
           datasets.push({
             label: 'Prediction',
-            data: filteredPredictData,
+            data: validPredictData,
             borderColor: '#4CAF50',
             backgroundColor: 'rgba(76, 175, 80, 0.2)',
             borderWidth: 2,
             fill: false,
             tension: 0.3,
             pointStyle: 'circle',
-            pointRadius: 4,
-            pointHoverRadius: 6,
+            pointRadius: 0, // Disable points
+            pointHoverRadius: 0, // Disable hover points
             parsing: {
               xAxisKey: 'x',
               yAxisKey: 'y'
             },
           });
-          
+
           // For chart styling to make the lines appear connected
-          // Update the options property for the chart
-          datasets[0].spanGaps = true; // Allow spanning gaps in data
-          datasets[1].spanGaps = true; // Allow spanning gaps in prediction data
-          
-          console.log("Chart.js prediction dataset:", datasets[1]);
+          datasets[0].spanGaps = true;
+          datasets[1].spanGaps = true;
         }
+
+        // console.log('Using all prediction data points:', validPredictData.length);
       }
 
       return {
@@ -245,7 +210,6 @@ const GoldChart = ({
       mode: 'nearest',
       intersect: false,
       axis: 'x',
-      // Show pointer only for 7d and 1m timeframes
       includeInvisible: (timeframe === '7d' || timeframe === '1m') && chartData.datasets[0]?.data.length <= 100
     },
     elements: {
@@ -254,9 +218,9 @@ const GoldChart = ({
         spanGaps: true,
       },
       point: {
-        radius: 2,
-        hoverRadius: 4,
-        hitRadius: 10
+        radius: 0, // Disable all points globally
+        hoverRadius: 0, // Disable hover effect
+        hitRadius: 0 // Disable hit detection
       }
     },
     layout: {
@@ -296,18 +260,12 @@ const GoldChart = ({
               if (!context || !context.length || !context[0].parsed || !context[0].raw) {
                 return 'No data';
               }
-              
-              // Display raw data for debugging
-              console.log('Tooltip context:', context[0]);
-              
-              // Extract date from x value
+
               const date = context[0].raw.x;
               if (!date || !isValid(new Date(date))) {
                 return 'Invalid date';
               }
-              
-              // Format date as "DD MMMM YYYY" in specified locale
-              // Changed from Thai to English locale
+
               return format(new Date(date), 'dd MMMM yyyy');
             } catch (error) {
               console.error('Error formatting tooltip date:', error);
@@ -318,24 +276,22 @@ const GoldChart = ({
             if (!context.dataset || !context.parsed) {
               return 'No data';
             }
-            
+
             const label = context.dataset.label || '';
             const value = context.parsed.y;
             const currency = chartData.currency;
-            
-            // Special case for USDTHB exchange rate
+
             let formattedValue;
             if (selectedCategory === DataCategories.USDTHB) {
               formattedValue = value.toFixed(2);
             } else {
               formattedValue = formatCurrency(value, currency);
             }
-            
+
             return `${label}: ${formattedValue}`;
           }
         }
       },
-      // Add zoom plugin options
       zoom: {
         pan: {
           enabled: true,
@@ -350,7 +306,6 @@ const GoldChart = ({
             enabled: true,
           },
           mode: 'x',
-          // Limit zoom level
           speed: 100,
           threshold: 2,
           sensitivity: 3,
@@ -372,7 +327,6 @@ const GoldChart = ({
             month: 'MMM yyyy'
           },
           tooltipFormat: 'dd MMMM yyyy',
-          // For '1m' timeframe, show more ticks (approximately every 3-4 days)
           stepSize: timeframe === '1m' ? 3 : undefined
         },
         adapters: {
@@ -413,7 +367,6 @@ const GoldChart = ({
           callback: (value) => {
             try {
               const currency = chartData.currency;
-              // Special case for USDTHB exchange rate
               if (selectedCategory === DataCategories.USDTHB) {
                 return value.toFixed(2);
               }
@@ -424,7 +377,6 @@ const GoldChart = ({
             }
           }
         },
-        // Start y-axis at zero for better comparison
         beginAtZero: false
       }
     }

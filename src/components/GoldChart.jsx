@@ -77,7 +77,7 @@ const GoldChart = ({ darkMode }) => {
             // เรียงข้อมูลตามวันที่เพื่อให้แสดงข้อมูลล่าสุดได้ถูกต้อง
             const sortedData = [...processedData].sort((a, b) => new Date(a.x) - new Date(b.x));
             // แสดง 3 ข้อมูลล่าสุดของ GoldTH
-            console.log('3 Latest GoldTH data:', sortedData.slice(-3));
+            // console.log('3 Latest GoldTH data:', sortedData.slice(-3));
             
             setGoldThData(processedData);
           }
@@ -93,7 +93,7 @@ const GoldChart = ({ darkMode }) => {
               .sort((a, b) => new Date(a.x) - new Date(b.x));
 
             // แสดง 3 ข้อมูลแรกของ Prediction
-            console.log('First 3 Prediction data:', processedPredictions.slice(0, 3));
+            // console.log('First 3 Prediction data:', processedPredictions.slice(0, 3));
             
             setPredictData(processedPredictions);
           }
@@ -160,7 +160,7 @@ const GoldChart = ({ darkMode }) => {
     }
 
     // ตรวจสอบว่าข้อมูลมีการทับซ้อนกันหรือไม่
-    console.log('Checking for overlapping dates...');
+    // console.log('Checking for overlapping dates...');
     const dataDateSet = new Set();
     
     // สร้าง Set ของวันที่จากข้อมูลจริง
@@ -182,7 +182,7 @@ const GoldChart = ({ darkMode }) => {
         const dateStr = new Date(item.x).toISOString().split('T')[0];
         if (dataDateSet.has(dateStr)) {
           // แทนที่จะใช้ console.warn ให้ใช้ console.log เพื่อป้องกัน error
-          console.log(`Skipping prediction date ${dateStr} (overlaps with actual data)`);
+          // console.log(`Skipping prediction date ${dateStr} (overlaps with actual data)`);
           overlappingCount++;
           return false;
         }
@@ -193,7 +193,7 @@ const GoldChart = ({ darkMode }) => {
       }
     });
     
-    console.log(`Filtered out ${overlappingCount} prediction points that overlap with actual data`);
+    // console.log(`Filtered out ${overlappingCount} prediction points that overlap with actual data`);
     
     // เรียงข้อมูลจริงตามวันที่
     const sortedData = [...data].filter(item => item && item.x).sort((a, b) => {
@@ -284,7 +284,7 @@ const GoldChart = ({ darkMode }) => {
           
           // ตรวจสอบก่อนที่จะ log
           if (continuousPredictionData.length > 0) {
-            console.log('Continuous prediction data length:', continuousPredictionData.length);
+            // console.log('Continuous prediction data length:', continuousPredictionData.length);
             
             chartDatasets.push({
               label: `${selectedCategory} Prediction`,
@@ -296,7 +296,7 @@ const GoldChart = ({ darkMode }) => {
             });
           }
         } else {
-          console.log('Could not create continuous prediction: invalid last actual point', lastActualPoint);
+          // console.log('Could not create continuous prediction: invalid last actual point', lastActualPoint);
         }
       } catch (err) {
         console.error('Error creating continuous prediction data:', err);
@@ -679,7 +679,6 @@ const GoldChart = ({ darkMode }) => {
                             }
                           });
                           
-                          // คำนวณการเปลี่ยนแปลงเทียบกับข้อมูลก่อนหน้า
                           let change = null;
                           let changePercent = null;
                           

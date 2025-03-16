@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fetchGoldTH, fetchGoldUS, fetchUSDTHB, fetchPredictions } from '@/services/apiService';
+import { fetchGoldTH, fetchPredictionsWithParams } from '@/services/apiService';
 import GoldChart from '@/components/GoldChartRevised';
 import { GoldCoinIcon, BarChartIcon, InfoIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn, formatCurrency, formatDate, calculatePercentageChange, formatPercentage } from '@/lib/utils';
+import { subDays, subMonths, subYears, format as formatDateFns } from 'date-fns';
 
 const DataCategories = {
   GOLD_TH: 'Gold TH',
@@ -22,19 +23,11 @@ const TimeFrames = {
   'all': 'All'
 };
 
-// Define time frame labels in English
-const timeframeLabels = {
-  '7d': '7 Days',
-  '1m': '1 Month',
-};
-
-export default function Dashboard() {
+const Dashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
   const [timeframe, setTimeframe] = useState('1m');
   const [goldThData, setGoldThData] = useState([]);
-  const [goldUsData, setGoldUsData] = useState([]);
-  const [usdthbData, setUsdthbData] = useState([]);
-  const [predictData, setPredictData] = useState(null);
+  const [predictData, setPredictData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -42,57 +35,52 @@ export default function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [goldTHResponse, goldUSResponse, usdthbResponse, predictionsResponse] = await Promise.all([
+        const today = new Date();
+        let startDate = null;
+        let endDate = formatDateFns(today, 'yyyy-MM-dd');
+
+        switch (timeframe) {
+          case '7d':
+            startDate = formatDateFns(subDays(today, 7), 'yyyy-MM-dd');
+            break;
+          case '1m':
+            startDate = formatDateFns(subMonths(today, 1), 'yyyy-MM-dd');
+            break;
+          case '1y':
+            startDate = formatDateFns(subYears(today, 1), 'yyyy-MM-dd');
+            break;
+          default:
+            startDate = null;
+            endDate = null;
+        }
+
+        const [goldTHResponse, predictionsResponse] = await Promise.all([
           fetchGoldTH(timeframe),
-          fetchGoldUS(timeframe),
-          fetchUSDTHB(timeframe),
-          fetchPredictions()
+          fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate, 100)
         ]);
 
-        // เข้าถึงข้อมูลผ่าน .data ก่อนใช้ .sort()
         if (goldTHResponse && goldTHResponse.data) {
           setGoldThData(goldTHResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date)));
         } else {
           setGoldThData([]);
         }
+        // console.log('Predictions Response: >> ✅✅✅✅✅', predictionsResponse);
         
-        if (goldUSResponse && goldUSResponse.data) {
-          setGoldUsData(goldUSResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date)));
-        } else {
-          setGoldUsData([]);
-        }
-        
-        if (usdthbResponse && usdthbResponse.data) {
-          setUsdthbData(usdthbResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date)));
-        } else {
-          setUsdthbData([]);
-        }
-        
-        // ประมวลผลข้อมูลทำนาย
-        if (predictionsResponse && predictionsResponse.status === "success" && predictionsResponse.week) {
-          const weekData = predictionsResponse.week;
-          const predictionData = [];
-          
-          // แปลงข้อมูลจากรูปแบบ { "YYYY-MM-DD": value } เป็นรูปแบบ [{ date: "YYYY-MM-DD", predict: value }]
-          Object.keys(weekData).forEach(key => {
-            // ข้ามค่า date, created_at, timestamp ที่ไม่ใช่วันที่ที่ต้องการ
-            if (key !== "date" && key !== "created_at" && key !== "timestamp") {
-              if (weekData[key] !== null) {
-                predictionData.push({
-                  date: key,
-                  predict: weekData[key]
-                });
-              }
-            }
-          });
-          
+
+        if (predictionsResponse && predictionsResponse.labels && predictionsResponse.data) {
+          const predictionData = predictionsResponse.labels.map((label, index) => ({
+            date: label,
+            predict: predictionsResponse.data[index]
+          }));
           setPredictData(predictionData);
+          // console.log('Prediction Data: >> ✅✅✅✅✅', predictionData);
+          
         } else {
           setPredictData([]);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง');
+        setError('Error loading data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -103,63 +91,19 @@ export default function Dashboard() {
 
   const getLatestPrice = () => {
     if (loading || !goldThData?.length) return null;
-
-    let latestData;
-    switch (selectedCategory) {
-      case DataCategories.GOLD_TH:
-        latestData = goldThData[goldThData.length - 1];
-        return latestData?.price;
-      case DataCategories.GOLD_US:
-        latestData = goldUsData[goldUsData.length - 1];
-        return latestData?.price;
-      case DataCategories.USDTHB:
-        latestData = usdthbData[usdthbData.length - 1];
-        return latestData?.price;
-      default:
-        return null;
-    }
+    const latestData = goldThData[goldThData.length - 1];
+    return latestData?.price;
   };
 
   const getPreviousPrice = () => {
     if (loading) return null;
-
-    let data;
-    switch (selectedCategory) {
-      case DataCategories.GOLD_TH:
-        data = goldThData;
-        break;
-      case DataCategories.GOLD_US:
-        data = goldUsData;
-        break;
-      case DataCategories.USDTHB:
-        data = usdthbData;
-        break;
-      default:
-        return null;
-    }
-
-    if (data?.length < 2) return null;
-    return data[data.length - 2]?.price;
+    if (goldThData?.length < 2) return null;
+    return goldThData[goldThData.length - 2]?.price;
   };
 
   const getLatestDate = () => {
     if (loading || !goldThData?.length) return null;
-
-    let latestData;
-    switch (selectedCategory) {
-      case DataCategories.GOLD_TH:
-        latestData = goldThData[goldThData.length - 1];
-        break;
-      case DataCategories.GOLD_US:
-        latestData = goldUsData[goldUsData.length - 1];
-        break;
-      case DataCategories.USDTHB:
-        latestData = usdthbData[usdthbData.length - 1];
-        break;
-      default:
-        return null;
-    }
-
+    const latestData = goldThData[goldThData.length - 1];
     return latestData?.date ? new Date(latestData.date) : null;
   };
 
@@ -178,7 +122,7 @@ export default function Dashboard() {
                 {loading ? (
                   <Skeleton className="h-8 w-36" />
                 ) : getLatestPrice() !== null ? (
-                  formatCurrency(getLatestPrice(), selectedCategory === DataCategories.GOLD_US ? 'USD' : 'THB')
+                  formatCurrency(getLatestPrice(), 'THB')
                 ) : (
                   'No data'
                 )}
@@ -273,8 +217,6 @@ export default function Dashboard() {
             ) : (
               <GoldChart
                 goldThData={goldThData}
-                goldUsData={goldUsData}
-                usdthbData={usdthbData}
                 predictData={predictData}
                 selectedCategory={selectedCategory}
                 timeframe={timeframe}
@@ -298,4 +240,6 @@ export default function Dashboard() {
       </Card>
     </div>
   );
-} 
+};
+
+export default Dashboard;
