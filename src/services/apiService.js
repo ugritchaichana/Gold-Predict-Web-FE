@@ -72,3 +72,14 @@ export const fetchPredictionsWithParams = async (range = 'sort_all', display = '
     throw error;
   }
 };
+
+
+export const fetchPredictionsMonth = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/predicts/month/read_all`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Prediction data:', error);
+    throw error;
+  }
+};
