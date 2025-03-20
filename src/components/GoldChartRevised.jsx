@@ -51,6 +51,8 @@ const TimeFrames = {
 // Main component
 const GoldChart = ({
   goldThData,
+  goldUsData,
+  usdthbData,
   predictData,
   selectedCategory,
   timeframe,
@@ -66,136 +68,117 @@ const GoldChart = ({
 
   // Process data for the chart based on selected category
   const chartData = (() => {
-    if (loading || !goldThData?.length) {
+    if (loading) {
       return { labels: [], datasets: [] };
     }
 
-    try {
-      // Select data based on category
-      let actualData = [];
-      let currency = 'THB';
-      
-      switch (selectedCategory) {
-        case DataCategories.GOLD_TH:
-          actualData = goldThData;
-          currency = 'THB';
-          break;
-        default:
-          actualData = goldThData;
-      }
+    let actualData = [];
+    let currency = 'THB';
 
-      // Handle loading state
-      if (loading) {
-        return (
-          <div className="flex justify-center items-center h-full w-full">
-            <div className="w-full h-60 bg-gray-200 animate-pulse rounded-lg"></div>
-          </div>
-        );
-      }
+    switch (selectedCategory) {
+      case DataCategories.GOLD_TH:
+        actualData = goldThData;
+        currency = 'THB';
+        break;
+      case DataCategories.GOLD_US:
+        actualData = goldUsData;
+        currency = 'USD';
+        break;
+      case DataCategories.USDTHB:
+        actualData = usdthbData;
+        currency = 'THB';
+        break;
+      default:
+        actualData = [];
+    }
 
-      // Ensure we have data to display
-      if (!actualData || actualData.length === 0) {
-        return (
-          <div className="flex justify-center items-center h-full w-full">
-            <p className="text-gray-500">No data found</p>
-          </div>
-        );
-      }
+    if (!actualData || actualData.length === 0) {
+      return { labels: [], datasets: [] };
+    }
 
-      // Filter and map actualData for the chart
-      const validActualData = actualData
-        .filter(item => {
-          const hasValidDate = (item && (item.created_at || item.date));
-          const hasValidPrice = (item && item.price && !isNaN(parseFloat(item.price)));
-          return hasValidDate && hasValidPrice;
-        })
+    const validActualData = actualData
+      .filter(item => {
+        const hasValidDate = (item && (item.created_at || item.date));
+        const hasValidPrice = (item && item.price && !isNaN(parseFloat(item.price)));
+        return hasValidDate && hasValidPrice;
+      })
+      .map(item => {
+        try {
+          const dateValue = item.created_at || item.date;
+          return {
+            x: new Date(dateValue).toISOString().split('T')[0],
+            y: parseFloat(item.price)
+          };
+        } catch (error) {
+          const dateValue = item.created_at || item.date;
+          console.error(`Invalid date in actualData: ${dateValue}`, error);
+          return null;
+        }
+      })
+      .filter(item => item !== null);
+
+    const datasets = [
+      {
+        label: `${selectedCategory} Latest`,
+        data: validActualData,
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 7,
+        tension: 0.1,
+        fill: false,
+        spanGaps: true,
+        parsing: {
+          xAxisKey: 'x',
+          yAxisKey: 'y'
+        },
+      }
+    ];
+
+    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
+      const validPredictData = predictData
+        .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
         .map(item => {
           try {
-            const dateValue = item.created_at || item.date;
             return {
-              x: new Date(dateValue).toISOString().split('T')[0],
-              y: parseFloat(item.price)
+              x: new Date(item.date).toISOString().split('T')[0],
+              y: parseFloat(item.predict)
             };
           } catch (error) {
-            const dateValue = item.created_at || item.date;
-            console.error(`Invalid date in actualData: ${dateValue}`, error);
+            console.error(`Invalid date in predictData: ${item.date}`, error);
             return null;
           }
         })
         .filter(item => item !== null);
 
-      const datasets = [
-        {
-          label: `${selectedCategory} Latest`,
-          data: validActualData,
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      if (validPredictData.length > 0) {
+        datasets.push({
+          label: 'Prediction',
+          data: validPredictData,
+          borderColor: '#4CAF50',
+          backgroundColor: 'rgba(76, 175, 80, 0.2)',
           borderWidth: 2,
-          pointRadius: 0, // Disable points
-          pointHoverRadius: 0, // Disable hover points
-          tension: 0.3,
           fill: false,
-          spanGaps: true,
+          tension: 0.1,
+          pointStyle: 'circle',
+          pointRadius: 0,
+          pointHoverRadius: 7,
           parsing: {
             xAxisKey: 'x',
             yAxisKey: 'y'
           },
-        }
-      ];
+        });
 
-      // Add prediction data if available and Gold TH is selected
-      if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
-        // Process prediction data - include all data without filtering
-        const validPredictData = predictData
-          .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
-          .map(item => {
-            try {
-              return {
-                x: new Date(item.date).toISOString().split('T')[0],
-                y: parseFloat(item.predict)
-              };
-            } catch (error) {
-              console.error(`Invalid date in predictData: ${item.date}`, error);
-              return null;
-            }
-          })
-          .filter(item => item !== null);
-
-        // Add prediction dataset using all data points from the API
-        if (validPredictData.length > 0) {
-          datasets.push({
-            label: 'Prediction',
-            data: validPredictData,
-            borderColor: '#4CAF50',
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-            borderWidth: 2,
-            fill: false,
-            tension: 0.3,
-            pointStyle: 'circle',
-            pointRadius: 0, // Disable points
-            pointHoverRadius: 0, // Disable hover points
-            parsing: {
-              xAxisKey: 'x',
-              yAxisKey: 'y'
-            },
-          });
-
-          // For chart styling to make the lines appear connected
-          datasets[0].spanGaps = true;
-          datasets[1].spanGaps = true;
-        }
-
-        // console.log('Using all prediction data points:', validPredictData.length);
+        datasets[0].spanGaps = true;
+        datasets[1].spanGaps = true;
       }
-
-      return {
-        datasets,
-        currency
-      };
-    } catch (error) {
-      console.error('Error preparing chart data:', error);
-      return { labels: [], datasets: [], currency: 'THB' };
     }
+
+    return {
+      datasets,
+      currency
+    };
   })();
 
   // Chart options with zoom capability
@@ -214,7 +197,7 @@ const GoldChart = ({
     },
     elements: {
       line: {
-        tension: 0.3,
+        tension: 0.1,
         spanGaps: true,
       },
       point: {

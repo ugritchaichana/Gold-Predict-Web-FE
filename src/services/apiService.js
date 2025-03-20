@@ -5,7 +5,9 @@ const BASE_URL = 'https://34.117.31.73.nip.io';
 
 export const fetchGoldTH = async (timeframe = 'all') => {
   try {
-    const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}&max=100`);
+    const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}`);
+    // const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}&max=100`);
+    console.log(`GoldTH : ${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}&max=100`);
     return response.data;
   } catch (error) {
     console.error('Error fetching Gold TH data:', error);
@@ -15,7 +17,10 @@ export const fetchGoldTH = async (timeframe = 'all') => {
 
 export const fetchGoldUS = async (timeframe = 'all') => {
   try {
-    const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}&max=100`);
+    const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}`);
+    // const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}&max=100`);
+    console.log(`GoldUS : ${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}&max=100`);
+    
     return response.data;
   } catch (error) {
     console.error('Error fetching Gold US data:', error);
@@ -25,7 +30,10 @@ export const fetchGoldUS = async (timeframe = 'all') => {
 
 export const fetchUSDTHB = async (timeframe = 'all') => {
   try {
-    const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
+    const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}`);
+    // const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
+    console.log(`USDTHB : ${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
+    
     return response.data;
   } catch (error) {
     console.error('Error fetching USDTHB data:', error);
@@ -43,7 +51,7 @@ export const fetchPredictions = async () => {
   }
 };
 
-export const fetchPredictionsWithParams = async (range = 'sort_all', display = 'chart', startdate, enddate, max = 100) => {
+export const fetchPredictionsWithParams = async (range = 'sort_all', display = 'chart', startdate, enddate, max = 999999) => {
   try {
     const params = new URLSearchParams({
       range,

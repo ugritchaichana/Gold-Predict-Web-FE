@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fetchGoldTH, fetchPredictionsWithParams } from '@/services/apiService';
+import { fetchGoldTH, fetchGoldUS, fetchUSDTHB, fetchPredictionsWithParams } from '@/services/apiService';
 import GoldChart from '@/components/GoldChartRevised';
 import { GoldCoinIcon, BarChartIcon, InfoIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +25,11 @@ const TimeFrames = {
 
 const Dashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
-  const [timeframe, setTimeframe] = useState('1m');
+  // console.log('Selected Category: >> ✅✅✅✅✅', selectedCategory);
+  const [timeframe, setTimeframe] = useState('1y');
   const [goldThData, setGoldThData] = useState([]);
+  const [goldUsData, setGoldUsData] = useState([]);
+  const [usdthbData, setUsdthbData] = useState([]);
   const [predictData, setPredictData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,18 +57,36 @@ const Dashboard = () => {
             endDate = null;
         }
 
-        const [goldTHResponse, predictionsResponse] = await Promise.all([
-          fetchGoldTH(timeframe),
-          fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate, 100)
-        ]);
-
-        if (goldTHResponse && goldTHResponse.data) {
-          setGoldThData(goldTHResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date)));
-        } else {
-          setGoldThData([]);
+        let dataResponse;
+        if (selectedCategory === DataCategories.GOLD_TH) {
+          dataResponse = await fetchGoldTH(timeframe);
+        } else if (selectedCategory === DataCategories.GOLD_US) {
+          dataResponse = await fetchGoldUS(timeframe);
+        } else if (selectedCategory === DataCategories.USDTHB) {
+          dataResponse = await fetchUSDTHB(timeframe);
         }
-        // console.log('Predictions Response: >> ✅✅✅✅✅', predictionsResponse);
-        
+
+        const predictionsResponse = await fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate);
+        // const predictionsResponse = await fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate, 100);
+
+        if (dataResponse && dataResponse.data) {
+          const sortedData = dataResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+          if (selectedCategory === DataCategories.GOLD_TH) {
+            setGoldThData(sortedData);
+          } else if (selectedCategory === DataCategories.GOLD_US) {
+            setGoldUsData(sortedData);
+          } else if (selectedCategory === DataCategories.USDTHB) {
+            setUsdthbData(sortedData);
+          }
+        } else {
+          if (selectedCategory === DataCategories.GOLD_TH) {
+            setGoldThData([]);
+          } else if (selectedCategory === DataCategories.GOLD_US) {
+            setGoldUsData([]);
+          } else if (selectedCategory === DataCategories.USDTHB) {
+            setUsdthbData([]);
+          }
+        }
 
         if (predictionsResponse && predictionsResponse.labels && predictionsResponse.data) {
           const predictionData = predictionsResponse.labels.map((label, index) => ({
@@ -73,8 +94,6 @@ const Dashboard = () => {
             predict: predictionsResponse.data[index]
           }));
           setPredictData(predictionData);
-          // console.log('Prediction Data: >> ✅✅✅✅✅', predictionData);
-          
         } else {
           setPredictData([]);
         }
@@ -87,23 +106,44 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [timeframe]);
+  }, [timeframe, selectedCategory]);
 
   const getLatestPrice = () => {
-    if (loading || !goldThData?.length) return null;
-    const latestData = goldThData[goldThData.length - 1];
+    if (loading) return null;
+    let latestData;
+    if (selectedCategory === DataCategories.GOLD_TH) {
+      latestData = goldThData[goldThData.length - 1];
+    } else if (selectedCategory === DataCategories.GOLD_US) {
+      latestData = goldUsData[goldUsData.length - 1];
+    } else if (selectedCategory === DataCategories.USDTHB) {
+      latestData = usdthbData[usdthbData.length - 1];
+    }
     return latestData?.price;
   };
 
   const getPreviousPrice = () => {
     if (loading) return null;
-    if (goldThData?.length < 2) return null;
-    return goldThData[goldThData.length - 2]?.price;
+    let previousData;
+    if (selectedCategory === DataCategories.GOLD_TH) {
+      previousData = goldThData[goldThData.length - 2];
+    } else if (selectedCategory === DataCategories.GOLD_US) {
+      previousData = goldUsData[goldUsData.length - 2];
+    } else if (selectedCategory === DataCategories.USDTHB) {
+      previousData = usdthbData[usdthbData.length - 2];
+    }
+    return previousData?.price;
   };
 
   const getLatestDate = () => {
-    if (loading || !goldThData?.length) return null;
-    const latestData = goldThData[goldThData.length - 1];
+    if (loading) return null;
+    let latestData;
+    if (selectedCategory === DataCategories.GOLD_TH) {
+      latestData = goldThData[goldThData.length - 1];
+    } else if (selectedCategory === DataCategories.GOLD_US) {
+      latestData = goldUsData[goldUsData.length - 1];
+    } else if (selectedCategory === DataCategories.USDTHB) {
+      latestData = usdthbData[usdthbData.length - 1];
+    }
     return latestData?.date ? new Date(latestData.date) : null;
   };
 
@@ -217,6 +257,8 @@ const Dashboard = () => {
             ) : (
               <GoldChart
                 goldThData={goldThData}
+                goldUsData={goldUsData}
+                usdthbData={usdthbData}
                 predictData={predictData}
                 selectedCategory={selectedCategory}
                 timeframe={timeframe}
@@ -224,18 +266,6 @@ const Dashboard = () => {
               />
             )}
           </div>
-          
-          {selectedCategory === DataCategories.GOLD_TH && predictData?.length > 0 && (
-            <div className="mt-4 p-4 rounded-md bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200">
-              <div className="flex items-start gap-2">
-                <InfoIcon className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium">Prediction Data</p>
-                  <p className="text-sm opacity-90">Gold price prediction data for the next 7 days is shown as a blue line on the graph. Predictions may be inaccurate and should not be used as the primary basis for investment decisions.</p>
-                </div>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
