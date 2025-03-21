@@ -20,6 +20,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import MonthlyPredictions from '@/components/MonthlyPredictions';
 
 // Register ChartJS components
 ChartJS.register(
@@ -409,109 +410,11 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-
-<Card className="overflow-hidden border-amber-200/20 dark:border-amber-800/20">
-  <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
-    <div className="flex justify-between items-center">
-      <div className="flex items-center space-x-2">
-        <CardTitle className="bg-gradient-to-r from-amber-600 to-yellow-500 text-transparent bg-clip-text">
-          Monthly Predictions
-        </CardTitle>
-      </div>
-      <div className="flex items-center gap-2">
-        <Tabs value={monthlyChartTab} onValueChange={setMonthlyChartTab}>
-          <TabsList className="h-8">
-            <TabsTrigger value="chart" className="text-xs px-2 h-7">
-              <BarChartIcon className="h-3 w-3 mr-1" />
-              Chart
-            </TabsTrigger>
-            <TabsTrigger value="table" className="text-xs px-2 h-7">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clipRule="evenodd" />
-              </svg>
-              Table
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
-          Forecast
-        </Badge>
-      </div>
-    </div>
-  </CardHeader>
-  <CardContent className="p-0">
-    <Tabs value={monthlyChartTab} onValueChange={setMonthlyChartTab}>
-      <TabsContent value="chart" className="mt-0">
-        <div className="p-4">
-          {monthlyPredictions.length > 0 ? (
-            <MonthlyPredictionChart data={monthlyPredictions} />
-          ) : (
-            <div className="flex items-center justify-center h-48 bg-amber-50/30 dark:bg-amber-950/10">
-              <div className="text-center">
-                <InfoIcon className="mx-auto h-8 w-8 text-amber-400/60 dark:text-amber-500/40 mb-2" />
-                <p className="text-amber-700 dark:text-amber-300 font-medium">No chart data available</p>
-                <p className="text-xs text-amber-600/80 dark:text-amber-400/60 mt-1">Forecasts will appear here when data is ready</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </TabsContent>
-      <TabsContent value="table" className="mt-0">
-        {monthlyPredictions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                    Month
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                    Open
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                    High
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                    Low
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
-                {monthlyPredictions.map((prediction, index) => (
-                  <tr 
-                    key={index} 
-                    className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100">
-                      {prediction.month_predict}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                      <span className="font-mono">{formatCurrency(prediction.open, 'THB')}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                      <span className="font-mono">{formatCurrency(prediction.high, 'THB')}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
-                      <span className="font-mono">{formatCurrency(prediction.low, 'THB')}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-48 bg-amber-50/30 dark:bg-amber-950/10">
-            <div className="text-center">
-              <InfoIcon className="mx-auto h-8 w-8 text-amber-400/60 dark:text-amber-500/40 mb-2" />
-              <p className="text-amber-700 dark:text-amber-300 font-medium">No prediction data available</p>
-              <p className="text-xs text-amber-600/80 dark:text-amber-400/60 mt-1">Forecasts will appear here when data is ready</p>
-            </div>
-          </div>
-        )}
-      </TabsContent>
-    </Tabs>
-  </CardContent>
-</Card>
+      <MonthlyPredictions
+        monthlyPredictions={monthlyPredictions}
+        monthlyChartTab={monthlyChartTab}
+        setMonthlyChartTab={setMonthlyChartTab}
+      />
     </div>
   );
 };

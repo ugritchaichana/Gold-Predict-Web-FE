@@ -60,22 +60,6 @@ const GoldChart = ({
 }) => {
   const chartRef = useRef(null);
   const [resetCount, setResetCount] = useState(0);
-  // const [monthlyPredictions, setMonthlyPredictions] = useState([]);
-
-  // useEffect(() => {
-  //   const fetchMonthlyPredictions = async () => {
-  //     try {
-  //       const response = await fetchPredictionsMonth();
-  //       if (response.status === 'success') {
-  //         setMonthlyPredictions(response.months);
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching monthly predictions:', error);
-  //     }
-  //   };
-
-  //   fetchMonthlyPredictions();
-  // }, []);
 
   // Reset zoom when changing timeframe or category
   useEffect(() => {
@@ -419,35 +403,6 @@ const GoldChart = ({
           </div>
         )}
       </div>
-      {/* {monthlyPredictions.length > 0 && (
-        <div className="mt-4 p-4 bg-muted rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">Monthly Predictions</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-center font-semibold text-gray-700 dark:text-gray-300">Date</th>
-                  <th className="border border-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-center font-semibold text-gray-700 dark:text-gray-300">Open</th>
-                  <th className="border border-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-center font-semibold text-gray-700 dark:text-gray-300">High</th>
-                  <th className="border border-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-center font-semibold text-gray-700 dark:text-gray-300">Low</th>
-                  <th className="border border-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-center font-semibold text-gray-700 dark:text-gray-300">Month</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyPredictions.map((prediction, index) => (
-                  <tr key={index}>
-                    <td className="border border-gray-300 px-4 py-2 text-center text-gray-700 dark:text-gray-300">{prediction.date}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-center text-gray-700 dark:text-gray-300">{prediction.open}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-center text-gray-700 dark:text-gray-300">{prediction.high}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-center text-gray-700 dark:text-gray-300">{prediction.low}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-center text-gray-700 dark:text-gray-300">{prediction.month_predict}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )} */}
     </div>
   );
 };
