@@ -1,7 +1,8 @@
 // src/services/apiService.js
 import axios from 'axios';
 
-const BASE_URL = 'https://34.117.31.73.nip.io';
+// const BASE_URL = 'https://34.117.31.73.nip.io';
+const BASE_URL = 'https://goldpredictions.duckdns.org';
 
 export const fetchGoldTH = async (timeframe = 'all') => {
   try {

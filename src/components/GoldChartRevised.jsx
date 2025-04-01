@@ -121,7 +121,9 @@ const GoldChart = ({
       {
         label: `${selectedCategory} Latest`,
         data: validActualData,
-        borderColor: 'rgb(75, 192, 192)',
+        borderColor: 'rgb(34, 197, 94)',
+        // borderColor: '#3b82f6',
+        // borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         borderWidth: 2,
         pointRadius: 0,
@@ -156,7 +158,8 @@ const GoldChart = ({
         datasets.push({
           label: 'Prediction',
           data: validPredictData,
-          borderColor: '#4CAF50',
+          borderColor: '#FFD54F',
+          // borderColor: '#4CAF50',
           backgroundColor: 'rgba(76, 175, 80, 0.2)',
           borderWidth: 2,
           fill: false,
