@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import Dashboard from "@/components/Dashboard";
 import Beta from "@/components/Beta";
+import Admin from "@/components/Admin";
 
 function App() {
   return (
@@ -25,6 +26,9 @@ function App() {
                     <Link to="/beta" className="text-sm font-medium transition-colors hover:text-primary">
                       Beta
                     </Link>
+                    <Link to="/admin" className="text-sm font-medium transition-colors hover:text-primary">
+                      Admin
+                    </Link>
                   </nav>
                 </div>
                 <div className="flex items-center gap-2">
@@ -37,6 +41,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/beta" element={<Beta />} />
+                <Route path="/admin" element={<Admin />} />
               </Routes>
             </main>
             

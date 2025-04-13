@@ -1,11 +1,10 @@
 // src/services/apiService.js
 import axios from 'axios';
-
-// const BASE_URL = 'https://34.117.31.73.nip.io';
-const BASE_URL = 'https://goldpredictions.duckdns.org';
+import { getBaseUrl } from '@/config/apiConfig';
 
 export const fetchGoldTH = async (timeframe = 'all') => {
   try {
+    const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}`);
     // const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}&max=100`);
     console.log(`GoldTH : ${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=0&frame=${timeframe}&max=100`);
@@ -18,6 +17,7 @@ export const fetchGoldTH = async (timeframe = 'all') => {
 
 export const fetchGoldUS = async (timeframe = 'all') => {
   try {
+    const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}`);
     // const response = await axios.get(`${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}&max=100`);
     console.log(`GoldUS : ${BASE_URL}/finnomenaGold/get-gold-data/?db_choice=1&frame=${timeframe}&max=100`);
@@ -31,6 +31,7 @@ export const fetchGoldUS = async (timeframe = 'all') => {
 
 export const fetchUSDTHB = async (timeframe = 'all') => {
   try {
+    const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}`);
     // const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
     console.log(`USDTHB : ${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
@@ -44,6 +45,7 @@ export const fetchUSDTHB = async (timeframe = 'all') => {
 
 export const fetchPredictions = async () => {
   try {
+    const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/predicts/week/read&max=100`);
     return response.data;
   } catch (error) {
@@ -54,6 +56,7 @@ export const fetchPredictions = async () => {
 
 export const fetchPredictionsWithParams = async (range = 'sort_all', display = 'chart', startdate, enddate, max = 999999) => {
   try {
+    const BASE_URL = getBaseUrl();
     const params = new URLSearchParams({
       range,
       display,
@@ -77,6 +80,7 @@ export const fetchPredictionsWithParams = async (range = 'sort_all', display = '
 
 export const fetchPredictionsMonth = async () => {
   try {
+    const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/predicts/month/read_all`);
     return response.data;
   } catch (error) {
