@@ -1,27 +1,21 @@
 // src/config/apiConfig.js
 
-// กำหนด URL ของ backend
-export const API_ENVIRONMENTS = {
-  production: 'https://goldpredictions.duckdns.org',
-  development: 'http://127.0.0.1:8000'
-};
+// กำหนด URL ของ backend - สลับคอมเม้นต์เพื่อเลือกใช้ URL
+export let API_ENVIRONMENTS = 'https://gold-predictions.duckdns.org';
+// export let API_ENVIRONMENTS = 'http://127.0.0.1:8000';
 
-// ดึงค่า environment ปัจจุบันจาก localStorage หรือใช้ค่าเริ่มต้นเป็น production
+// สำหรับความเข้ากันได้กับโค้ดเดิม
 export const getCurrentEnvironment = () => {
-  return localStorage.getItem('apiEnvironment') || 'production';
+  return 'production';
 };
 
-// ดึง URL ของ backend ตาม environment ปัจจุบัน
+// ดึง URL ของ backend
 export const getBaseUrl = () => {
-  const currentEnv = getCurrentEnvironment();
-  return API_ENVIRONMENTS[currentEnv] || API_ENVIRONMENTS.production;
+  return API_ENVIRONMENTS;
 };
 
-// เปลี่ยน environment และบันทึกลงใน localStorage
+// สำหรับความเข้ากันได้กับโค้ดเดิม
 export const setEnvironment = (environment) => {
-  if (API_ENVIRONMENTS[environment]) {
-    localStorage.setItem('apiEnvironment', environment);
-    return true;
-  }
+  console.log('Environment setting through UI is disabled. Please edit apiConfig.js directly.');
   return false;
-}; 
+};
