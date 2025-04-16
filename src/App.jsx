@@ -19,17 +19,6 @@ function App() {
                   <Link to="/" className="text-2xl font-semibold bg-gradient-to-r from-yellow-500 to-amber-600 text-transparent bg-clip-text">
                     Gold Prediction
                   </Link>
-                  <nav className="flex items-center space-x-4 lg:space-x-6">
-                    <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
-                      Home
-                    </Link>
-                    <Link to="/beta" className="text-sm font-medium transition-colors hover:text-primary">
-                      Beta
-                    </Link>
-                    <Link to="/admin" className="text-sm font-medium transition-colors hover:text-primary">
-                      Admin
-                    </Link>
-                  </nav>
                 </div>
                 <div className="flex items-center gap-2">
                   <ModeToggle />

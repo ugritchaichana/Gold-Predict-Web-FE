@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-// const BASE_URL = 'https://34.117.31.73.nip.io';
-const BASE_URL = 'https://goldpredictions.duckdns.org';
+import { getBaseUrl } from '@/config/apiConfig';
 
 /**
  * ฟังก์ชันสำหรับดึงข้อมูลทองคำ, ทองคำสหรัฐ และอัตราแลกเปลี่ยน USD/THB จาก API ใหม่
@@ -12,6 +10,7 @@ const BASE_URL = 'https://goldpredictions.duckdns.org';
  */
 export const fetchGoldDataNew = async (select, start, end) => {
   try {
+    const BASE_URL = getBaseUrl();
     let url = `${BASE_URL}/data/get_data/?select=${select}&display=chart`;
     
     // เพิ่มพารามิเตอร์ start และ end หากมีการกำหนด
@@ -39,7 +38,7 @@ export const fetchGoldDataNew = async (select, start, end) => {
  * @returns {Promise} - Promise ที่คืนค่าข้อมูลทองคำไทย
  */
 export const fetchGoldTHNew = async (start, end) => {
-  return fetchGoldDataNew('GoldTH', start, end);
+  return fetchGoldDataNew('GOLDTH', start, end);
 };
 
 /**
@@ -49,7 +48,7 @@ export const fetchGoldTHNew = async (start, end) => {
  * @returns {Promise} - Promise ที่คืนค่าข้อมูลทองคำสหรัฐ
  */
 export const fetchGoldUSNew = async (start, end) => {
-  return fetchGoldDataNew('GoldUS', start, end);
+  return fetchGoldDataNew('GOLDUS', start, end);
 };
 
 /**
@@ -60,4 +59,33 @@ export const fetchGoldUSNew = async (start, end) => {
  */
 export const fetchUSDTHBNew = async (start, end) => {
   return fetchGoldDataNew('USDTHB', start, end);
+};
+
+/**
+ * ฟังก์ชันสำหรับดึงข้อมูลการทำนายราคาทองรายสัปดาห์
+ * @param {string} startdate - วันที่เริ่มต้น (รูปแบบ YYYY-MM-DD)
+ * @param {string} enddate - วันที่สิ้นสุด (รูปแบบ YYYY-MM-DD)
+ * @returns {Promise} - Promise ที่คืนค่าข้อมูลการทำนาย
+ */
+export const fetchPredictionsNew = async (startdate, enddate) => {
+  try {
+    const BASE_URL = getBaseUrl();
+    let url = `${BASE_URL}/predicts/week/read/?range=sort_all&display=chart`;
+    
+    // เพิ่มพารามิเตอร์ startdate และ enddate หากมีการกำหนด
+    if (startdate) {
+      url += `&startdate=${startdate}`;
+    }
+    if (enddate) {
+      url += `&enddate=${enddate}`;
+    }
+    
+    console.log(`Fetching predictions from: ${url}`);
+    const response = await axios.get(url);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching prediction data:', error);
+    throw error;
+  }
 }; 
