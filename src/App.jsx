@@ -4,7 +4,6 @@ import { Toaster } from "@/components/ui/toaster.jsx";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import Dashboard from "@/components/Dashboard";
-import Beta from "@/components/Beta";
 import Admin from "@/components/Admin";
 
 function App() {
@@ -29,7 +28,6 @@ function App() {
             <main className="flex-1 container py-6">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/beta" element={<Beta />} />
                 <Route path="/admin" element={<Admin />} />
               </Routes>
             </main>
