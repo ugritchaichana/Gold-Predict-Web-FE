@@ -22,6 +22,7 @@ import {
 } from 'chart.js';
 import MonthlyPredictions from '@/components/MonthlyPredictions';
 import GoldUsVolumeChart from '@/components/GoldUsVolumeChart';
+import { ThreeDot } from 'react-loading-indicators';
 
 // Register ChartJS components
 ChartJS.register(
@@ -341,7 +342,8 @@ const Dashboard = () => {
   const latestDate = getLatestDate();
 
   return (
-    <div className="space-y-6">      <div className="flex flex-col md:flex-row gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row gap-4">
         <Card className="flex-1">
           <CardHeader className="pb-2">
             <CardDescription>Latest Price</CardDescription>
@@ -407,7 +409,8 @@ const Dashboard = () => {
             </Tabs>
           </CardContent>
         </Card>
-      </div>      <Card>
+      </div>
+      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Data Chart</CardTitle>
@@ -428,7 +431,11 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="h-[450px]">
-            {error ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
+              </div>
+            ) : error ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <InfoIcon className="h-8 w-8 text-destructive mb-2" />
                 <p className="text-destructive">{error}</p>
@@ -453,7 +460,8 @@ const Dashboard = () => {
             )}
           </div>
         </CardContent>
-      </Card>      {/* Show Monthly Predictions for Gold TH */}
+      </Card>
+      {/* Show Monthly Predictions for Gold TH */}
       {selectedCategory === DataCategories.GOLD_TH && (
         <MonthlyPredictions
           monthlyPredictions={monthlyPredictions}
