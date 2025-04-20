@@ -547,7 +547,8 @@ const GoldChart = ({
     } else {
       // For other data types, show just the main price
       datasets.push({
-        label: `${selectedCategory} Latest`,
+        label: `Close Price`,
+        // label: `${selectedCategory} Latest`,
         data: validActualData,
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -562,6 +563,106 @@ const GoldChart = ({
           yAxisKey: 'y'
         }
       });
+      // เพิ่มเส้นกราฟสำหรับข้อมูลอื่นๆ ของ USD/THB
+      if (selectedCategory === DataCategories.USDTHB) {
+        // Open
+        const openData = actualData
+          .filter(item => {
+            const hasValidDate = (item && (item.created_at || item.date));
+            const hasValid = (item && item.open && !isNaN(parseFloat(item.open)));
+            return hasValidDate && hasValid;
+          })
+          .map(item => {
+            try {
+              const dateValue = item.created_at || item.date;
+              const value = parseFloat(item.open);
+              if (value < minYValue) minYValue = value;
+              return { x: new Date(dateValue).toISOString().split('T')[0], y: value };
+            } catch { return null; }
+          })
+          .filter(item => item !== null);
+        if (openData.length > 0) {
+          datasets.push({
+            label: 'Open Price',
+            data: openData,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            tension: 0.2,
+            borderDash: [4, 2],
+            fill: false,
+            spanGaps: true,
+            parsing: { xAxisKey: 'x', yAxisKey: 'y' }
+          });
+        }
+        // High
+        const highData = actualData
+          .filter(item => {
+            const hasValidDate = (item && (item.created_at || item.date));
+            const hasValid = (item && item.high && !isNaN(parseFloat(item.high)));
+            return hasValidDate && hasValid;
+          })
+          .map(item => {
+            try {
+              const dateValue = item.created_at || item.date;
+              const value = parseFloat(item.high);
+              if (value < minYValue) minYValue = value;
+              return { x: new Date(dateValue).toISOString().split('T')[0], y: value };
+            } catch { return null; }
+          })
+          .filter(item => item !== null);
+        if (highData.length > 0) {
+          datasets.push({
+            label: 'High Price',
+            data: highData,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            tension: 0.2,
+            borderDash: [2, 2],
+            fill: false,
+            spanGaps: true,
+            parsing: { xAxisKey: 'x', yAxisKey: 'y' }
+          });
+        }
+        // Low
+        const lowData = actualData
+          .filter(item => {
+            const hasValidDate = (item && (item.created_at || item.date));
+            const hasValid = (item && item.low && !isNaN(parseFloat(item.low)));
+            return hasValidDate && hasValid;
+          })
+          .map(item => {
+            try {
+              const dateValue = item.created_at || item.date;
+              const value = parseFloat(item.low);
+              if (value < minYValue) minYValue = value;
+              return { x: new Date(dateValue).toISOString().split('T')[0], y: value };
+            } catch { return null; }
+          })
+          .filter(item => item !== null);
+        if (lowData.length > 0) {
+          datasets.push({
+            label: 'Low Price',
+            data: lowData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            tension: 0.2,
+            borderDash: [6, 2],
+            fill: false,
+            spanGaps: true,
+            parsing: { xAxisKey: 'x', yAxisKey: 'y' }
+          });
+        }
+        // ลบ Percent Change และ Difference dataset ไม่ต้องแสดง
+      }
     }
 
     // Ensure all datasets have spanGaps enabled for consistent display
@@ -580,7 +681,8 @@ const GoldChart = ({
   
   // Calculate adjusted minimum Y value (Original min - 50% of original min)
   const calculatedMinYValue = chartData.minYValue !== Infinity 
-    ? chartData.minYValue - (chartData.minYValue * 0.05)
+    ? chartData.minYValue - (chartData.minYValue * 0)
+    // ? chartData.minYValue - (chartData.minYValue * 0.05)
     : undefined;
     
   // Chart options with zoom capability

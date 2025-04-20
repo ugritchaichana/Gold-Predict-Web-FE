@@ -118,10 +118,45 @@ export const fetchGoldUS = async (timeframe = 'all') => {
 export const fetchUSDTHB = async (timeframe = 'all') => {
   try {
     const BASE_URL = getBaseUrl();
-    const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}`);
-    // const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}&max=100`);
-    console.log(`USDTHB : ${BASE_URL}/currency/get/?frame=${timeframe}`);
-    
+    // Use new API endpoint for USD/THB with cache and display=chart
+    const response = await axios.get(`${BASE_URL}/currency/get/?frame=${timeframe}&cache=True&display=chart`);
+    console.log(`USDTHB : ${BASE_URL}/currency/get/?frame=${timeframe}&cache=True&display=chart`);
+
+    // Handle the new data structure
+    if (response.data && response.data.status === "success" && response.data.data) {
+      const labels = response.data.data.labels || [];
+      const datasets = response.data.data.datasets || [];
+      // Find indices of required data fields
+      const dateIndex = datasets.findIndex(ds => ds.label === "Date");
+      const priceIndex = datasets.findIndex(ds => ds.label === "Price");
+      const openIndex = datasets.findIndex(ds => ds.label === "Open");
+      const highIndex = datasets.findIndex(ds => ds.label === "High");
+      const lowIndex = datasets.findIndex(ds => ds.label === "Low");
+      const percentChangeIndex = datasets.findIndex(ds => ds.label === "Percent Change");
+      const diffIndex = datasets.findIndex(ds => ds.label === "Difference");
+
+      // Transform to array of objects for chart usage
+      const transformedData = {
+        status: response.data.status,
+        data: labels.map((label, idx) => ({
+          date: dateIndex >= 0 ? datasets[dateIndex].data[idx] : label,
+          price: priceIndex >= 0 ? datasets[priceIndex].data[idx] : null,
+          open: openIndex >= 0 ? datasets[openIndex].data[idx] : null,
+          high: highIndex >= 0 ? datasets[highIndex].data[idx] : null,
+          low: lowIndex >= 0 ? datasets[lowIndex].data[idx] : null,
+          percent_change: percentChangeIndex >= 0 ? datasets[percentChangeIndex].data[idx] : null,
+          difference: diffIndex >= 0 ? datasets[diffIndex].data[idx] : null
+        })).filter(item => item.price !== null)
+      };
+      if (response.data.start_date) {
+        transformedData.start_date = response.data.start_date;
+      }
+      if (response.data.end_date) {
+        transformedData.end_date = response.data.end_date;
+      }
+      return transformedData;
+    }
+    // Return original data if not in the expected format
     return response.data;
   } catch (error) {
     console.error('Error fetching USDTHB data:', error);
