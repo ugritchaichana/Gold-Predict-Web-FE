@@ -60,20 +60,24 @@ const GoldChart = ({
 }) => {
   const chartRef = useRef(null);
   const [resetCount, setResetCount] = useState(0);
+  // Check if we have volume data for US Gold
+  const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
+    goldUsData.some(item => item.volume || item.volume_weighted_average || item.number_of_transactions);
 
   // Reset zoom when changing timeframe or category
   useEffect(() => {
     resetZoom();
-  }, [timeframe, selectedCategory]);
-
+  }, [timeframe, selectedCategory]);    
+  
   // Process data for the chart based on selected category
   const chartData = (() => {
     if (loading) {
-      return { labels: [], datasets: [] };
+      return { labels: [], datasets: [], minYValue: 0 };
     }
 
     let actualData = [];
     let currency = 'THB';
+    let minYValue = Infinity; // Track minimum Y value for later use
 
     switch (selectedCategory) {
       case DataCategories.GOLD_TH:
@@ -93,7 +97,7 @@ const GoldChart = ({
     }
 
     if (!actualData || actualData.length === 0) {
-      return { labels: [], datasets: [] };
+      return { labels: [], datasets: [], minYValue: 0 };
     }
 
     const validActualData = actualData
@@ -105,9 +109,16 @@ const GoldChart = ({
       .map(item => {
         try {
           const dateValue = item.created_at || item.date;
+          const price = parseFloat(item.price);
+          
+          // Update minimum Y value
+          if (price < minYValue) {
+            minYValue = price;
+          }
+          
           return {
             x: new Date(dateValue).toISOString().split('T')[0],
-            y: parseFloat(item.price)
+            y: price
           };
         } catch (error) {
           const dateValue = item.created_at || item.date;
@@ -116,14 +127,429 @@ const GoldChart = ({
         }
       })
       .filter(item => item !== null);
+      
+    const datasets = [];
+    // Process prediction data first if we're in Gold TH category
+    let predictionDataset = null;
+    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
+      const validPredictData = predictData
+        .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
+        .map(item => {
+          try {
+            // Convert date format from "DD-MM-YYYY" to "YYYY-MM-DD"
+            const dateParts = item.date.split('-');
+            const day = dateParts[0];
+            const month = dateParts[1];
+            const year = dateParts[2];
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            const predictPrice = parseFloat(item.predict);
+            
+            // Update minimum Y value
+            if (predictPrice < minYValue) {
+              minYValue = predictPrice;
+            }
+            
+            return {
+              x: formattedDate,
+              y: predictPrice
+            };
+          } catch (error) {
+            console.error(`Invalid date in predictData: ${item.date}`, error);
+            return null;
+          }
+        })
+        .filter(item => item !== null);
 
-    const datasets = [
-      {
+      if (validPredictData.length > 0) {
+        predictionDataset = {
+          label: 'Prediction Bar (Buy)',
+          data: validPredictData,
+          borderColor: '#FFD54F',
+          backgroundColor: 'rgba(76, 175, 80, 0.2)',
+          borderWidth: 2.5,
+          fill: false,
+          tension: 0.1,
+          pointStyle: 'circle',
+          pointRadius: 0,
+          pointHoverRadius: 7,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        };
+        // Add prediction dataset first
+        datasets.push(predictionDataset);
+      }
+    }
+    
+    if (selectedCategory === DataCategories.GOLD_TH) {
+      // For Gold TH, we show multiple price types as separate line series
+      // Main price (Gold Price)
+      datasets.push({
+        label: `Bar (Buy)`,
+        data: validActualData,
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderWidth: 2.5,
+        pointRadius: 1,
+        pointHoverRadius: 6,
+        tension: 0.2,
+        fill: false,
+        spanGaps: true,
+        parsing: {
+          xAxisKey: 'x',
+          yAxisKey: 'y'
+        }
+      });
+      
+      // Bar sell price (Gold Bar Selling Price)
+      const barSellData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.bar_sell_price && !isNaN(parseFloat(item.bar_sell_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.bar_sell_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (barSellData.length > 0) {
+        datasets.push({
+          label: `Bar (Sell)`,
+          data: barSellData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [5, 5],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+      
+      // Ornament sell price (Gold Jewelry Selling Price)
+      const ornamentSellData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.ornament_sell_price && !isNaN(parseFloat(item.ornament_sell_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.ornament_sell_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (ornamentSellData.length > 0) {
+        datasets.push({
+          label: `Jewelry (Sell)`,
+          data: ornamentSellData,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [3, 3],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+      
+      // Ornament buy price (Gold Jewelry Buying Price)
+      const ornamentBuyData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.ornament_buy_price && !isNaN(parseFloat(item.ornament_buy_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.ornament_buy_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (ornamentBuyData.length > 0) {
+        datasets.push({
+          label: `Jewelry (Buy)`,
+          data: ornamentBuyData,
+          borderColor: '#ec4899',
+          backgroundColor: 'rgba(236, 72, 153, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [2, 2],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+    } else if (selectedCategory === DataCategories.GOLD_US) {
+      // For Gold US, show multiple price types available from the new API
+      
+      // Main price
+      datasets.push({
+        label: `Open Price`,
+        data: validActualData,
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderWidth: 2.5,
+        pointRadius: 1,
+        pointHoverRadius: 6,
+        tension: 0.2,
+        fill: false,
+        spanGaps: true,
+        parsing: {
+          xAxisKey: 'x',
+          yAxisKey: 'y'
+        }
+      });
+      
+      // Close price
+      const closePriceData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.close_price && !isNaN(parseFloat(item.close_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.close_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (closePriceData.length > 0) {
+        datasets.push({
+          label: `Close Price`,
+          data: closePriceData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [5, 5],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+      
+      // High price
+      const highPriceData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.high_price && !isNaN(parseFloat(item.high_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.high_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (highPriceData.length > 0) {
+        datasets.push({
+          label: `High Price`,
+          data: highPriceData,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [3, 3],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+      
+      // Low price
+      const lowPriceData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidPrice = (item && item.low_price && !isNaN(parseFloat(item.low_price)));
+          return hasValidDate && hasValidPrice;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            const price = parseFloat(item.low_price);
+            
+            // Update minimum Y value
+            if (price < minYValue) {
+              minYValue = price;
+            }
+            
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: price
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (lowPriceData.length > 0) {
+        datasets.push({
+          label: `Low Price`,
+          data: lowPriceData,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          borderWidth: 2,
+          pointRadius: 1,
+          pointHoverRadius: 6,
+          tension: 0.2,
+          borderDash: [2, 2],
+          fill: false,
+          spanGaps: true,
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+      
+      // Volume data (always show if available)
+      const volumeData = actualData
+        .filter(item => {
+          const hasValidDate = (item && (item.created_at || item.date));
+          const hasValidVolume = (item && item.volume && !isNaN(parseFloat(item.volume)));
+          return hasValidDate && hasValidVolume;
+        })
+        .map(item => {
+          try {
+            const dateValue = item.created_at || item.date;
+            return {
+              x: new Date(dateValue).toISOString().split('T')[0],
+              y: parseFloat(item.volume)
+            };
+          } catch (error) {
+            return null;
+          }
+        })
+        .filter(item => item !== null);
+        
+      if (volumeData.length > 0) {
+        datasets.push({
+          label: `Volume`,
+          data: volumeData,
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          borderColor: 'rgba(59, 130, 246, 0.8)',
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          type: 'bar',
+          order: 1,
+          yAxisID: 'volumeAxis',
+          maxBarThickness: 12, // กำหนดความกว้างสูงสุดของแท่งกราฟ Volume (ค่าในหน่วย pixel)
+          parsing: {
+            xAxisKey: 'x',
+            yAxisKey: 'y'
+          }
+        });
+      }
+    } else {
+      // For other data types, show just the main price
+      datasets.push({
         label: `${selectedCategory} Latest`,
         data: validActualData,
         borderColor: 'rgb(34, 197, 94)',
-        // borderColor: '#3b82f6',
-        // borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         borderWidth: 2,
         pointRadius: 0,
@@ -134,56 +560,29 @@ const GoldChart = ({
         parsing: {
           xAxisKey: 'x',
           yAxisKey: 'y'
-        },
-      }
-    ];
-
-    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
-      const validPredictData = predictData
-        .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
-        .map(item => {
-          try {
-            return {
-              x: new Date(item.date).toISOString().split('T')[0],
-              y: parseFloat(item.predict)
-            };
-          } catch (error) {
-            console.error(`Invalid date in predictData: ${item.date}`, error);
-            return null;
-          }
-        })
-        .filter(item => item !== null);
-
-      if (validPredictData.length > 0) {
-        datasets.push({
-          label: 'Prediction',
-          data: validPredictData,
-          borderColor: '#FFD54F',
-          // borderColor: '#4CAF50',
-          backgroundColor: 'rgba(76, 175, 80, 0.2)',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1,
-          pointStyle: 'circle',
-          pointRadius: 0,
-          pointHoverRadius: 7,
-          parsing: {
-            xAxisKey: 'x',
-            yAxisKey: 'y'
-          },
-        });
-
-        datasets[0].spanGaps = true;
-        datasets[1].spanGaps = true;
-      }
+        }
+      });
     }
 
+    // Ensure all datasets have spanGaps enabled for consistent display
+    datasets.forEach(dataset => {
+      dataset.spanGaps = true;
+    });
+
+    // Return chart.js compatible object
     return {
-      datasets,
-      currency
+      labels: validActualData.map(item => item.x),
+      datasets: datasets,
+      currency: currency,
+      minYValue: minYValue // Pass the minimum Y value to be used in options
     };
   })();
-
+  
+  // Calculate adjusted minimum Y value (Original min - 50% of original min)
+  const calculatedMinYValue = chartData.minYValue !== Infinity 
+    ? chartData.minYValue - (chartData.minYValue * 0.05)
+    : undefined;
+    
   // Chart options with zoom capability
   const options = {
     responsive: true,
@@ -282,21 +681,31 @@ const GoldChart = ({
         pan: {
           enabled: true,
           mode: 'x',
-          modifierKey: 'shift',
+          threshold: 10, // เพิ่มค่า threshold เพื่อป้องกันการลากโดยไม่ตั้งใจ
+          onPanStart: function({chart}) {
+            chart.canvas.style.cursor = 'grab';
+          },
+          onPanComplete: function({chart}) {
+            chart.canvas.style.cursor = 'default';
+          }
         },
         zoom: {
           wheel: {
             enabled: true,
+            speed: 0.1, // ปรับความเร็วการซูม
           },
           pinch: {
             enabled: true,
           },
           mode: 'x',
-          speed: 100,
+          speed: 50,
           threshold: 2,
           sensitivity: 3,
         },
-      },
+        limits: {
+          x: {minRange: 86400000 * 2}, // อย่างน้อย 2 วัน (ในหน่วย milliseconds)
+        }
+      }
     },
     scales: {
       x: {
@@ -363,16 +772,85 @@ const GoldChart = ({
             }
           }
         },
+        // ตั้งค่า min ให้ต่ำกว่าค่าข้อมูลจริง 50% ตามที่ต้องการ
+        min: calculatedMinYValue,
         beginAtZero: false
+      },
+      // Y-axis for volume data with max value set to 12000
+      volumeAxis: {
+        type: 'linear',
+        display: selectedCategory === DataCategories.GOLD_US && hasVolumeData,
+        position: 'right',
+        grid: {
+          drawOnChartArea: false, // only draw grid lines for the volume axis
+        },
+        ticks: {
+          font: {
+            size: 10
+          },
+          color: 'rgba(59, 130, 246, 0.8)',
+          callback: (value) => {
+            if (value >= 1000000) {
+              return (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+              return (value / 1000).toFixed(1) + 'K';
+            }
+            return value;
+          }
+        },
+        max: 12000, // Set maximum value to 12000 as requested
+        beginAtZero: true
+      },
+      // Second Y-axis for transaction data
+      y1: {
+        type: 'linear',
+        display: false, // ปิดการแสดงผลชั่วคราวเนื่องจากไม่มีการใช้งาน
+        position: 'right',
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            size: 11
+          }
+        },
+        beginAtZero: true
       }
     }
   };
-
-  // Function to reset zoom
+  
+  // Functions to control zoom
   const resetZoom = () => {
+    try {
+      if (chartRef.current) {
+        const chartInstance = chartRef.current;
+        
+        if (chartInstance.chart && typeof chartInstance.chart.resetZoom === 'function') {
+          chartInstance.chart.resetZoom();
+          console.log('Zoom reset successfully');
+        } else {
+          console.warn('Chart instance has no resetZoom method or chart is not available');
+        }
+        
+        // อัปเดต state เพื่อกระตุ้นการเรนเดอร์ใหม่
+        setResetCount(prev => prev + 1);
+      } else {
+        console.warn('Chart reference is not available');
+      }
+    } catch (error) {
+      console.error('Error resetting zoom:', error);
+    }
+  };
+  
+  const zoomIn = () => {
     if (chartRef.current && chartRef.current.chart) {
-      chartRef.current.chart.resetZoom();
-      setResetCount(prev => prev + 1);
+      chartRef.current.chart.zoom(1.2); // ซูมเข้า 20%
+    }
+  };
+  
+  const zoomOut = () => {
+    if (chartRef.current && chartRef.current.chart) {
+      chartRef.current.chart.zoom(0.8); // ซูมออก 20%
     }
   };
 
@@ -380,25 +858,36 @@ const GoldChart = ({
   if (loading) {
     return <Skeleton className="w-full h-full" />;
   }
-
+  
   return (
     <div className="relative h-full">
-      <div className="absolute top-0 right-0 z-10">
+      <div className="absolute top-0 right-0 z-10 flex gap-2">
         <Button 
           variant="outline" 
           size="sm" 
           onClick={resetZoom}
           className="text-xs"
         >
-          Zoom Reset
+          Reset Zoom
         </Button>
       </div>
+      
       <div className="h-full">
         {chartData.datasets?.length > 0 ? (
           <Line 
             ref={chartRef}
-            data={{ datasets: chartData.datasets }} 
+            data={chartData} 
             options={options} 
+            onMouseEnter={() => {
+              if (chartRef.current?.canvas) {
+                chartRef.current.canvas.style.cursor = 'crosshair';
+              }
+            }}
+            onMouseLeave={() => {
+              if (chartRef.current?.canvas) {
+                chartRef.current.canvas.style.cursor = 'default';
+              }
+            }}
           />
         ) : (
           <div className="flex flex-col min-h-[350px] w-full justify-center items-center">

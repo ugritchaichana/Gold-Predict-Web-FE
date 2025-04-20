@@ -21,6 +21,7 @@ import {
   Legend,
 } from 'chart.js';
 import MonthlyPredictions from '@/components/MonthlyPredictions';
+import GoldUsVolumeChart from '@/components/GoldUsVolumeChart';
 
 // Register ChartJS components
 ChartJS.register(
@@ -150,15 +151,15 @@ const MonthlyPredictionChart = ({ data }) => {
 const Dashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
   // console.log('Selected Category: >> ✅✅✅✅✅', selectedCategory);
-  const [timeframe, setTimeframe] = useState('1y');
+  const [timeframe, setTimeframe] = useState('1m');
   const [goldThData, setGoldThData] = useState([]);
   const [goldUsData, setGoldUsData] = useState([]);
   const [usdthbData, setUsdthbData] = useState([]);
   const [predictData, setPredictData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [monthlyPredictions, setMonthlyPredictions] = useState([]);
+  const [error, setError] = useState(null);  const [monthlyPredictions, setMonthlyPredictions] = useState([]);
   const [monthlyChartTab, setMonthlyChartTab] = useState('table');
+  const [volumeChartTab, setVolumeChartTab] = useState('chart');
 
   useEffect(() => {
     const fetchMonthlyPredictions = async () => {
@@ -181,14 +182,19 @@ const Dashboard = () => {
       try {
         const today = new Date();
         let startDate = null;
-        let endDate = formatDateFns(today, 'yyyy-MM-dd');
-
-        switch (timeframe) {
+        let endDate = formatDateFns(today, 'yyyy-MM-dd');        switch (timeframe) {
           case '7d':
             startDate = formatDateFns(subDays(today, 7), 'yyyy-MM-dd');
             break;
           case '1m':
             startDate = formatDateFns(subMonths(today, 1), 'yyyy-MM-dd');
+            break;
+          case '3m':
+            startDate = formatDateFns(subMonths(today, 3), 'yyyy-MM-dd');
+            break;
+          case 'ytd':
+            // Year-to-date: from January 1st of current year to today
+            startDate = formatDateFns(new Date(today.getFullYear(), 0, 1), 'yyyy-MM-dd');
             break;
           case '1y':
             startDate = formatDateFns(subYears(today, 1), 'yyyy-MM-dd');
@@ -248,7 +254,6 @@ const Dashboard = () => {
 
     fetchData();
   }, [timeframe, selectedCategory]);
-
   const getLatestPrice = () => {
     if (loading) return null;
     let latestData;
@@ -260,6 +265,31 @@ const Dashboard = () => {
       latestData = usdthbData[usdthbData.length - 1];
     }
     return latestData?.price;
+  };
+  
+  // เพิ่มฟังก์ชันสำหรับดึงค่าที่มาจาก API ใหม่  // Functions for retrieving gold data details
+  const getLatestBarSellPrice = () => {
+    if (loading || selectedCategory !== DataCategories.GOLD_TH) return null;
+    const latestData = goldThData[goldThData.length - 1];
+    return latestData?.bar_sell_price;
+  };
+
+  const getLatestBarPriceChange = () => {
+    if (loading || selectedCategory !== DataCategories.GOLD_TH) return null;
+    const latestData = goldThData[goldThData.length - 1];
+    return latestData?.bar_price_change;
+  };
+
+  const getLatestOrnamentBuyPrice = () => {
+    if (loading || selectedCategory !== DataCategories.GOLD_TH) return null;
+    const latestData = goldThData[goldThData.length - 1];
+    return latestData?.ornament_buy_price;
+  };
+
+  const getLatestOrnamentSellPrice = () => {
+    if (loading || selectedCategory !== DataCategories.GOLD_TH) return null;
+    const latestData = goldThData[goldThData.length - 1];
+    return latestData?.ornament_sell_price;
   };
 
   const getPreviousPrice = () => {
@@ -274,7 +304,6 @@ const Dashboard = () => {
     }
     return previousData?.price;
   };
-
   const getLatestDate = () => {
     if (loading) return null;
     let latestData;
@@ -285,7 +314,26 @@ const Dashboard = () => {
     } else if (selectedCategory === DataCategories.USDTHB) {
       latestData = usdthbData[usdthbData.length - 1];
     }
-    return latestData?.date ? new Date(latestData.date) : null;
+    
+    if (!latestData) return null;
+    
+    // Try created_at first, then fall back to date
+    const dateValue = latestData.created_at || latestData.date;
+    if (!dateValue) return null;
+    
+    try {
+      // Handle various date formats
+      const date = new Date(dateValue);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date value:', dateValue);
+        return null;
+      }
+      return date;
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return null;
+    }
   };
 
   const priceChange = getPreviousPrice() !== null ? getLatestPrice() - getPreviousPrice() : null;
@@ -293,8 +341,7 @@ const Dashboard = () => {
   const latestDate = getLatestDate();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className="space-y-6">      <div className="flex flex-col md:flex-row gap-4">
         <Card className="flex-1">
           <CardHeader className="pb-2">
             <CardDescription>Latest Price</CardDescription>
@@ -334,7 +381,7 @@ const Dashboard = () => {
         <Card className="flex-1">
           <CardHeader className="pb-4">
             <div className="flex justify-between items-center">
-              <CardTitle>Data Type</CardTitle>
+              <CardTitle>Data Category</CardTitle>
               {selectedCategory === DataCategories.GOLD_TH && predictData?.length > 0 && (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
                   Prediction data available
@@ -352,17 +399,15 @@ const Dashboard = () => {
                     className="flex-1"
                     disabled={loading}
                   >
-                    {category === DataCategories.GOLD_TH ? 'Gold TH' : 
-                     category === DataCategories.GOLD_US ? 'Gold US' : 'USD/THB'}
+                    { category === DataCategories.GOLD_TH ? 'Gold TH' : 
+                      category === DataCategories.GOLD_US ? 'Gold US' : 'USD/THB'}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
           </CardContent>
         </Card>
-      </div>
-
-      <Card>
+      </div>      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Data Chart</CardTitle>
@@ -408,13 +453,23 @@ const Dashboard = () => {
             )}
           </div>
         </CardContent>
-      </Card>
-
-      <MonthlyPredictions
-        monthlyPredictions={monthlyPredictions}
-        monthlyChartTab={monthlyChartTab}
-        setMonthlyChartTab={setMonthlyChartTab}
-      />
+      </Card>      {/* Show Monthly Predictions for Gold TH */}
+      {selectedCategory === DataCategories.GOLD_TH && (
+        <MonthlyPredictions
+          monthlyPredictions={monthlyPredictions}
+          monthlyChartTab={monthlyChartTab}
+          setMonthlyChartTab={setMonthlyChartTab}
+        />
+      )}
+      
+      {/* Show Volume Data for Gold US */}
+      {/* {selectedCategory === DataCategories.GOLD_US && goldUsData.length > 0 && (
+        <GoldUsVolumeChart
+          data={goldUsData}
+          chartTab={volumeChartTab}
+          setChartTab={setVolumeChartTab}
+        />
+      )} */}
     </div>
   );
 };
