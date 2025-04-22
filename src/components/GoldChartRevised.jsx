@@ -163,7 +163,7 @@ const GoldChart = ({
 
       if (validPredictData.length > 0) {
         predictionDataset = {
-          label: 'Prediction Bar (Buy)',
+          label: 'Prediction Gold Bar (Buy)',
           data: validPredictData,
           borderColor: '#FFD54F',
           backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -187,7 +187,7 @@ const GoldChart = ({
       // For Gold TH, we show multiple price types as separate line series
       // Main price (Gold Price)
       datasets.push({
-        label: `Bar (Buy)`,
+        label: `Gold Bar (Buy)`,
         data: validActualData,
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -232,7 +232,7 @@ const GoldChart = ({
         
       if (barSellData.length > 0) {
         datasets.push({
-          label: `Bar (Sell)`,
+          label: `Gold Bar (Sell)`,
           data: barSellData,
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -279,7 +279,8 @@ const GoldChart = ({
         
       if (ornamentSellData.length > 0) {
         datasets.push({
-          label: `Jewelry (Sell)`,
+          label: `Ornament Gold (Sell)`,
+          // label: `Jewelry (Sell)`,
           data: ornamentSellData,
           borderColor: '#f59e0b',
           backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -326,7 +327,8 @@ const GoldChart = ({
         
       if (ornamentBuyData.length > 0) {
         datasets.push({
-          label: `Jewelry (Buy)`,
+          label: `Ornament Gold (Buy)`,
+          // label: `Jewelry (Buy)`,
           data: ornamentBuyData,
           borderColor: '#ec4899',
           backgroundColor: 'rgba(236, 72, 153, 0.1)',
