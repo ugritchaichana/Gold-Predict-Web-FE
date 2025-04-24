@@ -19,7 +19,7 @@ import { enUS } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchGoldTH, fetchPredictionsWithParams, fetchPredictionsMonth } from '@/services/apiService';
+import { fetchGoldTH, fetchPredictionsWithParams, fetchPredictionsMonth, sortByDateAscending } from '@/services/apiService';
 
 // Register ChartJS plugins
 ChartJS.register(
@@ -63,10 +63,14 @@ const GoldChart = ({
   // Check if we have volume data for US Gold
   const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
     goldUsData.some(item => item.volume || item.volume_weighted_average || item.number_of_transactions);
-
   // Reset zoom when changing timeframe or category
   useEffect(() => {
-    resetZoom();
+    // Add a small delay to ensure chart is fully initialized before resetting zoom
+    const timer = setTimeout(() => {
+      resetZoom();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [timeframe, selectedCategory]);    
   
   // Process data for the chart based on selected category
@@ -81,15 +85,15 @@ const GoldChart = ({
 
     switch (selectedCategory) {
       case DataCategories.GOLD_TH:
-        actualData = goldThData;
+        actualData = sortByDateAscending(goldThData);
         currency = 'THB';
         break;
       case DataCategories.GOLD_US:
-        actualData = goldUsData;
+        actualData = sortByDateAscending(goldUsData);
         currency = 'USD';
         break;
       case DataCategories.USDTHB:
-        actualData = usdthbData;
+        actualData = sortByDateAscending(usdthbData);
         currency = 'THB';
         break;
       default:
@@ -131,17 +135,44 @@ const GoldChart = ({
     const datasets = [];
     // Process prediction data first if we're in Gold TH category
     let predictionDataset = null;
-    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
+    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {        // ดูข้อมูล predictData และ goldThData
+      console.log('------- ข้อมูลวันแรก/สุดท้ายของ predictData และ goldThData -------');
+      if (predictData && predictData.length > 0) {
+        console.log('ข้อมูลแรกของ predict:', predictData[0]);
+        console.log('ข้อมูลสุดท้ายของ predict:', predictData[predictData.length - 1]);
+      } else {
+        console.log('ไม่พบข้อมูล predictData');
+      }
+      
+      if (goldThData && goldThData.length > 0) {
+        console.log('ข้อมูลแรกของ goldTH:', goldThData[0]);
+        console.log('ข้อมูลสุดท้ายของ goldTH:', goldThData[goldThData.length - 1]);
+        
+        // แสดงวันที่แรกและวันที่สุดท้ายในรูปแบบที่อ่านง่าย
+        const firstDate = new Date(goldThData[0].created_at || goldThData[0].date);
+        const lastDate = new Date(goldThData[goldThData.length - 1].created_at || goldThData[goldThData.length - 1].date);
+        console.log('วันแรกของ goldTH:', firstDate.toISOString().split('T')[0]);
+        console.log('วันสุดท้ายของ goldTH:', lastDate.toISOString().split('T')[0]);
+      } else {
+        console.log('ไม่พบข้อมูล goldThData');
+      }
+      console.log('--------------------------------------------------------------');
+      
       const validPredictData = predictData
         .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
         .map(item => {
           try {
-            // Convert date format from "DD-MM-YYYY" to "YYYY-MM-DD"
-            const dateParts = item.date.split('-');
-            const day = dateParts[0];
-            const month = dateParts[1];
-            const year = dateParts[2];
-            const formattedDate = `${year}-${month}-${day}`;
+            let dateValue = item.date;
+            
+            // Check if date is in "DD-MM-YYYY" format and convert it
+            if (item.date.match(/^\d{2}-\d{2}-\d{4}$/)) {
+              const dateParts = item.date.split('-');
+              const day = dateParts[0];
+              const month = dateParts[1];
+              const year = dateParts[2];
+              dateValue = `${year}-${month}-${day}`;
+            }
+            // If date is already in "YYYY-MM-DD" format, use it as is
             
             const predictPrice = parseFloat(item.predict);
             
@@ -150,8 +181,9 @@ const GoldChart = ({
               minYValue = predictPrice;
             }
             
+            // ใช้รูปแบบการแปลงวันที่เดียวกับ goldTH เพื่อความสอดคล้อง
             return {
-              x: formattedDate,
+              x: new Date(dateValue).toISOString().split('T')[0],
               y: predictPrice
             };
           } catch (error) {
@@ -347,7 +379,7 @@ const GoldChart = ({
       }
     } else if (selectedCategory === DataCategories.GOLD_US) {
       // For Gold US, show multiple price types available from the new API
-      
+      // --- แสดงกราฟเส้นก่อน ---
       // Main price
       datasets.push({
         label: `Open Price`,
@@ -365,7 +397,6 @@ const GoldChart = ({
           yAxisKey: 'y'
         }
       });
-      
       // Close price
       const closePriceData = actualData
         .filter(item => {
@@ -377,22 +408,11 @@ const GoldChart = ({
           try {
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.close_price);
-            
-            // Update minimum Y value
-            if (price < minYValue) {
-              minYValue = price;
-            }
-            
-            return {
-              x: new Date(dateValue).toISOString().split('T')[0],
-              y: price
-            };
-          } catch (error) {
-            return null;
-          }
+            if (price < minYValue) minYValue = price;
+            return { x: new Date(dateValue).toISOString().split('T')[0], y: price };
+          } catch (error) { return null; }
         })
         .filter(item => item !== null);
-        
       if (closePriceData.length > 0) {
         datasets.push({
           label: `Close Price`,
@@ -412,7 +432,6 @@ const GoldChart = ({
           }
         });
       }
-      
       // High price
       const highPriceData = actualData
         .filter(item => {
@@ -424,22 +443,11 @@ const GoldChart = ({
           try {
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.high_price);
-            
-            // Update minimum Y value
-            if (price < minYValue) {
-              minYValue = price;
-            }
-            
-            return {
-              x: new Date(dateValue).toISOString().split('T')[0],
-              y: price
-            };
-          } catch (error) {
-            return null;
-          }
+            if (price < minYValue) minYValue = price;
+            return { x: new Date(dateValue).toISOString().split('T')[0], y: price };
+          } catch (error) { return null; }
         })
         .filter(item => item !== null);
-        
       if (highPriceData.length > 0) {
         datasets.push({
           label: `High Price`,
@@ -459,7 +467,6 @@ const GoldChart = ({
           }
         });
       }
-      
       // Low price
       const lowPriceData = actualData
         .filter(item => {
@@ -471,22 +478,11 @@ const GoldChart = ({
           try {
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.low_price);
-            
-            // Update minimum Y value
-            if (price < minYValue) {
-              minYValue = price;
-            }
-            
-            return {
-              x: new Date(dateValue).toISOString().split('T')[0],
-              y: price
-            };
-          } catch (error) {
-            return null;
-          }
+            if (price < minYValue) minYValue = price;
+            return { x: new Date(dateValue).toISOString().split('T')[0], y: price };
+          } catch (error) { return null; }
         })
         .filter(item => item !== null);
-        
       if (lowPriceData.length > 0) {
         datasets.push({
           label: `Low Price`,
@@ -506,8 +502,7 @@ const GoldChart = ({
           }
         });
       }
-      
-      // Volume data (always show if available)
+      // --- แล้วค่อยแสดงกราฟแท่ง (Volume) ---
       const volumeData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -526,7 +521,6 @@ const GoldChart = ({
           }
         })
         .filter(item => item !== null);
-        
       if (volumeData.length > 0) {
         datasets.push({
           label: `Volume`,
@@ -672,12 +666,30 @@ const GoldChart = ({
       dataset.spanGaps = true;
     });
 
+    // Calculate max volume for volumeAxis
+    let maxVolume = 0;
+    if (selectedCategory === DataCategories.GOLD_US) {
+      const volumeArr = actualData
+        .filter(item => item && item.volume && !isNaN(parseFloat(item.volume)))
+        .map(item => parseFloat(item.volume));
+      if (volumeArr.length > 0) {
+        maxVolume = Math.max(...volumeArr);
+      }
+    }
+    let volumeMax = undefined;
+    if (["7d", "1m", "1y"].includes(timeframe)) {
+      volumeMax = Math.max(4000, Math.ceil(maxVolume * 1.1)); // 10% margin
+    } else if (timeframe === "all") {
+      volumeMax = Math.max(1300000, Math.ceil(maxVolume * 1.05)); // 5% margin
+    }
+
     // Return chart.js compatible object
     return {
       labels: validActualData.map(item => item.x),
       datasets: datasets,
       currency: currency,
-      minYValue: minYValue // Pass the minimum Y value to be used in options
+      minYValue: minYValue, // Pass the minimum Y value to be used in options
+      volumeMax: volumeMax // Pass the calculated max volume
     };
   })();
   
@@ -880,7 +892,7 @@ const GoldChart = ({
         min: calculatedMinYValue,
         beginAtZero: false
       },
-      // Y-axis for volume data with max value set to 12000
+      // Y-axis for volume data with max value set dynamically
       volumeAxis: {
         type: 'linear',
         display: selectedCategory === DataCategories.GOLD_US && hasVolumeData,
@@ -902,7 +914,8 @@ const GoldChart = ({
             return value;
           }
         },
-        max: 12000, // Set maximum value to 12000 as requested
+        max: chartData.volumeMax,
+        min: 0,
         beginAtZero: true
       },
       // Second Y-axis for transaction data

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchGoldTH, fetchGoldUS, fetchUSDTHB, fetchPredictionsWithParams, fetchPredictionsMonth } from '@/services/apiService';
+// Renamed from GoldChart to GoldChartRevised in imports to match actual usage
 import GoldChart from '@/components/GoldChartRevised';
 import { GoldCoinIcon, BarChartIcon, InfoIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import {
   Legend,
 } from 'chart.js';
 import MonthlyPredictions from '@/components/MonthlyPredictions';
+// GoldUsVolumeChart is imported but not used in this component (already commented out in JSX)
 import GoldUsVolumeChart from '@/components/GoldUsVolumeChart';
 import { ThreeDot } from 'react-loading-indicators';
 
@@ -149,9 +151,8 @@ const MonthlyPredictionChart = ({ data }) => {
   );
 };
 
-const Dashboard = () => {
-  const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
-  // console.log('Selected Category: >> ✅✅✅✅✅', selectedCategory);
+const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
+  // Removed debug console.log
   const [timeframe, setTimeframe] = useState('1m');
   const [goldThData, setGoldThData] = useState([]);
   const [goldUsData, setGoldUsData] = useState([]);
@@ -190,13 +191,6 @@ const Dashboard = () => {
           case '1m':
             startDate = formatDateFns(subMonths(today, 1), 'yyyy-MM-dd');
             break;
-          case '3m':
-            startDate = formatDateFns(subMonths(today, 3), 'yyyy-MM-dd');
-            break;
-          case 'ytd':
-            // Year-to-date: from January 1st of current year to today
-            startDate = formatDateFns(new Date(today.getFullYear(), 0, 1), 'yyyy-MM-dd');
-            break;
           case '1y':
             startDate = formatDateFns(subYears(today, 1), 'yyyy-MM-dd');
             break;
@@ -214,8 +208,8 @@ const Dashboard = () => {
           dataResponse = await fetchUSDTHB(timeframe);
         }
 
-        const predictionsResponse = await fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate);
-        // const predictionsResponse = await fetchPredictionsWithParams('sort_all', 'chart', startDate, endDate, 100);
+        const predictionsResponse = await fetchPredictionsWithParams();
+        
 
         if (dataResponse && dataResponse.data) {
           const sortedData = dataResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -234,14 +228,67 @@ const Dashboard = () => {
           } else if (selectedCategory === DataCategories.USDTHB) {
             setUsdthbData([]);
           }
-        }
-
-        if (predictionsResponse && predictionsResponse.labels && predictionsResponse.data) {
-          const predictionData = predictionsResponse.labels.map((label, index) => ({
-            date: label,
-            predict: predictionsResponse.data[index]
-          }));
+        }        // ใช้ข้อมูลการคาดการณ์ตาม timeframe ที่เลือก
+        if (predictionsResponse) {
+          let predictionData = [];
+          // เลือกใช้ชุดข้อมูลตาม timeframe
+          let predictions;
+          if (timeframe === '7d' && predictionsResponse.predict_data_7d) {
+            predictions = predictionsResponse.predict_data_7d;
+          } else if (timeframe === '1m' && predictionsResponse.predict_data_1m) {
+            predictions = predictionsResponse.predict_data_1m;
+          } else if (timeframe === '1y' && predictionsResponse.predict_data_1y) {
+            predictions = predictionsResponse.predict_data_1y;
+          } else if (predictionsResponse.predict_data_all) {
+            predictions = predictionsResponse.predict_data_all;
+          }
+          
+          // แปลงข้อมูล predictions จากรูปแบบ { labels: [...], data: [...] }
+          // เป็นอาร์เรย์ของออบเจ็กต์ที่มีฟิลด์ date และ predict
+          if (predictions && predictions.labels && predictions.data) {
+            console.log('[Dashboard] แปลงข้อมูล predictions:', {
+              labels_count: predictions.labels.length,
+              data_count: predictions.data.length
+            });
+            
+            // แปลงข้อมูลให้เป็นรูปแบบที่ GoldChartRevised.jsx คาดหวัง
+            predictionData = predictions.labels.map((date, index) => ({
+              date,  // วันที่ในรูปแบบ "YYYY-MM-DD"
+              predict: predictions.data[index]  // ราคาที่ทำนาย
+            }));
+            
+            console.log('[Dashboard] ข้อมูล prediction หลังแปลง:', {
+              count: predictionData.length,
+              first: predictionData[0],
+              last: predictionData[predictionData.length - 1]            });
+            
+            // กรอง predictionData ให้ startdate ตรงกับ goldth date
+            if (predictionData.length > 0 && goldThData.length > 0) {
+              // หา startdate ของ goldth (ใช้ created_at ถ้ามี, fallback เป็น date)
+              const goldthStartDateRaw = goldThData[0].created_at || goldThData[0].date;
+              // แปลงเป็น YYYY-MM-DD
+              const goldthStartDate = new Date(goldthStartDateRaw).toISOString().split('T')[0];
+              // หา index ของ prediction ที่ตรงกับหรือมากกว่า startdate
+              const startIdx = predictionData.findIndex(item => {
+                // แปลงวันที่ของ predict เป็น YYYY-MM-DD เช่นกัน
+                const predictDate = new Date(item.date).toISOString().split('T')[0];
+                return predictDate >= goldthStartDate;
+              });
+              // ถ้าเจอ index ที่ตรง/มากกว่า ให้ slice ตั้งแต่ตรงนั้นจนถึงข้อมูลล่าสุด
+              if (startIdx !== -1) {
+                predictionData = predictionData.slice(startIdx);
+              }
+            }
+            
+            // อัพเดต state สำหรับข้อมูล prediction
+            setPredictData(predictionData);
+          } else {
+            console.warn('[Dashboard] ไม่พบข้อมูล predictions ที่ต้องการ');
+            setPredictData([]);
+          }
+          
           setPredictData(predictionData);
+          
         } else {
           setPredictData([]);
         }
@@ -309,7 +356,7 @@ const Dashboard = () => {
     if (loading) return null;
     let latestData;
     if (selectedCategory === DataCategories.GOLD_TH) {
-      latestData = goldThData[goldThData.length - 1];
+      latestData = goldThData[goldThData.length - 1];      
     } else if (selectedCategory === DataCategories.GOLD_US) {
       latestData = goldUsData[goldUsData.length - 1];
     } else if (selectedCategory === DataCategories.USDTHB) {
@@ -324,12 +371,13 @@ const Dashboard = () => {
     
     try {
       // Handle various date formats
+      
       const date = new Date(dateValue);
       // Check if date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date value:', dateValue);
         return null;
-      }
+      }      
       return date;
     } catch (error) {
       console.error('Error parsing date:', error);
