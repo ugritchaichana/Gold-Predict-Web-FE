@@ -228,7 +228,7 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           } else if (selectedCategory === DataCategories.USDTHB) {
             setUsdthbData([]);
           }
-        }        // ใช้ข้อมูลการคาดการณ์ตาม timeframe ที่เลือก
+        }        
         if (predictionsResponse) {
           let predictionData = [];
           // เลือกใช้ชุดข้อมูลตาม timeframe
@@ -242,43 +242,18 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           } else if (predictionsResponse.predict_data_all) {
             predictions = predictionsResponse.predict_data_all;
           }
-          
           // แปลงข้อมูล predictions จากรูปแบบ { labels: [...], data: [...] }
           // เป็นอาร์เรย์ของออบเจ็กต์ที่มีฟิลด์ date และ predict
           if (predictions && predictions.labels && predictions.data) {
-            // แปลงข้อมูลให้เป็นรูปแบบที่ GoldChartRevised.jsx คาดหวัง
             predictionData = predictions.labels.map((date, index) => ({
               date,  // วันที่ในรูปแบบ "YYYY-MM-DD"
               predict: predictions.data[index]  // ราคาที่ทำนาย
             }));
-            
-            // กรอง predictionData ให้ startdate ตรงกับ goldth date
-            if (predictionData.length > 0 && goldThData.length > 0) {
-              // หา startdate ของ goldth (ใช้ created_at ถ้ามี, fallback เป็น date)
-              const goldthStartDateRaw = goldThData[0].created_at || goldThData[0].date;
-              // แปลงเป็น YYYY-MM-DD
-              const goldthStartDate = new Date(goldthStartDateRaw).toISOString().split('T')[0];
-              // หา index ของ prediction ที่ตรงกับหรือมากกว่า startdate
-              const startIdx = predictionData.findIndex(item => {
-                // แปลงวันที่ของ predict เป็น YYYY-MM-DD เช่นกัน
-                const predictDate = new Date(item.date).toISOString().split('T')[0];
-                return predictDate >= goldthStartDate;
-              });
-              // ถ้าเจอ index ที่ตรง/มากกว่า ให้ slice ตั้งแต่ตรงนั้นจนถึงข้อมูลล่าสุด
-              if (startIdx !== -1) {
-                predictionData = predictionData.slice(startIdx);
-              }
-            }
-            
-            // อัพเดต state สำหรับข้อมูล prediction
+            // ไม่ต้อง slice หรือกรอง startdate ที่นี่ ให้ GoldChartRevised เป็นคนจัดการ
             setPredictData(predictionData);
           } else {
-            console.warn('[Dashboard] ไม่พบข้อมูล predictions ที่ต้องการ');
             setPredictData([]);
           }
-          
-          setPredictData(predictionData);
-          
         } else {
           setPredictData([]);
         }

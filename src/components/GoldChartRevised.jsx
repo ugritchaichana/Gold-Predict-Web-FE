@@ -51,6 +51,13 @@ const TimeFrames = {
   LAST_30_DAYS: '30d'
 };
 
+// Key for localStorage (แยกตาม category)
+const LEGEND_KEY_MAP = {
+  [DataCategories.GOLD_TH]: 'goldth-legend-visibility',
+  [DataCategories.GOLD_US]: 'goldus-legend-visibility',
+  [DataCategories.USDTHB]: 'usdthb-legend-visibility',
+};
+
 // Main component
 const GoldChart = ({
   goldThData,
@@ -67,6 +74,9 @@ const GoldChart = ({
 
   // เพิ่ม state สำหรับติดตามธีม
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  // เพิ่ม state สำหรับ legend visibility (ทุก category)
+  const [legendVisibility, setLegendVisibility] = useState({});
 
   // ติดตามการเปลี่ยนแปลงธีมแยกต่างหาก
   useEffect(() => {
@@ -89,6 +99,32 @@ const GoldChart = ({
     // ทำความสะอาดเมื่อ component ถูก unmounted
     return () => observer.disconnect();
   }, []);
+
+  // โหลด legend visibility จาก localStorage เมื่อ category เปลี่ยนเท่านั้น
+  useEffect(() => {
+    const key = LEGEND_KEY_MAP[selectedCategory];
+    if (key) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          setLegendVisibility(JSON.parse(saved));
+        } catch {
+          setLegendVisibility({});
+        }
+      } else {
+        setLegendVisibility({});
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]);
+
+  // ฟังก์ชันบันทึก legend visibility ลง localStorage (ตาม category)
+  const saveLegendVisibility = (vis) => {
+    const key = LEGEND_KEY_MAP[selectedCategory];
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(vis));
+    }
+  };
 
   // Check if we have volume data for US Gold
   const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
@@ -160,6 +196,12 @@ const GoldChart = ({
         }
       })
       .filter(item => item !== null);
+    
+    // เพิ่มการกรอง predictData ให้ startdate ตรงกับวันแรกของ goldThData
+    let firstActualDate = null;
+    if (validActualData.length > 0) {
+      firstActualDate = validActualData[0].x;
+    }
       
     const datasets = [];
     // Process prediction data first if we're in Gold TH category
@@ -197,7 +239,12 @@ const GoldChart = ({
             return null;
           }
         })
-        .filter(item => item !== null);
+        .filter(item => item !== null)
+        // กรองให้แสดงเฉพาะวันที่ >= วันแรกของ actualData
+        .filter(item => {
+          if (!firstActualDate) return true;
+          return item.x >= firstActualDate;
+        });
 
       if (validPredictData.length > 0) {
         predictionDataset = {
@@ -214,7 +261,8 @@ const GoldChart = ({
           parsing: {
             xAxisKey: 'x',
             yAxisKey: 'y'
-          }
+          },
+          hidden: legendVisibility['Prediction Gold Bar (Buy)'] === undefined ? false : legendVisibility['Prediction Gold Bar (Buy)']
         };
         // Add prediction dataset first
         datasets.push(predictionDataset);
@@ -238,7 +286,8 @@ const GoldChart = ({
         parsing: {
           xAxisKey: 'x',
           yAxisKey: 'y'
-        }
+        },
+        hidden: legendVisibility['Gold Bar (Buy)'] === undefined ? false : legendVisibility['Gold Bar (Buy)']
       });
       
       // Bar sell price (Gold Bar Selling Price)
@@ -281,6 +330,7 @@ const GoldChart = ({
           borderDash: [5, 5],
           fill: false,
           spanGaps: true,
+          hidden: legendVisibility['Gold Bar (Sell)'] === undefined ? true : legendVisibility['Gold Bar (Sell)'],
           parsing: {
             xAxisKey: 'x',
             yAxisKey: 'y'
@@ -318,7 +368,7 @@ const GoldChart = ({
       if (ornamentSellData.length > 0) {
         datasets.push({
           label: `Ornament Gold (Sell)`,
-          // label: `Jewelry (Sell)`,
+          hidden: legendVisibility['Ornament Gold (Sell)'] === undefined ? true : legendVisibility['Ornament Gold (Sell)'],
           data: ornamentSellData,
           borderColor: '#f59e0b',
           backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -366,7 +416,7 @@ const GoldChart = ({
       if (ornamentBuyData.length > 0) {
         datasets.push({
           label: `Ornament Gold (Buy)`,
-          // label: `Jewelry (Buy)`,
+          hidden: legendVisibility['Ornament Gold (Buy)'] === undefined ? true : legendVisibility['Ornament Gold (Buy)'],
           data: ornamentBuyData,
           borderColor: '#ec4899',
           backgroundColor: 'rgba(236, 72, 153, 0.1)',
@@ -401,7 +451,8 @@ const GoldChart = ({
         parsing: {
           xAxisKey: 'x',
           yAxisKey: 'y'
-        }
+        },
+        hidden: legendVisibility['Open Price'] === undefined ? false : legendVisibility['Open Price']
       });
       // Close price
       const closePriceData = actualData
@@ -435,7 +486,8 @@ const GoldChart = ({
           parsing: {
             xAxisKey: 'x',
             yAxisKey: 'y'
-          }
+          },
+          hidden: legendVisibility['Close Price'] === undefined ? false : legendVisibility['Close Price']
         });
       }
       // High price
@@ -457,6 +509,7 @@ const GoldChart = ({
       if (highPriceData.length > 0) {
         datasets.push({
           label: `High Price`,
+          hidden: legendVisibility['High Price'] === undefined ? true : legendVisibility['High Price'],
           data: highPriceData,
           borderColor: '#f59e0b',
           backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -492,6 +545,7 @@ const GoldChart = ({
       if (lowPriceData.length > 0) {
         datasets.push({
           label: `Low Price`,
+          hidden: legendVisibility['Low Price'] === undefined ? true : legendVisibility['Low Price'],
           data: lowPriceData,
           borderColor: '#ef4444',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -530,6 +584,7 @@ const GoldChart = ({
       if (volumeData.length > 0) {
         datasets.push({
           label: `Volume`,
+          hidden: legendVisibility['Volume'] === undefined ? true : legendVisibility['Volume'],
           data: volumeData,
           backgroundColor: 'rgba(59, 130, 246, 0.5)',
           borderColor: 'rgba(59, 130, 246, 0.8)',
@@ -550,7 +605,6 @@ const GoldChart = ({
       // For other data types, show just the main price
       datasets.push({
         label: `Close Price`,
-        // label: `${selectedCategory} Latest`,
         data: validActualData,
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -563,7 +617,8 @@ const GoldChart = ({
         parsing: {
           xAxisKey: 'x',
           yAxisKey: 'y'
-        }
+        },
+        hidden: legendVisibility['Close Price'] === undefined ? false : legendVisibility['Close Price']
       });
       // เพิ่มเส้นกราฟสำหรับข้อมูลอื่นๆ ของ USD/THB
       if (selectedCategory === DataCategories.USDTHB) {
@@ -596,7 +651,8 @@ const GoldChart = ({
             borderDash: [4, 2],
             fill: false,
             spanGaps: true,
-            parsing: { xAxisKey: 'x', yAxisKey: 'y' }
+            parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+            hidden: legendVisibility['Open Price'] === undefined ? true : legendVisibility['Open Price']
           });
         }
         // High
@@ -618,6 +674,7 @@ const GoldChart = ({
         if (highData.length > 0) {
           datasets.push({
             label: 'High Price',
+            hidden: legendVisibility['High Price'] === undefined ? true : legendVisibility['High Price'],
             data: highData,
             borderColor: '#ef4444',
             backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -650,6 +707,7 @@ const GoldChart = ({
         if (lowData.length > 0) {
           datasets.push({
             label: 'Low Price',
+            hidden: legendVisibility['Low Price'] === undefined ? true : legendVisibility['Low Price'],
             data: lowData,
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -780,6 +838,19 @@ const GoldChart = ({
               };
             });
           }
+        },
+        onClick: (e, legendItem, legend) => {
+          const ci = legend.chart;
+          const index = legendItem.datasetIndex;
+          const meta = ci.getDatasetMeta(index);
+          // toggle visibility
+          meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+          ci.update();
+          // update state & localStorage
+          const label = ci.data.datasets[index].label;
+          const newVis = { ...legendVisibility, [label]: !(meta.hidden === null ? !ci.data.datasets[index].hidden : !meta.hidden) };
+          setLegendVisibility(newVis);
+          saveLegendVisibility(newVis);
         }
       },
       tooltip: {
@@ -834,10 +905,10 @@ const GoldChart = ({
           mode: 'x',
           threshold: 10, // เพิ่มค่า threshold เพื่อป้องกันการลากโดยไม่ตั้งใจ
           onPanStart: function({chart}) {
-            chart.canvas.style.cursor = 'grab';
+            if (chart && chart.canvas) chart.canvas.style.cursor = 'grabbing';
           },
           onPanComplete: function({chart}) {
-            chart.canvas.style.cursor = 'default';
+            if (chart && chart.canvas) chart.canvas.style.cursor = 'default';
           }
         },
         zoom: {
@@ -1061,12 +1132,12 @@ const GoldChart = ({
             data={chartData} 
             options={options} 
             onMouseEnter={() => {
-              if (chartRef.current?.canvas) {
+              if (chartRef.current && chartRef.current.canvas) {
                 chartRef.current.canvas.style.cursor = 'crosshair';
               }
             }}
             onMouseLeave={() => {
-              if (chartRef.current?.canvas) {
+              if (chartRef.current && chartRef.current.canvas) {
                 chartRef.current.canvas.style.cursor = 'default';
               }
             }}
