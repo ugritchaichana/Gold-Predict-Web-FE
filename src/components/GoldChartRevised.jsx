@@ -13,6 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import 'chartjs-adapter-date-fns';
 import { format, isValid } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -20,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchGoldTH, fetchPredictionsWithParams, fetchPredictionsMonth, sortByDateAscending } from '@/services/apiService';
+import { useTheme } from 'next-themes';
 
 // Register ChartJS plugins
 ChartJS.register(
@@ -32,7 +34,8 @@ ChartJS.register(
   Legend,
   TimeScale,
   Filler,
-  zoomPlugin
+  zoomPlugin,
+  annotationPlugin
 );
 
 // Constants for data categories
@@ -60,6 +63,33 @@ const GoldChart = ({
 }) => {
   const chartRef = useRef(null);
   const [resetCount, setResetCount] = useState(0);
+  const { theme } = useTheme(); // เพิ่ม hook สำหรับธีม
+
+  // เพิ่ม state สำหรับติดตามธีม
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  // ติดตามการเปลี่ยนแปลงธีมแยกต่างหาก
+  useEffect(() => {
+    // ตั้งค่าเริ่มต้น
+    setIsDarkTheme(document.documentElement.classList.contains('dark'));
+    
+    // สร้าง MutationObserver เพื่อติดตามการเปลี่ยนแปลง class ของ documentElement
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isDark = document.documentElement.classList.contains('dark');
+          setIsDarkTheme(isDark);
+        }
+      });
+    });
+    
+    // เริ่มการสังเกตการณ์
+    observer.observe(document.documentElement, { attributes: true });
+    
+    // ทำความสะอาดเมื่อ component ถูก unmounted
+    return () => observer.disconnect();
+  }, []);
+
   // Check if we have volume data for US Gold
   const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
     goldUsData.some(item => item.volume || item.volume_weighted_average || item.number_of_transactions);
@@ -826,6 +856,45 @@ const GoldChart = ({
         limits: {
           x: {minRange: 86400000 * 2}, // อย่างน้อย 2 วัน (ในหน่วย milliseconds)
         }
+      },
+      annotation: {
+        annotations: (() => {
+          // เฉพาะ Gold TH เท่านั้น
+          if (selectedCategory === DataCategories.GOLD_TH && chartData.labels && chartData.labels.length > 0) {
+            const lastGoldThLabel = chartData.labels[chartData.labels.length - 1];
+            
+            return {
+              lastGoldThLine: {
+                type: 'line',
+                xMin: lastGoldThLabel,
+                xMax: lastGoldThLabel,
+                borderColor: isDarkTheme ? '#fff' : '#222', // ใช้ค่าจาก state แทน
+                borderWidth: 2,
+                borderDash: [6, 6],
+                label: {
+                  display: true,
+                  content: 'Current Day',
+                  color: isDarkTheme ? '#fff' : '#222', // ใช้ค่าจาก state แทน
+                  backgroundColor: isDarkTheme ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)', // ใช้ค่าจาก state แทน
+                  position: 'start',
+                  rotation: -90,
+                  font: {
+                    size: 14,
+                    weight: 'bold',
+                    family: 'Inter, Arial, sans-serif',
+                    lineHeight: 1.2,
+                  },
+                  xAdjust: 20,
+                  yAdjust: -20,
+                  padding: { top: 8, bottom: 8, left: 12, right: 12 },
+                  cornerRadius: 6,
+                },
+                z: 99,
+              },
+            };
+          }
+          return {};
+        })()
       }
     },
     scales: {

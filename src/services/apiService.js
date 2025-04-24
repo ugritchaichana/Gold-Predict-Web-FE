@@ -221,32 +221,32 @@ export const fetchPredictionsWithParams = async () => {
         if (goldAllResponse?.data?.length > 0) {
           const lastItemAll = goldAllResponse.data[goldAllResponse.data.length - 1];
           goldLastDateAll = new Date(lastItemAll.created_at || lastItemAll.date);
-          console.log('[PREDICT] วันที่สุดท้ายของ goldTH (all):', goldLastDateAll, lastItemAll.date);
+          // console.log('[PREDICT] วันที่สุดท้ายของ goldTH (all):', goldLastDateAll, lastItemAll.date);
         }
         
         if (gold7dResponse?.data?.length > 0) {
           const lastItem7d = gold7dResponse.data[gold7dResponse.data.length - 1];
           goldLastDate7d = new Date(lastItem7d.created_at || lastItem7d.date);
-          console.log('[PREDICT] วันที่สุดท้ายของ goldTH (7d):', goldLastDate7d, lastItem7d.date);
+          // console.log('[PREDICT] วันที่สุดท้ายของ goldTH (7d):', goldLastDate7d, lastItem7d.date);
         }
         
         if (gold1mResponse?.data?.length > 0) {
           const lastItem1m = gold1mResponse.data[gold1mResponse.data.length - 1];
           goldLastDate1m = new Date(lastItem1m.created_at || lastItem1m.date);
-          console.log('[PREDICT] วันที่สุดท้ายของ goldTH (1m):', goldLastDate1m, lastItem1m.date);
+          // console.log('[PREDICT] วันที่สุดท้ายของ goldTH (1m):', goldLastDate1m, lastItem1m.date);
         }
         
         if (gold1yResponse?.data?.length > 0) {
           const lastItem1y = gold1yResponse.data[gold1yResponse.data.length - 1];
           goldLastDate1y = new Date(lastItem1y.created_at || lastItem1y.date);
-          console.log('[PREDICT] วันที่สุดท้ายของ goldTH (1y):', goldLastDate1y, lastItem1y.date);
+          // console.log('[PREDICT] วันที่สุดท้ายของ goldTH (1y):', goldLastDate1y, lastItem1y.date);
         }
         
         // ช่วยแสดงข้อมูลเพื่อตรวจสอบ
-        if (goldAllResponse?.data?.length > 0) {
-          console.log('[PREDICT] ข้อมูล goldTH วันแรก (all):', goldAllResponse.data[0]);
-          console.log('[PREDICT] ข้อมูล goldTH วันสุดท้าย (all):', goldAllResponse.data[goldAllResponse.data.length - 1]);
-        }
+        // if (goldAllResponse?.data?.length > 0) {
+        //   console.log('[PREDICT] ข้อมูล goldTH วันแรก (all):', goldAllResponse.data[0]);
+        //   console.log('[PREDICT] ข้อมูล goldTH วันสุดท้าย (all):', goldAllResponse.data[goldAllResponse.data.length - 1]);
+        // }
         
         // เตรียมข้อมูล prediction ทั้งหมด
         const predictLabels = response.data.labels;

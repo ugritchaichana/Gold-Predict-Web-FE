@@ -451,7 +451,8 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Data Chart</CardTitle>
+            <CardTitle></CardTitle>
+            {/* <CardTitle>Data Chart</CardTitle> */}
             <div className="flex gap-2">
               {Object.entries(TimeFrames).map(([key, label]) => (
                 <Button
