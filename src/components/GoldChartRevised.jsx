@@ -868,14 +868,14 @@ const GoldChart = ({
                 type: 'line',
                 xMin: lastGoldThLabel,
                 xMax: lastGoldThLabel,
-                borderColor: isDarkTheme ? '#fff' : '#222', // ใช้ค่าจาก state แทน
+                borderColor: isDarkTheme ? '#fff' : '#222',
                 borderWidth: 2,
                 borderDash: [6, 6],
                 label: {
                   display: true,
-                  content: 'Current Day',
-                  color: isDarkTheme ? '#fff' : '#222', // ใช้ค่าจาก state แทน
-                  backgroundColor: isDarkTheme ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)', // ใช้ค่าจาก state แทน
+                  content: 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0D\u00A0a\u00A0y',
+                  color: isDarkTheme ? '#fff' : '#222',
+                  backgroundColor: isDarkTheme ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)',
                   position: 'start',
                   rotation: -90,
                   font: {
