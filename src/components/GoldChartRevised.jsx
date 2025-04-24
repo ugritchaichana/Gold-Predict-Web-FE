@@ -126,7 +126,6 @@ const GoldChart = ({
           };
         } catch (error) {
           const dateValue = item.created_at || item.date;
-          console.error(`Invalid date in actualData: ${dateValue}`, error);
           return null;
         }
       })
@@ -135,29 +134,7 @@ const GoldChart = ({
     const datasets = [];
     // Process prediction data first if we're in Gold TH category
     let predictionDataset = null;
-    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {        // ดูข้อมูล predictData และ goldThData
-      console.log('------- ข้อมูลวันแรก/สุดท้ายของ predictData และ goldThData -------');
-      if (predictData && predictData.length > 0) {
-        console.log('ข้อมูลแรกของ predict:', predictData[0]);
-        console.log('ข้อมูลสุดท้ายของ predict:', predictData[predictData.length - 1]);
-      } else {
-        console.log('ไม่พบข้อมูล predictData');
-      }
-      
-      if (goldThData && goldThData.length > 0) {
-        console.log('ข้อมูลแรกของ goldTH:', goldThData[0]);
-        console.log('ข้อมูลสุดท้ายของ goldTH:', goldThData[goldThData.length - 1]);
-        
-        // แสดงวันที่แรกและวันที่สุดท้ายในรูปแบบที่อ่านง่าย
-        const firstDate = new Date(goldThData[0].created_at || goldThData[0].date);
-        const lastDate = new Date(goldThData[goldThData.length - 1].created_at || goldThData[goldThData.length - 1].date);
-        console.log('วันแรกของ goldTH:', firstDate.toISOString().split('T')[0]);
-        console.log('วันสุดท้ายของ goldTH:', lastDate.toISOString().split('T')[0]);
-      } else {
-        console.log('ไม่พบข้อมูล goldThData');
-      }
-      console.log('--------------------------------------------------------------');
-      
+    if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
       const validPredictData = predictData
         .filter(item => item && item.date && item.predict && !isNaN(parseFloat(item.predict)))
         .map(item => {
@@ -187,7 +164,6 @@ const GoldChart = ({
               y: predictPrice
             };
           } catch (error) {
-            console.error(`Invalid date in predictData: ${item.date}`, error);
             return null;
           }
         })
@@ -736,13 +712,43 @@ const GoldChart = ({
       legend: {
         position: 'top',
         labels: {
-          boxWidth: 12,
+          boxWidth: 16,
           usePointStyle: true,
           pointStyle: 'circle',
           padding: 16,
           font: {
             family: 'Inter',
-            size: 12
+            size: 13
+          },
+          generateLabels: (chart) => {
+            const datasets = chart.data.datasets;
+            return datasets.map((dataset, i) => {
+              const meta = chart.getDatasetMeta(i);
+              const hidden = meta.hidden === true || chart.data.datasets[i].hidden === true;
+              return {
+                text: dataset.label,
+                fillStyle: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+                strokeStyle: dataset.borderColor,
+                fontColor: dataset.borderColor,
+                lineWidth: hidden ? 2 : 0,
+                pointStyle: 'circle',
+                borderRadius: 8,
+                hidden: hidden,
+                datasetIndex: i,
+                borderWidth: hidden ? 2 : 0,
+                borderColor: dataset.borderColor,
+                backgroundColor: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+                font: {
+                  family: 'Inter',
+                  size: 13,
+                  style: hidden ? 'normal' : 'normal',
+                  weight: hidden ? 'normal' : 'bold',
+                  lineHeight: 1.2,
+                  decoration: hidden ? 'line-through' : undefined
+                },
+                textDecoration: hidden ? 'line-through' : undefined
+              };
+            });
           }
         }
       },
@@ -769,7 +775,6 @@ const GoldChart = ({
 
               return format(new Date(date), 'dd MMMM yyyy');
             } catch (error) {
-              console.error('Error formatting tooltip date:', error);
               return 'Date error';
             }
           },
@@ -883,7 +888,6 @@ const GoldChart = ({
               }
               return formatCurrency(value, currency);
             } catch (err) {
-              console.error('Error formatting y-axis tick:', err);
               return value.toFixed(2);
             }
           }
@@ -941,21 +945,13 @@ const GoldChart = ({
     try {
       if (chartRef.current) {
         const chartInstance = chartRef.current;
-        
         if (chartInstance.chart && typeof chartInstance.chart.resetZoom === 'function') {
           chartInstance.chart.resetZoom();
-          console.log('Zoom reset successfully');
-        } else {
-          console.warn('Chart instance has no resetZoom method or chart is not available');
         }
-        
-        // อัปเดต state เพื่อกระตุ้นการเรนเดอร์ใหม่
         setResetCount(prev => prev + 1);
-      } else {
-        console.warn('Chart reference is not available');
       }
     } catch (error) {
-      console.error('Error resetting zoom:', error);
+      // Error handling
     }
   };
   

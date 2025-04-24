@@ -246,21 +246,11 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           // แปลงข้อมูล predictions จากรูปแบบ { labels: [...], data: [...] }
           // เป็นอาร์เรย์ของออบเจ็กต์ที่มีฟิลด์ date และ predict
           if (predictions && predictions.labels && predictions.data) {
-            console.log('[Dashboard] แปลงข้อมูล predictions:', {
-              labels_count: predictions.labels.length,
-              data_count: predictions.data.length
-            });
-            
             // แปลงข้อมูลให้เป็นรูปแบบที่ GoldChartRevised.jsx คาดหวัง
             predictionData = predictions.labels.map((date, index) => ({
               date,  // วันที่ในรูปแบบ "YYYY-MM-DD"
               predict: predictions.data[index]  // ราคาที่ทำนาย
             }));
-            
-            console.log('[Dashboard] ข้อมูล prediction หลังแปลง:', {
-              count: predictionData.length,
-              first: predictionData[0],
-              last: predictionData[predictionData.length - 1]            });
             
             // กรอง predictionData ให้ startdate ตรงกับ goldth date
             if (predictionData.length > 0 && goldThData.length > 0) {
