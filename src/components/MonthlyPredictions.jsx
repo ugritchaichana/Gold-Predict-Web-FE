@@ -122,27 +122,35 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                           key={index} 
                           className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
                         >
+
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100">
                             {prediction.month_predict}
                           </td>
+
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <span className="font-mono">{formatCurrency(prediction.open, 'THB')}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                            <span className="font-mono">{formatCurrency(prediction.high, 'THB')}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
-                            <span className="font-mono">{formatCurrency(prediction.low, 'THB')}</span>
-                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <span className="font-mono">{prediction.actual_open !== null ? formatCurrency(prediction.actual_open, 'THB') : '-'}</span>
                           </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span className="font-mono">{formatCurrency(prediction.high, 'THB')}</span>
+                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
                             <span className="font-mono">{prediction.actual_high !== null ? formatCurrency(prediction.actual_high, 'THB') : '-'}</span>
                           </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
+                            <span className="font-mono">{formatCurrency(prediction.low, 'THB')}</span>
+                          </td>
+
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
                             <span className="font-mono">{prediction.actual_low !== null ? formatCurrency(prediction.actual_low, 'THB') : '-'}</span>
                           </td>
+
                         </tr>
                       ))}
                     </tbody>

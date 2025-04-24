@@ -178,6 +178,8 @@ export const fetchUSDTHB = async (timeframe = 'all') => {
   }
 };
 
+
+
 export const fetchPredictionsWithParams = async () => {
   try {
     const BASE_URL = getBaseUrl();
@@ -391,6 +393,35 @@ export const fetchPredictionsMonth = async () => {
     return response.data;
   } catch (error) {
     console.error('Error fetching Prediction data:', error);
+    throw error;
+  }
+};
+
+export const fetchPredictionWeekWithSingleDate = async (date) => {
+  if (!date) {
+    throw new Error('Date parameter is required for fetchPredictionWeekWithSingleDate');
+  }
+  try {
+    const BASE_URL = getBaseUrl();
+    // Use the provided date parameter in the URL
+    const response = await axios.get(`${BASE_URL}/predicts/week/read/?display=chart&date=${date}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching Prediction data for date ${date}:`, error);
+    throw error;
+  }
+};
+
+
+export const fetchPredictionWeekDate = async () => {
+  try {
+    const BASE_URL = getBaseUrl();
+    const response = await axios.get(`${BASE_URL}/predicts/week/get_predict_date`);
+    console.log('fetchPredictionWeekDate response.data', response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Prediction week dates:', error);
     throw error;
   }
 };
