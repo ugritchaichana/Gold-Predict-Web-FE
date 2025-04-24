@@ -177,6 +177,7 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
 
     fetchMonthlyPredictions();
   }, []);
+  
 
   useEffect(() => {
     const fetchData = async () => {

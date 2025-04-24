@@ -14,11 +14,15 @@ const API_ENDPOINTS = [
     label: 'USD/THB',
     url: 'https://gold-predictions.duckdns.org/currency/update-daily-usdthb?auto=True',
   },
+  {
+    label: 'Clear Cache',
+    url: 'https://gold-predictions.duckdns.org/redis/clear/'
+  }
 ];
 
 export default function Admin() {
-  const [results, setResults] = useState([null, null, null]);
-  const [loading, setLoading] = useState([false, false, false]);
+  const [results, setResults] = useState([null, null, null, null]);
+  const [loading, setLoading] = useState([false, false, false, false]);
 
   const handleFetch = async (idx, url) => {
     setLoading(l => l.map((v, i) => (i === idx ? true : v)));

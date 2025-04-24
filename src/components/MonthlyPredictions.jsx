@@ -97,13 +97,22 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                           Month
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                          Open
+                          Predict Open
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                          High
+                          Actual Open
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                          Low
+                          Predict High
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                          Actual High
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                          Predict Low
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                          Actual Low
                         </th>
                       </tr>
                     </thead>
@@ -124,6 +133,15 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
                             <span className="font-mono">{formatCurrency(prediction.low, 'THB')}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                            <span className="font-mono">{prediction.actual_open !== null ? formatCurrency(prediction.actual_open, 'THB') : '-'}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span className="font-mono">{prediction.actual_high !== null ? formatCurrency(prediction.actual_high, 'THB') : '-'}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
+                            <span className="font-mono">{prediction.actual_low !== null ? formatCurrency(prediction.actual_low, 'THB') : '-'}</span>
                           </td>
                         </tr>
                       ))}
