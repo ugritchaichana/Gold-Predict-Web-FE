@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchGoldTH, fetchGoldUS, fetchUSDTHB, fetchPredictionsWithParams, fetchPredictionsMonth } from '@/services/apiService';
-// Renamed from GoldChart to GoldChartRevised in imports to match actual usage
 import GoldChart from '@/components/GoldChartRevised';
 import { GoldCoinIcon, BarChartIcon, InfoIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
@@ -22,11 +21,10 @@ import {
   Legend,
 } from 'chart.js';
 import MonthlyPredictions from '@/components/MonthlyPredictions';
-// GoldUsVolumeChart is imported but not used in this component (already commented out in JSX)
 import GoldUsVolumeChart from '@/components/GoldUsVolumeChart';
 import { ThreeDot } from 'react-loading-indicators';
+import SelectPrediction from '@/components/SelectPrediction';
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -50,7 +48,6 @@ const TimeFrames = {
   'all': 'All'
 };
 
-// Monthly Prediction Chart Component
 const MonthlyPredictionChart = ({ data }) => {
   if (!data || data.length === 0) {
     return (
@@ -152,7 +149,6 @@ const MonthlyPredictionChart = ({ data }) => {
 };
 
 const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
-  // Removed debug console.log
   const [timeframe, setTimeframe] = useState('1m');
   const [goldThData, setGoldThData] = useState([]);
   const [goldUsData, setGoldUsData] = useState([]);
@@ -232,7 +228,6 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
         }        
         if (predictionsResponse) {
           let predictionData = [];
-          // เลือกใช้ชุดข้อมูลตาม timeframe
           let predictions;
           if (timeframe === '7d' && predictionsResponse.predict_data_7d) {
             predictions = predictionsResponse.predict_data_7d;
@@ -243,14 +238,11 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           } else if (predictionsResponse.predict_data_all) {
             predictions = predictionsResponse.predict_data_all;
           }
-          // แปลงข้อมูล predictions จากรูปแบบ { labels: [...], data: [...] }
-          // เป็นอาร์เรย์ของออบเจ็กต์ที่มีฟิลด์ date และ predict
           if (predictions && predictions.labels && predictions.data) {
             predictionData = predictions.labels.map((date, index) => ({
-              date,  // วันที่ในรูปแบบ "YYYY-MM-DD"
-              predict: predictions.data[index]  // ราคาที่ทำนาย
+              date,
+              predict: predictions.data[index]
             }));
-            // ไม่ต้อง slice หรือกรอง startdate ที่นี่ ให้ GoldChartRevised เป็นคนจัดการ
             setPredictData(predictionData);
           } else {
             setPredictData([]);
@@ -281,7 +273,6 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
     return latestData?.price;
   };
   
-  // เพิ่มฟังก์ชันสำหรับดึงค่าที่มาจาก API ใหม่  // Functions for retrieving gold data details
   const getLatestBarSellPrice = () => {
     if (loading || selectedCategory !== DataCategories.GOLD_TH) return null;
     const latestData = goldThData[goldThData.length - 1];
@@ -331,15 +322,12 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
     
     if (!latestData) return null;
     
-    // Try created_at first, then fall back to date
     const dateValue = latestData.created_at || latestData.date;
     if (!dateValue) return null;
     
     try {
-      // Handle various date formats
       
       const date = new Date(dateValue);
-      // Check if date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date value:', dateValue);
         return null;
@@ -476,6 +464,12 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           </div>
         </CardContent>
       </Card>
+      
+      {/* Show SelectPrediction for Gold TH */}
+      {selectedCategory === DataCategories.GOLD_TH && (
+        <SelectPrediction />
+      )}
+      
       {/* Show Monthly Predictions for Gold TH */}
       {selectedCategory === DataCategories.GOLD_TH && (
         <MonthlyPredictions
@@ -484,15 +478,6 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
           setMonthlyChartTab={setMonthlyChartTab}
         />
       )}
-      
-      {/* Show Volume Data for Gold US */}
-      {/* {selectedCategory === DataCategories.GOLD_US && goldUsData.length > 0 && (
-        <GoldUsVolumeChart
-          data={goldUsData}
-          chartTab={volumeChartTab}
-          setChartTab={setVolumeChartTab}
-        />
-      )} */}
     </div>
   );
 };

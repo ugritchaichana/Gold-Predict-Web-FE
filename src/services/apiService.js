@@ -169,7 +169,7 @@ export const fetchUSDTHB = async (timeframe = 'all') => {
       }
       return transformedData;
     }
-    console.log('response.data 🌟🌟🌟',response.data);
+    // console.log('response.data 🌟🌟🌟',response.data);
     
     return response.data;
   } catch (error) {
@@ -403,8 +403,11 @@ export const fetchPredictionWeekWithSingleDate = async (date) => {
   }
   try {
     const BASE_URL = getBaseUrl();
-    // Use the provided date parameter in the URL
-    const response = await axios.get(`${BASE_URL}/predicts/week/read/?display=chart&date=${date}`);
+    // Use the provided date parameter in the URL  
+    console.log(`${BASE_URL}/predicts/week/select_predict?date=${date}&display=chart`);  
+    // const response = await axios.get(`${BASE_URL}/predicts/week/select_predict?date=${date}`);
+    const response = await axios.get(`${BASE_URL}/predicts/week/select_predict?date=${date}&display=chart`);
+    // const response = await axios.get(`${BASE_URL}/predicts/week/read/?display=chart&date=${date}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching Prediction data for date ${date}:`, error);

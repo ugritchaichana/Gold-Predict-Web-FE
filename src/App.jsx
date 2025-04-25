@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import Dashboard from "@/components/Dashboard";
 import Admin from "@/components/Admin";
+import DemoCalendar from "@/components/DemoCalendar";
 
 function App() {
   return (
@@ -25,10 +26,10 @@ function App() {
               </div>
             </header>
             
-            <main className="flex-1 container py-6">
-              <Routes>
+            <main className="flex-1 container py-6">              <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/democalendar" element={<DemoCalendar />} />
               </Routes>
             </main>
             

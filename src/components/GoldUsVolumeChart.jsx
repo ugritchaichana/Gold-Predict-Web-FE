@@ -36,7 +36,7 @@ const GoldUsVolumeChart = ({ data, chartTab, setChartTab }) => {
   // Process data for volume chart
   const chartData = (() => {
     // Debug actual data format
-    console.log("Sample data item for debugging:", data[0]);
+    // console.log("Sample data item for debugging:", data[0]);
     
     // Sort data by date - using safer parsing like in the table view
     const sortedData = [...data].sort((a, b) => {
@@ -208,7 +208,7 @@ const GoldUsVolumeChart = ({ data, chartTab, setChartTab }) => {
                       }
                       
                       // Add direct debugging output for this item
-                      console.log(`Date debug: item=${JSON.stringify(item)}, parsed timestamp=${timestamp}, display=${displayDate}`);
+                      // console.log(`Date debug: item=${JSON.stringify(item)}, parsed timestamp=${timestamp}, display=${displayDate}`);
                       
                     } catch (error) {
                       console.error("Error formatting date:", error);
