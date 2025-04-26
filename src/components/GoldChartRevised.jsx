@@ -907,7 +907,7 @@ const GoldChart = ({
         pan: {
           enabled: true,
           mode: 'x',
-          threshold: 10, // เพิ่มค่า threshold เพื่อป้องกันการลากโดยไม่ตั้งใจ
+          threshold: 10,
           onPanStart: function({chart}) {
             if (chart && chart.canvas) chart.canvas.style.cursor = 'grabbing';
           },
@@ -918,7 +918,7 @@ const GoldChart = ({
         zoom: {
           wheel: {
             enabled: true,
-            speed: 0.1, // ปรับความเร็วการซูม
+            speed: 0.1,
           },
           pinch: {
             enabled: true,
@@ -929,12 +929,15 @@ const GoldChart = ({
           sensitivity: 3,
         },
         limits: {
-          x: {minRange: 86400000 * 2}, // อย่างน้อย 2 วัน (ในหน่วย milliseconds)
+          x: {
+            minRange: 86400000 * 2,
+            min: 'original',
+            max: 'original'
+          }
         }
       },
       annotation: {
         annotations: (() => {
-          // เฉพาะ Gold TH เท่านั้น
           if (selectedCategory === DataCategories.GOLD_TH && chartData.labels && chartData.labels.length > 0) {
             const lastGoldThLabel = chartData.labels[chartData.labels.length - 1];
             
@@ -1036,17 +1039,15 @@ const GoldChart = ({
             }
           }
         },
-        // ตั้งค่า min ให้ต่ำกว่าค่าข้อมูลจริง 50% ตามที่ต้องการ
         min: calculatedMinYValue,
         beginAtZero: false
       },
-      // Y-axis for volume data with max value set dynamically
       volumeAxis: {
         type: 'linear',
         display: selectedCategory === DataCategories.GOLD_US && hasVolumeData,
         position: 'right',
         grid: {
-          drawOnChartArea: false, // only draw grid lines for the volume axis
+          drawOnChartArea: false,
         },
         ticks: {
           font: {
@@ -1066,10 +1067,9 @@ const GoldChart = ({
         min: 0,
         beginAtZero: true
       },
-      // Second Y-axis for transaction data
       y1: {
         type: 'linear',
-        display: false, // ปิดการแสดงผลชั่วคราวเนื่องจากไม่มีการใช้งาน
+        display: false,
         position: 'right',
         grid: {
           display: false,
