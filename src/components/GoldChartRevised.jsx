@@ -25,7 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchGoldTH, fetchPredictionsWithParams, fetchPredictionsMonth, sortByDateAscending } from '@/services/apiService';
 import { useTheme } from 'next-themes';
 
-// Register ChartJS plugins
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -42,27 +41,23 @@ ChartJS.register(
   annotationPlugin
 );
 
-// Constants for data categories
 const DataCategories = {
   GOLD_TH: 'Gold TH',
   GOLD_US: 'Gold US',
   USDTHB: 'USD THB'
 };
 
-// Constants for timeframes
 const TimeFrames = {
   LAST_7_DAYS: '7d',
   LAST_30_DAYS: '30d'
 };
 
-// Key for localStorage (แยกตาม category)
 const LEGEND_KEY_MAP = {
   [DataCategories.GOLD_TH]: 'goldth-legend-visibility',
   [DataCategories.GOLD_US]: 'goldus-legend-visibility',
   [DataCategories.USDTHB]: 'usdthb-legend-visibility',
 };
 
-// Main component
 const GoldChart = ({
   goldThData,
   goldUsData,
@@ -74,20 +69,15 @@ const GoldChart = ({
 }) => {
   const chartRef = useRef(null);
   const [resetCount, setResetCount] = useState(0);
-  const { theme } = useTheme(); // เพิ่ม hook สำหรับธีม
+  const { theme } = useTheme();
 
-  // เพิ่ม state สำหรับติดตามธีม
   const [isDarkTheme, setIsDarkTheme] = useState(false);
 
-  // เพิ่ม state สำหรับ legend visibility (ทุก category)
   const [legendVisibility, setLegendVisibility] = useState({});
 
-  // ติดตามการเปลี่ยนแปลงธีมแยกต่างหาก
   useEffect(() => {
-    // ตั้งค่าเริ่มต้น
     setIsDarkTheme(document.documentElement.classList.contains('dark'));
     
-    // สร้าง MutationObserver เพื่อติดตามการเปลี่ยนแปลง class ของ documentElement
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
@@ -97,14 +87,11 @@ const GoldChart = ({
       });
     });
     
-    // เริ่มการสังเกตการณ์
     observer.observe(document.documentElement, { attributes: true });
     
-    // ทำความสะอาดเมื่อ component ถูก unmounted
     return () => observer.disconnect();
   }, []);
 
-  // โหลด legend visibility จาก localStorage เมื่อ category เปลี่ยนเท่านั้น
   useEffect(() => {
     const key = LEGEND_KEY_MAP[selectedCategory];
     if (key) {
@@ -119,10 +106,8 @@ const GoldChart = ({
         setLegendVisibility({});
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory]);
 
-  // ฟังก์ชันบันทึก legend visibility ลง localStorage (ตาม category)
   const saveLegendVisibility = (vis) => {
     const key = LEGEND_KEY_MAP[selectedCategory];
     if (key) {
@@ -130,12 +115,9 @@ const GoldChart = ({
     }
   };
 
-  // Check if we have volume data for US Gold
   const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
     goldUsData.some(item => item.volume || item.volume_weighted_average || item.number_of_transactions);
-  // Reset zoom when changing timeframe or category
   useEffect(() => {
-    // Add a small delay to ensure chart is fully initialized before resetting zoom
     const timer = setTimeout(() => {
       resetZoom();
     }, 500);
@@ -143,7 +125,6 @@ const GoldChart = ({
     return () => clearTimeout(timer);
   }, [timeframe, selectedCategory]);    
   
-  // Process data for the chart based on selected category
   const chartData = (() => {
     if (loading) {
       return { labels: [], datasets: [], minYValue: 0 };
@@ -151,7 +132,7 @@ const GoldChart = ({
 
     let actualData = [];
     let currency = 'THB';
-    let minYValue = Infinity; // Track minimum Y value for later use
+    let minYValue = Infinity;
 
     switch (selectedCategory) {
       case DataCategories.GOLD_TH:
@@ -185,7 +166,6 @@ const GoldChart = ({
           const dateValue = item.created_at || item.date;
           const price = parseFloat(item.price);
           
-          // Update minimum Y value
           if (price < minYValue) {
             minYValue = price;
           }
@@ -201,14 +181,12 @@ const GoldChart = ({
       })
       .filter(item => item !== null);
     
-    // เพิ่มการกรอง predictData ให้ startdate ตรงกับวันแรกของ goldThData
     let firstActualDate = null;
     if (validActualData.length > 0) {
       firstActualDate = validActualData[0].x;
     }
       
     const datasets = [];
-    // Process prediction data first if we're in Gold TH category
     let predictionDataset = null;
     if (selectedCategory === DataCategories.GOLD_TH && predictData?.length) {
       const validPredictData = predictData
@@ -217,7 +195,6 @@ const GoldChart = ({
           try {
             let dateValue = item.date;
             
-            // Check if date is in "DD-MM-YYYY" format and convert it
             if (item.date.match(/^\d{2}-\d{2}-\d{4}$/)) {
               const dateParts = item.date.split('-');
               const day = dateParts[0];
@@ -225,16 +202,13 @@ const GoldChart = ({
               const year = dateParts[2];
               dateValue = `${year}-${month}-${day}`;
             }
-            // If date is already in "YYYY-MM-DD" format, use it as is
             
             const predictPrice = parseFloat(item.predict);
             
-            // Update minimum Y value
             if (predictPrice < minYValue) {
               minYValue = predictPrice;
             }
             
-            // ใช้รูปแบบการแปลงวันที่เดียวกับ goldTH เพื่อความสอดคล้อง
             return {
               x: new Date(dateValue).toISOString().split('T')[0],
               y: predictPrice
@@ -244,7 +218,6 @@ const GoldChart = ({
           }
         })
         .filter(item => item !== null)
-        // กรองให้แสดงเฉพาะวันที่ >= วันแรกของ actualData
         .filter(item => {
           if (!firstActualDate) return true;
           return item.x >= firstActualDate;
@@ -268,14 +241,11 @@ const GoldChart = ({
           },
           hidden: legendVisibility['Prediction Gold Bar (Buy)'] === undefined ? false : legendVisibility['Prediction Gold Bar (Buy)']
         };
-        // Add prediction dataset first
         datasets.push(predictionDataset);
       }
     }
     
     if (selectedCategory === DataCategories.GOLD_TH) {
-      // For Gold TH, we show multiple price types as separate line series
-      // Main price (Gold Price)
       datasets.push({
         label: `Gold Bar (Buy)`,
         data: validActualData,
@@ -294,7 +264,6 @@ const GoldChart = ({
         hidden: legendVisibility['Gold Bar (Buy)'] === undefined ? false : legendVisibility['Gold Bar (Buy)']
       });
       
-      // Bar sell price (Gold Bar Selling Price)
       const barSellData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -306,7 +275,6 @@ const GoldChart = ({
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.bar_sell_price);
             
-            // Update minimum Y value
             if (price < minYValue) {
               minYValue = price;
             }
@@ -342,7 +310,6 @@ const GoldChart = ({
         });
       }
       
-      // Ornament sell price (Gold Jewelry Selling Price)
       const ornamentSellData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -354,7 +321,6 @@ const GoldChart = ({
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.ornament_sell_price);
             
-            // Update minimum Y value
             if (price < minYValue) {
               minYValue = price;
             }
@@ -390,7 +356,6 @@ const GoldChart = ({
         });
       }
       
-      // Ornament buy price (Gold Jewelry Buying Price)
       const ornamentBuyData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -402,7 +367,6 @@ const GoldChart = ({
             const dateValue = item.created_at || item.date;
             const price = parseFloat(item.ornament_buy_price);
             
-            // Update minimum Y value
             if (price < minYValue) {
               minYValue = price;
             }
@@ -438,9 +402,6 @@ const GoldChart = ({
         });
       }
     } else if (selectedCategory === DataCategories.GOLD_US) {
-      // For Gold US, show multiple price types available from the new API
-      // --- แสดงกราฟเส้นก่อน ---
-      // Main price
       datasets.push({
         label: `Open Price`,
         data: validActualData,
@@ -458,7 +419,6 @@ const GoldChart = ({
         },
         hidden: legendVisibility['Open Price'] === undefined ? false : legendVisibility['Open Price']
       });
-      // Close price
       const closePriceData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -494,7 +454,6 @@ const GoldChart = ({
           hidden: legendVisibility['Close Price'] === undefined ? false : legendVisibility['Close Price']
         });
       }
-      // High price
       const highPriceData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -530,7 +489,6 @@ const GoldChart = ({
           }
         });
       }
-      // Low price
       const lowPriceData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -566,7 +524,6 @@ const GoldChart = ({
           }
         });
       }
-      // --- แล้วค่อยแสดงกราฟแท่ง (Volume) ---
       const volumeData = actualData
         .filter(item => {
           const hasValidDate = (item && (item.created_at || item.date));
@@ -598,7 +555,7 @@ const GoldChart = ({
           type: 'bar',
           order: 1,
           yAxisID: 'volumeAxis',
-          maxBarThickness: 12, // กำหนดความกว้างสูงสุดของแท่งกราฟ Volume (ค่าในหน่วย pixel)
+          maxBarThickness: 12,
           parsing: {
             xAxisKey: 'x',
             yAxisKey: 'y'
@@ -606,7 +563,6 @@ const GoldChart = ({
         });
       }
     } else {
-      // For other data types, show just the main price
       datasets.push({
         label: `Close Price`,
         data: validActualData,
@@ -624,9 +580,7 @@ const GoldChart = ({
         },
         hidden: legendVisibility['Close Price'] === undefined ? false : legendVisibility['Close Price']
       });
-      // เพิ่มเส้นกราฟสำหรับข้อมูลอื่นๆ ของ USD/THB
       if (selectedCategory === DataCategories.USDTHB) {
-        // Open
         const openData = actualData
           .filter(item => {
             const hasValidDate = (item && (item.created_at || item.date));
@@ -659,7 +613,6 @@ const GoldChart = ({
             hidden: legendVisibility['Open Price'] === undefined ? true : legendVisibility['Open Price']
           });
         }
-        // High
         const highData = actualData
           .filter(item => {
             const hasValidDate = (item && (item.created_at || item.date));
@@ -725,16 +678,13 @@ const GoldChart = ({
             parsing: { xAxisKey: 'x', yAxisKey: 'y' }
           });
         }
-        // ลบ Percent Change และ Difference dataset ไม่ต้องแสดง
       }
     }
 
-    // Ensure all datasets have spanGaps enabled for consistent display
     datasets.forEach(dataset => {
       dataset.spanGaps = true;
     });
 
-    // Calculate max volume for volumeAxis
     let maxVolume = 0;
     if (selectedCategory === DataCategories.GOLD_US) {
       const volumeArr = actualData
@@ -746,9 +696,9 @@ const GoldChart = ({
     }
     let volumeMax = undefined;
     if (["7d", "1m", "1y"].includes(timeframe)) {
-      volumeMax = Math.max(4000, Math.ceil(maxVolume * 1.1)); // 10% margin
+      volumeMax = Math.max(4000, Math.ceil(maxVolume * 1.1));
     } else if (timeframe === "all") {
-      volumeMax = Math.max(1300000, Math.ceil(maxVolume * 1.05)); // 5% margin
+      volumeMax = Math.max(1300000, Math.ceil(maxVolume * 1.05));
     }
 
     // Return chart.js compatible object
@@ -756,24 +706,44 @@ const GoldChart = ({
       labels: validActualData.map(item => item.x),
       datasets: datasets,
       currency: currency,
-      minYValue: minYValue, // Pass the minimum Y value to be used in options
-      volumeMax: volumeMax // Pass the calculated max volume
+      minYValue: minYValue,
+      volumeMax: volumeMax
     };
   })();
   
-  // Calculate adjusted minimum Y value (Original min - 50% of original min)
   const calculatedMinYValue = chartData.minYValue !== Infinity 
     ? chartData.minYValue - (chartData.minYValue * 0)
-    // ? chartData.minYValue - (chartData.minYValue * 0.05)
     : undefined;
     
-  // Chart options with zoom capability
   const options = {
     responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: 1000,
-      easing: 'easeInOutQuad'
+    maintainAspectRatio: false,    animation: {
+      duration: 800,
+      easing: 'easeOutQuart',
+      animateScale: true,
+      animateRotate: true
+    },
+    transitions: {
+      show: {
+        animations: {
+          x: {
+            from: 0
+          },
+          y: {
+            from: 0
+          }
+        }
+      },
+      hide: {
+        animations: {
+          x: {
+            to: 0
+          },
+          y: {
+            to: 0
+          }
+        }
+      }
     },
     interaction: {
       mode: 'nearest',
@@ -787,9 +757,9 @@ const GoldChart = ({
         spanGaps: true,
       },
       point: {
-        radius: 0, // Disable all points globally
-        hoverRadius: 0, // Disable hover effect
-        hitRadius: 0 // Disable hit detection
+        radius: 0,
+        hoverRadius: 0,
+        hitRadius: 0
       }
     },
     layout: {
@@ -847,10 +817,8 @@ const GoldChart = ({
           const ci = legend.chart;
           const index = legendItem.datasetIndex;
           const meta = ci.getDatasetMeta(index);
-          // toggle visibility
           meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
           ci.update();
-          // update state & localStorage
           const label = ci.data.datasets[index].label;
           const newVis = { ...legendVisibility, [label]: !(meta.hidden === null ? !ci.data.datasets[index].hidden : !meta.hidden) };
           setLegendVisibility(newVis);
@@ -1084,7 +1052,6 @@ const GoldChart = ({
     }
   };
   
-  // Functions to control zoom
   const resetZoom = () => {
     try {
       if (chartRef.current) {
@@ -1095,13 +1062,13 @@ const GoldChart = ({
         setResetCount(prev => prev + 1);
       }
     } catch (error) {
-      // Error handling
+      console.error('Error resetting zoom:', error);
     }
   };
   
   const zoomIn = () => {
     if (chartRef.current && chartRef.current.chart) {
-      chartRef.current.chart.zoom(1.2); // ซูมเข้า 20%
+      chartRef.current.chart.zoom(1.2);
     }
   };
   

@@ -75,10 +75,33 @@ const prepareChartData = (rows) => {
 
 const chartOptions = {
   responsive: true,
-  maintainAspectRatio: false,
-  animation: {
-    duration: 1000,
-    easing: 'easeInOutQuad'
+  maintainAspectRatio: false,  animation: {
+    duration: 800,
+    easing: 'easeOutQuart',
+    animateScale: true,
+    animateRotate: true
+  },
+  transitions: {
+    show: {
+      animations: {
+        x: {
+          from: 0
+        },
+        y: {
+          from: 0
+        }
+      }
+    },
+    hide: {
+      animations: {
+        x: {
+          to: 0
+        },
+        y: {
+          to: 0
+        }
+      }
+    }
   },
   scales: {
     x: {
@@ -106,8 +129,7 @@ const chartOptions = {
       },
       beginAtZero: false
     }
-  },
-  plugins: {
+  },  plugins: {
     legend: {
       position: 'top',
       labels: {
@@ -118,7 +140,50 @@ const chartOptions = {
         font: {
           family: 'Inter',
           size: 13
+        },
+        generateLabels: (chart) => {
+          const datasets = chart.data.datasets;
+          return datasets.map((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            const hidden = meta.hidden === true || chart.data.datasets[i].hidden === true;
+            return {
+              text: dataset.label,
+              fillStyle: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+              strokeStyle: dataset.borderColor,
+              fontColor: dataset.borderColor,
+              lineWidth: hidden ? 2 : 0,
+              pointStyle: 'circle',
+              borderRadius: 8,
+              hidden: hidden,
+              datasetIndex: i,
+              borderWidth: hidden ? 2 : 0,
+              borderColor: dataset.borderColor,
+              backgroundColor: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+              font: {
+                family: 'Inter',
+                size: 13,
+                style: hidden ? 'normal' : 'normal',
+                weight: hidden ? 'normal' : 'bold',
+                lineHeight: 1.2,
+                decoration: hidden ? 'line-through' : undefined
+              },
+              textDecoration: hidden ? 'line-through' : undefined
+            };
+          });
         }
+      },
+      onClick: (e, legendItem, legend) => {
+        const ci = legend.chart;
+        const index = legendItem.datasetIndex;
+        const meta = ci.getDatasetMeta(index);
+        // toggle visibility
+        meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+        ci.update();
+        // update state & localStorage
+        const label = ci.data.datasets[index].label;
+        const newVis = { ...legendVisibility, [label]: !(meta.hidden === null ? !ci.data.datasets[index].hidden : !meta.hidden) };
+        setLegendVisibility(newVis);
+        saveLegendVisibility(newVis);
       }
     },
     tooltip: {
