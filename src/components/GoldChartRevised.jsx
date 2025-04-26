@@ -717,33 +717,10 @@ const GoldChart = ({
     
   const options = {
     responsive: true,
-    maintainAspectRatio: false,    animation: {
-      duration: 800,
-      easing: 'easeOutQuart',
-      animateScale: true,
-      animateRotate: true
-    },
-    transitions: {
-      show: {
-        animations: {
-          x: {
-            from: 0
-          },
-          y: {
-            from: 0
-          }
-        }
-      },
-      hide: {
-        animations: {
-          x: {
-            to: 0
-          },
-          y: {
-            to: 0
-          }
-        }
-      }
+    maintainAspectRatio: false,
+    animation: {
+      duration: 1000,
+      easing: 'easeInOutQuad'
     },
     interaction: {
       mode: 'nearest',
@@ -850,8 +827,7 @@ const GoldChart = ({
             } catch (error) {
               return 'Date error';
             }
-          },
-          label: (context) => {
+          },          label: (context) => {
             if (!context.dataset || !context.parsed) {
               return 'No data';
             }
@@ -862,9 +838,11 @@ const GoldChart = ({
 
             let formattedValue;
             if (selectedCategory === DataCategories.USDTHB) {
-              formattedValue = value.toFixed(2);
+              formattedValue = value.toFixed(2) + " THB";
+            } else if (selectedCategory === DataCategories.GOLD_US) {
+              formattedValue = value.toLocaleString(undefined, {maximumFractionDigits:2}) + " USD";
             } else {
-              formattedValue = formatCurrency(value, currency);
+              formattedValue = value.toLocaleString(undefined, {maximumFractionDigits:2}) + " THB";
             }
 
             return `${label}: ${formattedValue}`;
@@ -994,14 +972,16 @@ const GoldChart = ({
         ticks: {
           font: {
             size: 11
-          },
-          callback: (value) => {
+          },          callback: (value) => {
             try {
               const currency = chartData.currency;
               if (selectedCategory === DataCategories.USDTHB) {
-                return value.toFixed(2);
+                return value.toFixed(2) + " THB";
+              } else if (selectedCategory === DataCategories.GOLD_US) {
+                return value.toLocaleString(undefined, {maximumFractionDigits:2}) + " USD";
+              } else {
+                return value.toLocaleString(undefined, {maximumFractionDigits:2}) + " THB";
               }
-              return formatCurrency(value, currency);
             } catch (err) {
               return value.toFixed(2);
             }

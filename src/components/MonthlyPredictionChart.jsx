@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import { formatCurrency } from '@/lib/utils';
+import { enUS } from 'date-fns/locale';
 
 const LEGEND_KEY = 'monthly-predict-legend-visibility';
 
@@ -8,7 +9,6 @@ const MonthlyPredictionChart = ({ data }) => {
   const chartRef = useRef(null);
   const [legendVisibility, setLegendVisibility] = useState({});
 
-  // Load legend visibility from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(LEGEND_KEY);
     if (saved) {
@@ -176,8 +176,7 @@ const MonthlyPredictionChart = ({ data }) => {
           setLegendVisibility(newVis);
           saveLegendVisibility(newVis);
         }
-      },
-      tooltip: {
+      },      tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: 'white',
         bodyColor: 'rgba(255, 255, 255, 0.8)',
@@ -185,26 +184,41 @@ const MonthlyPredictionChart = ({ data }) => {
         borderWidth: 1,
         padding: 10,
         cornerRadius: 6,
+        mode: 'index',
+        intersect: false,
         callbacks: {
-          label: function(context) {
+          title: function(tooltipItems) {
+            // แปลงรูปแบบเดือนจาก YYYY-MM เป็น MMMM YYYY
+            if (tooltipItems.length > 0) {
+              const month = tooltipItems[0].label;
+              if (month && month.includes('-')) {
+                const [year, monthNum] = month.split('-');
+                if (year && monthNum) {
+                  const date = new Date(year, monthNum - 1, 1);
+                  return date.toLocaleString('en-US', { month: 'long' }) + ' ' + date.getFullYear();
+                }
+              }
+            }
+            return tooltipItems[0].label;
+          },          label: function(context) {
             let label = context.dataset.label || '';
             if (label) {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += formatCurrency(context.parsed.y, 'THB');
+              // แสดงราคาพร้อมกับสกุลเงิน THB ต่อท้ายตัวเลข
+              label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
             }
             return label;
           }
         }
       }
-    },
-    scales: {
+    },    scales: {
       y: {
         beginAtZero: false,
         ticks: {
           callback: function(value) {
-            return formatCurrency(value, 'THB');
+            return value.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
           }
         },
         grid: {
@@ -212,6 +226,19 @@ const MonthlyPredictionChart = ({ data }) => {
         }
       },
       x: {
+        type: 'time',
+        time: {
+          unit: 'month',
+          displayFormats: {
+            month: 'MMM yyyy'
+          },
+          tooltipFormat: 'MMMM yyyy'
+        },
+        adapters: {
+          date: {
+            locale: enUS
+          }
+        },
         grid: {
           display: false
         }

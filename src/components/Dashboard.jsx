@@ -158,13 +158,34 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
   const [error, setError] = useState(null);  const [monthlyPredictions, setMonthlyPredictions] = useState([]);
   const [monthlyChartTab, setMonthlyChartTab] = useState('table');
   const [volumeChartTab, setVolumeChartTab] = useState('chart');
-
   useEffect(() => {
     const fetchMonthlyPredictions = async () => {
       try {
         const response = await fetchPredictionsMonth();
-        if (response.status === 'success') {
-          setMonthlyPredictions(response.months);
+        console.log('Monthly predictions data:', response);
+        // ตรวจสอบว่า response เป็น array หรือไม่
+        if (Array.isArray(response)) {
+          // สลับการเรียงลำดับข้อมูลจากเก่าไปใหม่ (เรียงตาม timestamp หรือวันที่)
+          const sortedData = [...response].sort((a, b) => {
+            // เรียงตาม timestamp หรือวันที่ (เก่าไปใหม่)
+            if (a.timestamp && b.timestamp) {
+              return a.timestamp - b.timestamp;
+            }
+            // ถ้าไม่มี timestamp ให้เรียงตามวันที่
+            return new Date(a.date) - new Date(b.date);
+          });
+          setMonthlyPredictions(sortedData);
+        } else if (response.status === 'success' && response.months) {
+          // กรณีที่ API อาจมีโครงสร้างเป็น { status: 'success', months: [...] }
+          const sortedMonths = [...response.months].sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+              return a.timestamp - b.timestamp;
+            }
+            return new Date(a.date) - new Date(b.date);
+          });
+          setMonthlyPredictions(sortedMonths);
+        } else {
+          console.warn('Unexpected response format from monthly predictions API:', response);
         }
       } catch (error) {
         console.error('Error fetching monthly predictions:', error);

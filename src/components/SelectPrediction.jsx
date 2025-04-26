@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/ui/calendar.jsx';
 import { format } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import dayjs from 'dayjs';
 import {
   Card,
@@ -12,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { fetchPredictionWeekDate, fetchPredictionWeekWithSingleDate } from '@/services/apiService';
-import { CircularProgress } from '@mui/material';
+import { ThreeDot } from 'react-loading-indicators';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -44,7 +45,11 @@ const LEGEND_KEY = 'selectprediction-legend-visibility';
 const prepareChartData = (rows, legendVisibility) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
-  const labels = rows.map(row => row.date);
+  const labels = rows.map(row => {
+    // แปลงรูปแบบวันที่เป็น ISO format เพื่อให้ chart.js จัดการได้อย่างถูกต้อง
+    const date = dayjs(row.date).format('YYYY-MM-DD');
+    return date;
+  });
   
   const datasets = [
     {
@@ -59,7 +64,8 @@ const prepareChartData = (rows, legendVisibility) => {
       hidden: legendVisibility && legendVisibility['Predicted Price'] === false,
     },
     {
-      label: 'Actual Price',      data: rows.map(row => row.actual),
+      label: 'Actual Price',
+      data: rows.map(row => row.actual),
       borderColor: '#3b82f6',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderWidth: 2,
@@ -103,9 +109,21 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
         }
       }
     }
-  },
-  scales: {
+  },  scales: {
     x: {
+      type: 'time',
+      time: {
+        unit: 'day',
+        displayFormats: {
+          day: 'dd MMM'
+        },
+        tooltipFormat: 'dd MMMM yyyy'
+      },
+      adapters: {
+        date: {
+          locale: enUS
+        }
+      },
       grid: {
         display: false
       },
@@ -114,11 +132,10 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
           size: 11
         }
       }
-    },
-    y: {
+    },    y: {
       ticks: {
         callback: function(value) {
-          return formatCurrency(value, 'THB');
+          return value.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
         },
         font: {
           size: 11
@@ -186,8 +203,7 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
         setLegendVisibility(newVis);
         saveLegendVisibility(newVis);
       }
-    },
-    tooltip: {
+    },    tooltip: {
       backgroundColor: 'rgba(0, 0, 0, 0.8)',
       titleColor: 'white',
       bodyColor: 'rgba(255, 255, 255, 0.8)',
@@ -197,13 +213,27 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
       cornerRadius: 8,
       displayColors: true,
       callbacks: {
-        label: function(context) {
+        title: function(tooltipItems) {
+          // แปลง format จาก YYYY-MM-DD เป็น DD MMMM YYYY
+          if (tooltipItems.length > 0) {
+            const dateStr = tooltipItems[0].label;
+            if (dateStr) {
+              const [year, month, day] = dateStr.split('-');
+              if (year && month && day) {
+                const date = new Date(year, month - 1, day);
+                return date.getDate() + ' ' + date.toLocaleString('en-US', { month: 'long' }) + ' ' + date.getFullYear();
+              }
+            }
+          }
+          return tooltipItems[0].label;
+        },        label: function(context) {
           let label = context.dataset.label || '';
           if (label) {
             label += ': ';
           }
           if (context.parsed.y !== null) {
-            label += formatCurrency(context.parsed.y, 'THB');
+            // แสดงราคาพร้อมกับสกุลเงิน THB ต่อท้ายตัวเลข
+            label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
           }
           return label;
         }
@@ -400,9 +430,12 @@ const SelectPrediction = () => {
       return found ? found.price : null;
     }
   }
-
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-[300px]"><CircularProgress /></div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
+        <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
+      </div>
+    );
   }
   const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
@@ -416,13 +449,19 @@ const SelectPrediction = () => {
           </div>
           <div className="w-60 ml-auto">
             <Card className="shadow-lg border border-amber-200/30 dark:border-amber-700/20 bg-gradient-to-b from-amber-50/80 to-background/95 dark:from-amber-950/10 dark:to-background/95 hover:shadow-amber-200/10 dark:hover:shadow-amber-700/5 transition-all duration-300 rounded-xl overflow-hidden">
-              <CardContent className="p-3">
+              <CardContent className="p-3 flex flex-col items-end space-y-2">
                 <Calendar 
                   value={selectedDate} 
                   onChange={handleDateSelect} 
-                  className="w-full" 
+                  className="w-full"
                   disabled={isDateDisabled}
                 />
+                <Badge 
+                  variant="outline" 
+                  className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20 ml-auto"
+                >
+                  Forecast
+                </Badge>
               </CardContent>
             </Card>
           </div>
@@ -432,21 +471,12 @@ const SelectPrediction = () => {
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-3/5 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-medium flex items-center">
-                    Prediction Chart
-                  </CardTitle>
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
-                    Forecast
-                  </Badge>
-                </div>
-              </CardHeader>
               <CardContent className="p-4">
                 {(fetchingPrediction || predictionData === null) ? (
-                  <div className="flex justify-center items-center h-[420px]">
-                    <CircularProgress size={40} style={{color: '#f59e0b'}} />
-                  </div>                ) : rows.length > 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[420px]">
+                    <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
+                  </div>
+                ) : rows.length > 0 ? (
                   <div className="h-[420px]">
                     <Line data={chartData} options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility)} />
                   </div>
@@ -470,36 +500,46 @@ const SelectPrediction = () => {
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-medium flex items-center">
+                  {/* <CardTitle className="text-base font-medium flex items-center">
                     Price Data
-                  </CardTitle>
+                  </CardTitle> */}
                 </div>
               </CardHeader>
-              <CardContent className="p-4 overflow-y-auto">
-                {(fetchingPrediction || predictionData === null) ? (
-                  <div className="flex justify-center items-center h-[420px]">
-                    <CircularProgress size={40} style={{color: '#f59e0b'}} />
+              <CardContent className="p-4 overflow-y-auto">                {(fetchingPrediction || predictionData === null) ? (
+                  <div className="flex flex-col items-center justify-center h-[420px]">
+                    <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
                   </div>
-                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (
-                  <div className="max-h-[420px] overflow-y-auto">
-                    <Table>
-                      <TableHeader className="sticky top-0 bg-card shadow-sm z-10">
-                        <TableRow className="border-b border-muted/50">
-                          <TableHead className="font-semibold text-muted-foreground">Date</TableHead>
-                          <TableHead className="font-semibold text-muted-foreground">Predicted</TableHead>
-                          <TableHead className="font-semibold text-muted-foreground">Actual (THB)</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                            Predicted
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                            Actual
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
                         {rows.map((row, idx) => (
-                          <TableRow key={idx} className="hover:bg-amber-50/10 dark:hover:bg-amber-950/20 transition-colors">
-                            <TableCell className="font-medium">{row.date}</TableCell>
-                            <TableCell className="text-emerald-600 dark:text-emerald-400 font-medium">{row.predict ? row.predict.toLocaleString(undefined, {maximumFractionDigits:2}) : '-'}</TableCell>
-                            <TableCell className="text-blue-600 dark:text-blue-400 font-medium">{row.actual ? row.actual.toLocaleString(undefined, {maximumFractionDigits:2}) : '-'}</TableCell>
-                          </TableRow>
+                          <tr 
+                            key={idx} 
+                            className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
+                          >                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
+                              {dayjs(row.date).format('DD-MM-YYYY')}
+                            </td><td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
+                              <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-blue-600 dark:text-blue-400 font-medium">
+                              <span className="font-mono">{row.actual ? `${row.actual.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
+                            </td>
+                          </tr>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground h-[420px] flex items-center justify-center">
