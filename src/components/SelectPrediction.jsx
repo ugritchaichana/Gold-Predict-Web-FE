@@ -41,7 +41,7 @@ ChartJS.register(
 
 const LEGEND_KEY = 'selectprediction-legend-visibility';
 
-const prepareChartData = (rows) => {
+const prepareChartData = (rows, legendVisibility) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
   const labels = rows.map(row => row.date);
@@ -56,14 +56,15 @@ const prepareChartData = (rows) => {
       tension: 0.2,
       pointRadius: 3,
       pointHoverRadius: 6,
+      hidden: legendVisibility && legendVisibility['Predicted Price'] === false,
     },
     {
-      label: 'Actual Price',
-      data: rows.map(row => row.actual),
+      label: 'Actual Price',      data: rows.map(row => row.actual),
       borderColor: '#3b82f6',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderWidth: 2,
       tension: 0.2,
+      hidden: legendVisibility && legendVisibility['Actual Price'] === false,
       pointRadius: 3,
       pointHoverRadius: 6,
       pointStyle: 'circle',
@@ -73,7 +74,7 @@ const prepareChartData = (rows) => {
   return { labels, datasets };
 };
 
-const chartOptions = {
+const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility) => ({
   responsive: true,
   maintainAspectRatio: false,  animation: {
     duration: 800,
@@ -148,7 +149,7 @@ const chartOptions = {
             const hidden = meta.hidden === true || chart.data.datasets[i].hidden === true;
             return {
               text: dataset.label,
-              fillStyle: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+              fillStyle: hidden ? 'transparent' : dataset.borderColor,
               strokeStyle: dataset.borderColor,
               fontColor: dataset.borderColor,
               lineWidth: hidden ? 2 : 0,
@@ -158,7 +159,7 @@ const chartOptions = {
               datasetIndex: i,
               borderWidth: hidden ? 2 : 0,
               borderColor: dataset.borderColor,
-              backgroundColor: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+              backgroundColor: hidden ? 'transparent' : dataset.borderColor,
               font: {
                 family: 'Inter',
                 size: 13,
@@ -171,17 +172,17 @@ const chartOptions = {
             };
           });
         }
-      },
-      onClick: (e, legendItem, legend) => {
+      },      onClick: (e, legendItem, legend) => {
         const ci = legend.chart;
         const index = legendItem.datasetIndex;
         const meta = ci.getDatasetMeta(index);
-        // toggle visibility
-        meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+        const currentHidden = meta.hidden === null ? ci.data.datasets[index].hidden : meta.hidden;
+
+        meta.hidden = !currentHidden;
         ci.update();
-        // update state & localStorage
+
         const label = ci.data.datasets[index].label;
-        const newVis = { ...legendVisibility, [label]: !(meta.hidden === null ? !ci.data.datasets[index].hidden : !meta.hidden) };
+        const newVis = { ...legendVisibility, [label]: !meta.hidden };
         setLegendVisibility(newVis);
         saveLegendVisibility(newVis);
       }
@@ -212,14 +213,13 @@ const chartOptions = {
   interaction: {
     mode: 'index',
     intersect: false,
-  },
-  elements: {
+  },  elements: {
     line: {
       tension: 0.2,
       spanGaps: true,
     }
-  },
-};
+  }
+});
 
 const SelectPrediction = () => {
   const [availableDates, setAvailableDates] = useState([]);
@@ -227,20 +227,17 @@ const SelectPrediction = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
   const [fetchingPrediction, setFetchingPrediction] = useState(false);
-  const [legendVisibility, setLegendVisibility] = useState({});
-
-  useEffect(() => {
+  const [legendVisibility, setLegendVisibility] = useState({});  useEffect(() => {
     try {
       const savedVisibility = localStorage.getItem(LEGEND_KEY);
       if (savedVisibility) {
-        setLegendVisibility(JSON.parse(savedVisibility));
+        const parsedVisibility = JSON.parse(savedVisibility);
+        setLegendVisibility(parsedVisibility);
       }
     } catch (error) {
       console.error('Error loading legend visibility settings:', error);
     }
-  }, []);
-
-  const saveLegendVisibility = (visibility) => {
+  }, []);  const saveLegendVisibility = (visibility) => {
     try {
       localStorage.setItem(LEGEND_KEY, JSON.stringify(visibility));
     } catch (error) {
@@ -407,11 +404,10 @@ const SelectPrediction = () => {
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-[300px]"><CircularProgress /></div>;
   }
-
   const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
     : [];
-  const chartData = prepareChartData(rows);  return (
+  const chartData = prepareChartData(rows, legendVisibility);return (
     <Card className="w-full mb-6 shadow-md bg-card/90 backdrop-blur-sm">
       <CardHeader className="pb-0">
         <div className="flex flex-row items-center justify-between">
@@ -450,12 +446,11 @@ const SelectPrediction = () => {
                 {(fetchingPrediction || predictionData === null) ? (
                   <div className="flex justify-center items-center h-[420px]">
                     <CircularProgress size={40} style={{color: '#f59e0b'}} />
-                  </div>
-                ) : rows.length > 0 ? (
+                  </div>                ) : rows.length > 0 ? (
                   <div className="h-[420px]">
-                    <Line data={chartData} options={chartOptions} />
+                    <Line data={chartData} options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility)} />
                   </div>
-                ) : (
+                ) :(
                   <div className="flex justify-center items-center h-[420px] text-muted-foreground">
                     <div className="text-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 text-muted">
