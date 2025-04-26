@@ -39,6 +39,8 @@ ChartJS.register(
   TimeScale
 );
 
+const LEGEND_KEY = 'selectprediction-legend-visibility';
+
 const prepareChartData = (rows) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
@@ -48,7 +50,7 @@ const prepareChartData = (rows) => {
     {
       label: 'Predicted Price',
       data: rows.map(row => row.predict),
-      borderColor: 'rgb(34, 197, 94)', // Green color matching GoldChartRevised
+      borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(34, 197, 94, 0.1)',
       borderWidth: 2.5,
       tension: 0.2,
@@ -58,7 +60,7 @@ const prepareChartData = (rows) => {
     {
       label: 'Actual Price',
       data: rows.map(row => row.actual),
-      borderColor: '#3b82f6', // Blue color matching GoldChartRevised
+      borderColor: '#3b82f6',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderWidth: 2,
       tension: 0.2,
@@ -160,6 +162,26 @@ const SelectPrediction = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
   const [fetchingPrediction, setFetchingPrediction] = useState(false);
+  const [legendVisibility, setLegendVisibility] = useState({});
+
+  useEffect(() => {
+    try {
+      const savedVisibility = localStorage.getItem(LEGEND_KEY);
+      if (savedVisibility) {
+        setLegendVisibility(JSON.parse(savedVisibility));
+      }
+    } catch (error) {
+      console.error('Error loading legend visibility settings:', error);
+    }
+  }, []);
+
+  const saveLegendVisibility = (visibility) => {
+    try {
+      localStorage.setItem(LEGEND_KEY, JSON.stringify(visibility));
+    } catch (error) {
+      console.error('Error saving legend visibility settings:', error);
+    }
+  };
 
   useEffect(() => {
     const loadAvailableDates = async () => {
@@ -187,29 +209,16 @@ const SelectPrediction = () => {
   }, []);
 
   useEffect(() => {
-    console.log('[SelectPrediction] useEffect selectedDate', selectedDate);
     const fetchPredictionData = async () => {
       if (selectedDate) {
         setFetchingPrediction(true);
         setPredictionData(null);
         const formattedDate = selectedDate.format('DD-MM-YYYY');
         try {
-          console.log('[SelectPrediction] Fetching prediction data for date:', formattedDate);
           const data = await fetchPredictionWeekWithSingleDate(formattedDate);
-          console.log('[SelectPrediction] Prediction data structure:', 
-            data && data[0] ? {
-              hasPredict: !!data[0].predict_data,
-              predictLength: data[0].predict_data?.length,
-              samplePredict: data[0].predict_data?.[0],
-              hasActual: !!data[0].actual_data,
-              actualLength: data[0].actual_data?.length,
-            } : 'No data'
-          );
           setPredictionData(data);
-          console.log('[SelectPrediction] Prediction data:', data);
         } catch (error) {
           setPredictionData(null);
-          console.error('[SelectPrediction] Error fetching prediction data:', error);
         } finally {
           setFetchingPrediction(false);
         }
@@ -232,18 +241,15 @@ const SelectPrediction = () => {
   };
 
   const handleDateSelect = (date) => {
-    console.log('[SelectPrediction] handleDateSelect', { date, selectedDate });
     if (!date) return;
     setFetchingPrediction(true);
     setPredictionData(null);
     if (selectedDate && dayjs(date).isSame(selectedDate, 'day')) {
       setSelectedDate(null);
       setTimeout(() => {
-        console.log('[SelectPrediction] setSelectedDate (force)', date);
         setSelectedDate(date);
       }, 0);
     } else {
-      console.log('[SelectPrediction] setSelectedDate', date);
       setSelectedDate(date);
     }
   };
@@ -254,47 +260,37 @@ const SelectPrediction = () => {
       setPredictionData(null);
       const formattedDate = selectedDate.format('DD-MM-YYYY');
       try {
-        console.log('[SelectPrediction] [Refresh] Fetching prediction data for date:', formattedDate);
         const data = await fetchPredictionWeekWithSingleDate(formattedDate);
         setPredictionData(data);
-        console.log('[SelectPrediction] [Refresh] Prediction data:', data);
       } catch (error) {
         setPredictionData(null);
-        console.error('[SelectPrediction] [Refresh] Error fetching prediction data:', error);
       } finally {
         setFetchingPrediction(false);
       }
     }
   };
   function getPredictionRows(predictionData) {
-    console.log('[Table] getPredictionRows input:', predictionData);
     
     if (!predictionData || !Array.isArray(predictionData) || !predictionData[0]) {
-      console.log('[Table] No prediction data found');
       return [];
     }
     
     const predictDataArray = predictionData[0].predict_data;
     if (!Array.isArray(predictDataArray) || predictDataArray.length === 0) {
-      console.log('[Table] No predict_data array found');
       return [];
     }
     
     const predict = predictDataArray[0];
-    console.log('[Table] Using predict data:', predict);
     
     const actualArr = predictionData[0].actual_data || [];
-    console.log('[Table] Actual data:', actualArr);
     
     if (!predict) {
-      console.log('[Table] No valid prediction object found');
       return [];
     }
     
     const rows = [];
     
     const today = dayjs().format('YYYY-MM-DD');
-    console.log('[Table] Current date:', today);
     
     for (let i = 1; i <= 7; i++) {
       const dateKey = `date_${i}`;
@@ -304,7 +300,6 @@ const SelectPrediction = () => {
         const predictDate = predict[dateKey];
         
         if (predictDate === today) {
-          console.log('[Table] Skipping current day:', today);
           continue;
         }
         
@@ -316,7 +311,6 @@ const SelectPrediction = () => {
       }
     }
     
-    console.log('[Table] Generated future-only rows:', rows);
     return rows;
   }
   function findActualPrice(dateStr, actualArr) {
@@ -359,7 +353,7 @@ const SelectPrediction = () => {
           <div className="flex items-center space-x-2">
             <CardTitle className="text-2xl font-bold">Select Prediction By Date</CardTitle>
           </div>
-          <div className="w-60">
+          <div className="w-60 ml-auto">
             <Card className="shadow-lg border border-amber-200/30 dark:border-amber-700/20 bg-gradient-to-b from-amber-50/80 to-background/95 dark:from-amber-950/10 dark:to-background/95 hover:shadow-amber-200/10 dark:hover:shadow-amber-700/5 transition-all duration-300 rounded-xl overflow-hidden">
               <CardContent className="p-3">
                 <Calendar 
@@ -367,27 +361,6 @@ const SelectPrediction = () => {
                   onChange={handleDateSelect} 
                   className="w-full" 
                   disabled={isDateDisabled}
-                  classNames={{
-                    container: "space-y-2",
-                    caption: "flex justify-center pt-1 relative items-center",
-                    caption_label: "text-sm font-medium",
-                    nav: "space-x-1 flex items-center",
-                    nav_button: "h-7 w-7 bg-transparent hover:bg-muted rounded-full transition-colors flex items-center justify-center",
-                    nav_button_previous: "absolute left-1",
-                    nav_button_next: "absolute right-1",
-                    table: "w-full border-collapse space-y-1",
-                    head_row: "flex mb-1",
-                    head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-1",
-                    cell: "text-center text-sm relative p-0 rounded-md focus-within:relative focus-within:z-20",
-                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent/50 rounded-full transition-colors",
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary hover:text-primary-foreground focus:text-primary-foreground",
-                    day_today: "bg-accent text-accent-foreground",
-                    day_disabled: "text-muted-foreground/60 opacity-40",
-                    day_outside: "text-muted-foreground/60 opacity-40",
-                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                    day_hidden: "invisible",
-                  }}
                 />
               </CardContent>
             </Card>
@@ -453,7 +426,7 @@ const SelectPrediction = () => {
                       <TableHeader className="sticky top-0 bg-card shadow-sm z-10">
                         <TableRow className="border-b border-muted/50">
                           <TableHead className="font-semibold text-muted-foreground">Date</TableHead>
-                          <TableHead className="font-semibold text-muted-foreground">Predicted (THB)</TableHead>
+                          <TableHead className="font-semibold text-muted-foreground">Predicted</TableHead>
                           <TableHead className="font-semibold text-muted-foreground">Actual (THB)</TableHead>
                         </TableRow>
                       </TableHeader>

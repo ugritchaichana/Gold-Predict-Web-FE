@@ -404,7 +404,7 @@ export const fetchPredictionWeekWithSingleDate = async (date) => {
   try {
     const BASE_URL = getBaseUrl();
     // Use the provided date parameter in the URL  
-    console.log(`${BASE_URL}/predicts/week/select_predict?date=${date}&display=chart`);  
+    // console.log(`${BASE_URL}/predicts/week/select_predict?date=${date}&display=chart`);  
     // const response = await axios.get(`${BASE_URL}/predicts/week/select_predict?date=${date}`);
     const response = await axios.get(`${BASE_URL}/predicts/week/select_predict?date=${date}&display=chart`);
     // const response = await axios.get(`${BASE_URL}/predicts/week/read/?display=chart&date=${date}`);
@@ -420,7 +420,7 @@ export const fetchPredictionWeekDate = async () => {
   try {
     const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/predicts/week/get_predict_date`);
-    console.log('fetchPredictionWeekDate response.data', response.data);
+    // console.log('fetchPredictionWeekDate response.data', response.data);
     
     return response.data;
   } catch (error) {
