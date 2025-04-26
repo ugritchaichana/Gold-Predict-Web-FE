@@ -114,9 +114,8 @@ const GoldChart = ({
       localStorage.setItem(key, JSON.stringify(vis));
     }
   };
-
-  const hasVolumeData = selectedCategory === DataCategories.GOLD_US && 
-    goldUsData.some(item => item.volume || item.volume_weighted_average || item.number_of_transactions);
+  // ลบการตรวจสอบข้อมูล Volume
+  const hasVolumeData = false;
   useEffect(() => {
     const timer = setTimeout(() => {
       resetZoom();
@@ -523,45 +522,7 @@ const GoldChart = ({
             yAxisKey: 'y'
           }
         });
-      }
-      const volumeData = actualData
-        .filter(item => {
-          const hasValidDate = (item && (item.created_at || item.date));
-          const hasValidVolume = (item && item.volume && !isNaN(parseFloat(item.volume)));
-          return hasValidDate && hasValidVolume;
-        })
-        .map(item => {
-          try {
-            const dateValue = item.created_at || item.date;
-            return {
-              x: new Date(dateValue).toISOString().split('T')[0],
-              y: parseFloat(item.volume)
-            };
-          } catch (error) {
-            return null;
-          }
-        })
-        .filter(item => item !== null);
-      if (volumeData.length > 0) {
-        datasets.push({
-          label: `Volume`,
-          hidden: legendVisibility['Volume'] === undefined ? true : legendVisibility['Volume'],
-          data: volumeData,
-          backgroundColor: 'rgba(59, 130, 246, 0.5)',
-          borderColor: 'rgba(59, 130, 246, 0.8)',
-          borderWidth: 1,
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          type: 'bar',
-          order: 1,
-          yAxisID: 'volumeAxis',
-          maxBarThickness: 12,
-          parsing: {
-            xAxisKey: 'x',
-            yAxisKey: 'y'
-          }
-        });
-      }
+      }      // ลบการแสดงข้อมูล Volume
     } else {
       datasets.push({
         label: `Close Price`,
@@ -683,23 +644,8 @@ const GoldChart = ({
 
     datasets.forEach(dataset => {
       dataset.spanGaps = true;
-    });
-
-    let maxVolume = 0;
-    if (selectedCategory === DataCategories.GOLD_US) {
-      const volumeArr = actualData
-        .filter(item => item && item.volume && !isNaN(parseFloat(item.volume)))
-        .map(item => parseFloat(item.volume));
-      if (volumeArr.length > 0) {
-        maxVolume = Math.max(...volumeArr);
-      }
-    }
+    });    // ลบการคำนวณที่เกี่ยวกับ Volume
     let volumeMax = undefined;
-    if (["7d", "1m", "1y"].includes(timeframe)) {
-      volumeMax = Math.max(4000, Math.ceil(maxVolume * 1.1));
-    } else if (timeframe === "all") {
-      volumeMax = Math.max(1300000, Math.ceil(maxVolume * 1.05));
-    }
 
     // Return chart.js compatible object
     return {
@@ -989,31 +935,16 @@ const GoldChart = ({
         },
         min: calculatedMinYValue,
         beginAtZero: false
-      },
-      volumeAxis: {
+      },      volumeAxis: {
         type: 'linear',
-        display: selectedCategory === DataCategories.GOLD_US && hasVolumeData,
+        display: false, // ปิดการแสดง Volume Axis
         position: 'right',
         grid: {
           drawOnChartArea: false,
         },
         ticks: {
-          font: {
-            size: 10
-          },
-          color: 'rgba(59, 130, 246, 0.8)',
-          callback: (value) => {
-            if (value >= 1000000) {
-              return (value / 1000000).toFixed(1) + 'M';
-            } else if (value >= 1000) {
-              return (value / 1000).toFixed(1) + 'K';
-            }
-            return value;
-          }
-        },
-        max: chartData.volumeMax,
-        min: 0,
-        beginAtZero: true
+          display: false
+        }
       },
       y1: {
         type: 'linear',

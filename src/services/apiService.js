@@ -324,7 +324,7 @@ export const fetchPredictionsMonth = async () => {
   try {
     const BASE_URL = getBaseUrl();
     const response = await axios.get(`${BASE_URL}/predicts/month/read_all`);
-    console.log(`${BASE_URL}/predicts/month/read_all`);
+    // console.log(`${BASE_URL}/predicts/month/read_all`);
     return response.data;
   } catch (error) {
     console.error('Error fetching Prediction data:', error);

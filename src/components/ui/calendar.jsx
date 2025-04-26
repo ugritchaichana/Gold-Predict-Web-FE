@@ -181,7 +181,7 @@ function Calendar({ value, onChange }) {
               }
             }}
             sx={{
-              width: '100%',
+              width: '60%',
               '& .MuiInputBase-root': {
                 backgroundColor: customMuiTheme.palette.background.paper,
                 color: customMuiTheme.palette.text.primary,

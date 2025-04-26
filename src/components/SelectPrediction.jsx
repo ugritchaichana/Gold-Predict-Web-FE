@@ -439,38 +439,32 @@ const SelectPrediction = () => {
   }
   const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
-    : [];
-  const chartData = prepareChartData(rows, legendVisibility);return (
-    <Card className="w-full mb-6 shadow-md bg-card/90 backdrop-blur-sm">
-      <CardHeader className="pb-0">
-        <div className="flex flex-row items-center justify-between">
+    : [];  const chartData = prepareChartData(rows, legendVisibility);return (
+    <Card className="w-full mb-6 overflow-hidden border-amber-200/20 dark:border-amber-800/20">
+      <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">        <div className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-2">
-            <CardTitle className="text-2xl font-bold">Select Prediction By Date</CardTitle>
+            <CardTitle>Select Prediction By Date</CardTitle>
           </div>
-          <div className="w-60 ml-auto">
-            <Card className="shadow-lg border border-amber-200/30 dark:border-amber-700/20 bg-gradient-to-b from-amber-50/80 to-background/95 dark:from-amber-950/10 dark:to-background/95 hover:shadow-amber-200/10 dark:hover:shadow-amber-700/5 transition-all duration-300 rounded-xl overflow-hidden">
-              <CardContent className="p-3 flex flex-col items-end space-y-2">
-                <Calendar 
-                  value={selectedDate} 
-                  onChange={handleDateSelect} 
-                  className="w-full"
-                  disabled={isDateDisabled}
-                />
-                <Badge 
-                  variant="outline" 
-                  className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20 ml-auto"
-                >
-                  Forecast
-                </Badge>
-              </CardContent>
-            </Card>
+          <div className="flex items-center">
+            <Badge 
+              variant="outline" 
+              className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20"
+            >
+              Forecast
+            </Badge>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-6 pb-4">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-3/5 flex-none">
+        <div className="flex flex-col md:flex-row gap-6">          <div className="md:w-3/5 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-base font-medium flex items-center">
+                    Prediction Chart
+                  </CardTitle>
+                </div>
+              </CardHeader>
               <CardContent className="p-4">
                 {(fetchingPrediction || predictionData === null) ? (
                   <div className="flex flex-col items-center justify-center h-[420px]">
@@ -495,21 +489,26 @@ const SelectPrediction = () => {
               </CardContent>
             </Card>
           </div>
-
           <div className="md:w-2/5 flex-none">
-            <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
-              <CardHeader className="pb-2">
+            <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">              <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
-                  {/* <CardTitle className="text-base font-medium flex items-center">
+                  <CardTitle className="text-base font-medium">
                     Price Data
-                  </CardTitle> */}
+                  </CardTitle>
+                  <div className="flex justify-end">
+                    <Calendar 
+                      value={selectedDate} 
+                      onChange={handleDateSelect} 
+                      disabled={isDateDisabled}
+                    />
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-4 overflow-y-auto">                {(fetchingPrediction || predictionData === null) ? (
+              <CardContent className="p-4 overflow-y-auto">{(fetchingPrediction || predictionData === null) ? (
                   <div className="flex flex-col items-center justify-center h-[420px]">
                     <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
                   </div>
-                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
+                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (<div className="max-h-[420px] overflow-y-auto overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
@@ -528,7 +527,8 @@ const SelectPrediction = () => {
                           <tr 
                             key={idx} 
                             className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
-                          >                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                               {dayjs(row.date).format('DD-MM-YYYY')}
                             </td><td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
                               <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>

@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import MonthlyPredictionChart from '@/components/MonthlyPredictionChart';
 import { formatCurrency } from '@/lib/utils';
+import { ThreeDot } from 'react-loading-indicators';
 
-const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyChartTab }) => {
+const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyChartTab, loading = false }) => {
   // สร้างข้อมูลสำหรับแสดงในตาราง (เรียงจากใหม่ไปเก่า)
   const [tableData, setTableData] = useState([]);
-  
+  const [isLoading, setIsLoading] = useState(loading);
   // อัพเดทข้อมูลสำหรับตารางเมื่อ monthlyPredictions เปลี่ยนแปลง
   useEffect(() => {
     if (monthlyPredictions && monthlyPredictions.length > 0) {
@@ -46,11 +47,23 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
       setCurrentPage(currentPage - 1);
     }
   };
-
   // Reset to first page when tab changes
   useEffect(() => {
     setCurrentPage(1);
   }, [monthlyChartTab]);
+  
+  // ตรวจสอบสถานะการโหลด
+  useEffect(() => {
+    setIsLoading(loading);
+  }, [loading]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
+        <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
+      </div>
+    );
+  }
 
   return (
     // <Card className="overflow-hidden">

@@ -162,21 +162,16 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
     const fetchMonthlyPredictions = async () => {
       try {
         const response = await fetchPredictionsMonth();
-        console.log('Monthly predictions data:', response);
-        // ตรวจสอบว่า response เป็น array หรือไม่
+        // console.log('Monthly predictions data:', response);
         if (Array.isArray(response)) {
-          // สลับการเรียงลำดับข้อมูลจากเก่าไปใหม่ (เรียงตาม timestamp หรือวันที่)
           const sortedData = [...response].sort((a, b) => {
-            // เรียงตาม timestamp หรือวันที่ (เก่าไปใหม่)
             if (a.timestamp && b.timestamp) {
               return a.timestamp - b.timestamp;
             }
-            // ถ้าไม่มี timestamp ให้เรียงตามวันที่
             return new Date(a.date) - new Date(b.date);
           });
           setMonthlyPredictions(sortedData);
         } else if (response.status === 'success' && response.months) {
-          // กรณีที่ API อาจมีโครงสร้างเป็น { status: 'success', months: [...] }
           const sortedMonths = [...response.months].sort((a, b) => {
             if (a.timestamp && b.timestamp) {
               return a.timestamp - b.timestamp;
@@ -370,12 +365,13 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
         <Card className="flex-1">
           <CardHeader className="pb-2">
             <CardDescription>Latest Price</CardDescription>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl md:text-3xl">
+            <div className="flex items-center justify-between">              <CardTitle className="text-2xl md:text-3xl">
                 {loading ? (
                   <Skeleton className="h-8 w-36" />
-                ) : getLatestPrice() !== null ? (
-                  formatCurrency(getLatestPrice(), 'THB')
+                ) : getLatestPrice() !== null && getLatestPrice() !== undefined ? (
+                  selectedCategory === DataCategories.GOLD_US ? 
+                  `${getLatestPrice().toLocaleString(undefined, {maximumFractionDigits:2})} USD` :
+                  `${getLatestPrice().toLocaleString(undefined, {maximumFractionDigits:2})} THB`
                 ) : (
                   'No data'
                 )}
@@ -437,7 +433,6 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle></CardTitle>
-            {/* <CardTitle>Data Chart</CardTitle> */}
             <div className="flex gap-2">
               {Object.entries(TimeFrames).map(([key, label]) => (
                 <Button
