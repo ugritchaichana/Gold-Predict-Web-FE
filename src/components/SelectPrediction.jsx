@@ -610,7 +610,9 @@ const SelectPrediction = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
-                        {rows.map((row, idx) => (
+                        {[...rows].sort((a, b) => {
+                          return new Date(b.date) - new Date(a.date);
+                        }).map((row, idx) => (
                           <tr 
                             key={idx} 
                             className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
