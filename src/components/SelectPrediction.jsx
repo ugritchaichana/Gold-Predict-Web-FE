@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Calendar from '@/components/ui/calendar.jsx';
 import { format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -49,7 +49,6 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
   const labels = rows.map(row => {
-    // แปลงรูปแบบวันที่เป็น ISO format เพื่อให้ chart.js จัดการได้อย่างถูกต้อง
     const date = dayjs(row.date).format('YYYY-MM-DD');
     return date;
   });
@@ -80,7 +79,6 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
     }
   ];
   
-  // หาวันสุดท้ายที่มีข้อมูล Actual Price
   let lastActualDate = null;
   for (let i = rows.length - 1; i >= 0; i--) {
     if (rows[i].actual !== null && rows[i].actual !== undefined) {
@@ -89,17 +87,16 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
     }
   }
 
-  // ตรวจสอบว่าวันสุดท้ายที่มีข้อมูล Actual Price ตรงกับวันล่าสุดจาก API หรือไม่
   const shouldShowAnnotation = lastActualDate && latestDate && lastActualDate === latestDate;
 
   return { 
     labels, 
     datasets,
-    lastActualDate: shouldShowAnnotation ? lastActualDate : null  // ส่ง null ถ้าไม่ควรแสดง annotation
+    lastActualDate: shouldShowAnnotation ? lastActualDate : null
   };
 };
 
-const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData) => ({
+const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate) => ({
   responsive: true,
   maintainAspectRatio: false,  animation: {
     duration: 800,
@@ -169,7 +166,6 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
   },  plugins: {
     annotation: {
       annotations: (() => {
-        // ถ้ามีวันสุดท้ายที่มีข้อมูล Actual Price จะแสดงเส้น annotation
         if (chartData && chartData.lastActualDate) {
           return {
             lastActualLine: {
@@ -259,7 +255,8 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
         setLegendVisibility(newVis);
         saveLegendVisibility(newVis);
       }
-    },    tooltip: {
+    },
+    tooltip: {
       backgroundColor: 'rgba(0, 0, 0, 0.8)',
       titleColor: 'white',
       bodyColor: 'rgba(255, 255, 255, 0.8)',
@@ -268,9 +265,52 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
       padding: 12,
       cornerRadius: 8,
       displayColors: true,
+      events: ['mousemove', 'mouseenter', 'mouseout', 'click', 'touchstart', 'touchmove'],
+      mode: 'index',
+      intersect: false,      external: function(context) {
+        if (hoveredDate) {
+          const chart = context.chart;
+          const datasets = chart.data.datasets;
+          
+          const index = chart.data.labels.findIndex(label => {
+            return label === hoveredDate;
+          });
+          
+          if (index !== -1) {
+            const activeElements = [];
+            
+            datasets.forEach((dataset, datasetIndex) => {
+              if (!dataset.hidden) {
+                activeElements.push({
+                  datasetIndex,
+                  index
+                });
+              }
+            });
+            
+            let shouldUpdate = true;
+            if (chart._active && chart._active.length === activeElements.length) {
+              shouldUpdate = false;
+              for (let i = 0; i < chart._active.length; i++) {
+                const activeElement = chart._active[i];
+                if (activeElement.datasetIndex !== activeElements[i].datasetIndex || 
+                    activeElement.index !== activeElements[i].index) {
+                  shouldUpdate = true;
+                  break;
+                }
+              }
+            }
+            
+            if (shouldUpdate) {
+              chart.setActiveElements(activeElements);
+              chart.tooltip.setActiveElements(activeElements, {});
+              chart.update('none');
+            }
+          }
+        }
+      },
       callbacks: {
         title: function(tooltipItems) {
-          // แปลง format จาก YYYY-MM-DD เป็น DD MMMM YYYY
           if (tooltipItems.length > 0) {
             const dateStr = tooltipItems[0].label;
             if (dateStr) {
@@ -282,24 +322,49 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
             }
           }
           return tooltipItems[0].label;
-        },        label: function(context) {
+        },
+        label: function(context) {
           let label = context.dataset.label || '';
           if (label) {
             label += ': ';
           }
-          if (context.parsed.y !== null) {
-            // แสดงราคาพร้อมกับสกุลเงิน THB ต่อท้ายตัวเลข
-            label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+          if (context.parsed && context.parsed.y !== null && context.parsed.y !== undefined) {
+            try {
+              label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+            } catch (error) {
+              label += context.parsed.y + ' THB';
+            }
           }
           return label;
         }
       }
     }
-  },
-  interaction: {
+  },  interaction: {
     mode: 'index',
     intersect: false,
-  },  elements: {
+  },  onHover: (event, chartElements, chart) => {
+    requestAnimationFrame(() => {
+      try {
+        if (chartElements && chartElements.length > 0) {
+          const element = chartElements[0];
+          const index = element.index;
+          
+          const chartInstance = chart || (chartRef.current ? chartRef.current : null);
+          
+          if (chartInstance && chartInstance.data && chartInstance.data.labels && index !== undefined) {
+            const date = chartInstance.data.labels[index];
+            if (date !== hoveredDate) {
+              updateHoveredDate(date);
+            }
+          }
+        } else if (hoveredDate !== null) {
+          updateHoveredDate(null);
+        }
+      } catch (error) {
+        console.error("Error in chart hover handler:", error);
+      }
+    });
+  },elements: {
     line: {
       tension: 0.2,
       spanGaps: true,
@@ -309,12 +374,57 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
 
 const SelectPrediction = () => {
   const [availableDates, setAvailableDates] = useState([]);
-  const [latestDate, setLatestDate] = useState(null); // เก็บวันที่ล่าสุดจาก API
+  const [latestDate, setLatestDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [predictionData, setPredictionData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);  const [predictionData, setPredictionData] = useState(null);
   const [fetchingPrediction, setFetchingPrediction] = useState(false);
-  const [legendVisibility, setLegendVisibility] = useState({});useEffect(() => {
+  const [legendVisibility, setLegendVisibility] = useState({});
+  const [hoveredDate, setHoveredDate] = useState(null);
+  const chartRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
+  const tooltipTimeoutRef = useRef(null);
+  
+  const updateHoveredDate = useCallback((date) => {
+    setHoveredDate(date);
+    
+    if (date && chartRef.current) {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+      
+      tooltipTimeoutRef.current = setTimeout(() => {
+        const chartObj = chartRef.current;
+        if (chartObj && chartObj.setActiveElements) {
+          try {
+            const chartInstance = chartObj;
+            const index = chartInstance.data.labels.findIndex(label => label === date);
+            
+            if (index !== -1) {
+              const activeElements = [];
+              chartInstance.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chartInstance.getDatasetMeta(datasetIndex);
+                if (!meta.hidden && !dataset.hidden) {
+                  activeElements.push({
+                    datasetIndex,
+                    index
+                  });
+                }
+              });
+              
+              if (activeElements.length > 0) {
+                chartObj.setActiveElements(activeElements);
+                chartObj.update('none');
+              }
+            }
+          } catch (e) {
+            console.error('Error updating chart tooltip:', e);
+          }
+        }
+      }, 20);
+    }
+  }, [chartRef, tooltipTimeoutRef, setHoveredDate]);
+  
+  useEffect(() => {
     try {
       const savedVisibility = localStorage.getItem(LEGEND_KEY);
       if (savedVisibility) {
@@ -324,35 +434,34 @@ const SelectPrediction = () => {
     } catch (error) {
       console.error('Error loading legend visibility settings:', error);
     }
-  }, []);  const saveLegendVisibility = (visibility) => {
-    try {
+  }, []);
+  
+  const saveLegendVisibility = (visibility) => {    try {
       localStorage.setItem(LEGEND_KEY, JSON.stringify(visibility));
     } catch (error) {
       console.error('Error saving legend visibility settings:', error);
     }
-  };  useEffect(() => {
+  };
+  
+  useEffect(() => {
     const loadAvailableDates = async () => {
       try {
         setIsLoading(true);
         const data = await fetchPredictionWeekDate();
         setAvailableDates(data);
         
-        // หาวันที่ล่าสุดจากข้อมูลที่ได้จาก API
         if (data && data.length > 0) {
           const sortedDates = [...data].sort((a, b) => {
             return new Date(b.date) - new Date(a.date);
           });
-          setLatestDate(sortedDates[0].date); // วันที่ล่าสุดจาก API
+          setLatestDate(sortedDates[0].date);
         }
         
-        // ตรวจสอบว่ามีวันที่ที่เคยเลือกไว้ใน localStorage หรือไม่
         const savedDateStr = localStorage.getItem(SELECTED_DATE_KEY);
         
         if (savedDateStr && data.some(item => item.date === savedDateStr)) {
-          // ถ้ามีวันที่ที่เคยเลือกไว้และวันนั้นยังอยู่ในรายการที่เลือกได้ ให้ใช้วันนั้น
           setSelectedDate(dayjs(savedDateStr));
         } else {
-          // ถ้าไม่มีวันที่ที่เคยเลือกไว้ หรือวันนั้นไม่อยู่ในรายการแล้ว ให้ใช้ค่าเริ่มต้นเป็น last week
           const today = dayjs();
           const lastWeek = today.subtract(6, 'day');
           const lastWeekStr = lastWeek.format('YYYY-MM-DD');
@@ -513,20 +622,39 @@ const SelectPrediction = () => {
     else {
       const d = dayjs(dateStr).format('DD-MM-YY');
       const found = actualArr.find(a => a.date === d);
-      return found ? found.price : null;
-    }
+      return found ? found.price : null;    }
   }
+  useEffect(() => {
+    if (chartRef.current && hoveredDate) {
+      tooltipTimeoutRef.current = setTimeout(() => {
+        updateHoveredDate(hoveredDate);
+      }, 100);
+    }
+    
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, [chartRef, hoveredDate, tooltipTimeoutRef, updateHoveredDate]);
+  
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
         <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
       </div>
     );
-  }  const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
+  }
+  
+  const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
-    : [];  const chartData = prepareChartData(rows, legendVisibility, latestDate);return (
+    : [];
+  
+  const chartData = prepareChartData(rows, legendVisibility, latestDate);
+    return (
     <Card className="w-full mb-6 overflow-hidden border-amber-200/20 dark:border-amber-800/20">
-      <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">        <div className="flex flex-row items-center justify-between">
+      <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
+        <div className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-2">
             <CardTitle>Select Prediction By Date</CardTitle>
           </div>
@@ -555,10 +683,13 @@ const SelectPrediction = () => {
                 {(fetchingPrediction || predictionData === null) ? (
                   <div className="flex flex-col items-center justify-center h-[420px]">
                     <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
-                  </div>
-                ) : rows.length > 0 ? (
+                  </div>                ) : rows.length > 0 ? (
                   <div className="h-[420px]">
-                    <Line data={chartData} options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData)} />
+                    <Line 
+                      ref={chartRef}
+                      data={chartData} 
+                      options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate)} 
+                    />
                   </div>
                 ) :(
                   <div className="flex justify-center items-center h-[420px] text-muted-foreground">
@@ -594,11 +725,12 @@ const SelectPrediction = () => {
                   <div className="flex flex-col items-center justify-center h-[420px]">
                     <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
                   </div>
-                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (<div className="max-h-[420px] overflow-y-auto overflow-x-auto">
+                ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (
+                  <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
                             Date
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
@@ -612,14 +744,58 @@ const SelectPrediction = () => {
                       <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
                         {[...rows].sort((a, b) => {
                           return new Date(b.date) - new Date(a.date);
-                        }).map((row, idx) => (
-                          <tr 
+                        }).map((row, idx) => (                          <tr
                             key={idx} 
-                            className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
+                            className={`transition-colors hover:bg-amber-100/70 dark:hover:bg-amber-800/40 ${hoveredDate === row.date ? 'bg-amber-100/70 dark:bg-amber-800/40' : ''}`}
+                            onMouseEnter={() => {
+                              if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current);
+                              }
+                              hoverTimeoutRef.current = setTimeout(() => {
+                                setHoveredDate(row.date);
+                                
+                                if (chartRef.current) {
+                                  const chart = chartRef.current;
+                                  const index = chart.data.labels.findIndex(label => label === row.date);
+                                  
+                                  if (index !== -1) {
+                                    const activeElements = [];
+                                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                                      const meta = chart.getDatasetMeta(datasetIndex);
+                                      if (!meta.hidden && !dataset.hidden) {
+                                        activeElements.push({
+                                          datasetIndex,
+                                          index
+                                        });
+                                      }
+                                    });
+                                    
+                                    if (activeElements.length > 0) {
+                                      chart.setActiveElements(activeElements);
+                                      chart.tooltip.setActiveElements(activeElements, {});
+                                      chart.update('none');
+                                    }
+                                  }
+                                }
+                              }, 50);
+                            }}
+                            onMouseLeave={() => {
+                              if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current);
+                              }
+                              hoverTimeoutRef.current = setTimeout(() => {
+                                setHoveredDate(null);
+                                
+                                if (chartRef.current) {
+                                  chartRef.current.setActiveElements([]);
+                                  chartRef.current.update('none');
+                                }
+                              }, 50);                            }}
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                               {dayjs(row.date).format('DD-MM-YYYY')}
-                            </td><td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
                               <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-blue-600 dark:text-blue-400 font-medium">
