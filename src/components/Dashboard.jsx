@@ -485,13 +485,13 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       {selectedCategory === DataCategories.GOLD_TH && (
         <SelectPrediction />
       )}
-      
-      {/* Show Monthly Predictions for Gold TH */}
+        {/* Show Monthly Predictions for Gold TH */}
       {selectedCategory === DataCategories.GOLD_TH && (
         <MonthlyPredictions
           monthlyPredictions={monthlyPredictions}
           monthlyChartTab={monthlyChartTab}
           setMonthlyChartTab={setMonthlyChartTab}
+          loading={loading}
         />
       )}
     </div>

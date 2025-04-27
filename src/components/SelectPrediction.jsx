@@ -26,6 +26,7 @@ import {
   Legend,
   TimeScale,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import 'chartjs-adapter-date-fns';
 import { formatCurrency } from '@/lib/utils';
 
@@ -37,12 +38,14 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  TimeScale
+  TimeScale,
+  annotationPlugin
 );
 
 const LEGEND_KEY = 'selectprediction-legend-visibility';
+const SELECTED_DATE_KEY = 'selectprediction-selected-date';
 
-const prepareChartData = (rows, legendVisibility) => {
+const prepareChartData = (rows, legendVisibility, latestDate) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
   const labels = rows.map(row => {
@@ -76,11 +79,27 @@ const prepareChartData = (rows, legendVisibility) => {
       pointStyle: 'circle',
     }
   ];
+  
+  // หาวันสุดท้ายที่มีข้อมูล Actual Price
+  let lastActualDate = null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].actual !== null && rows[i].actual !== undefined) {
+      lastActualDate = rows[i].date;
+      break;
+    }
+  }
 
-  return { labels, datasets };
+  // ตรวจสอบว่าวันสุดท้ายที่มีข้อมูล Actual Price ตรงกับวันล่าสุดจาก API หรือไม่
+  const shouldShowAnnotation = lastActualDate && latestDate && lastActualDate === latestDate;
+
+  return { 
+    labels, 
+    datasets,
+    lastActualDate: shouldShowAnnotation ? lastActualDate : null  // ส่ง null ถ้าไม่ควรแสดง annotation
+  };
 };
 
-const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility) => ({
+const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData) => ({
   responsive: true,
   maintainAspectRatio: false,  animation: {
     duration: 800,
@@ -148,6 +167,43 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
       beginAtZero: false
     }
   },  plugins: {
+    annotation: {
+      annotations: (() => {
+        // ถ้ามีวันสุดท้ายที่มีข้อมูล Actual Price จะแสดงเส้น annotation
+        if (chartData && chartData.lastActualDate) {
+          return {
+            lastActualLine: {
+              type: 'line',
+              xMin: chartData.lastActualDate,
+              xMax: chartData.lastActualDate,
+              borderColor: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
+              borderWidth: 2,
+              borderDash: [6, 6],
+              label: {
+                display: true,
+                content: 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0D\u00A0a\u00A0y',
+                color: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
+                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)',
+                position: 'start',
+                rotation: -90,
+                font: {
+                  size: 14,
+                  weight: 'bold',
+                  family: 'Inter, Arial, sans-serif',
+                  lineHeight: 1.2,
+                },
+                xAdjust: 20,
+                yAdjust: -20,
+                padding: { top: 8, bottom: 8, left: 12, right: 12 },
+                cornerRadius: 6,
+              },
+              z: 99,
+            }
+          };
+        }
+        return {};
+      })()
+    },
     legend: {
       position: 'top',
       labels: {
@@ -189,7 +245,7 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
             };
           });
         }
-      },      onClick: (e, legendItem, legend) => {
+      },onClick: (e, legendItem, legend) => {
         const ci = legend.chart;
         const index = legendItem.datasetIndex;
         const meta = ci.getDatasetMeta(index);
@@ -253,11 +309,12 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
 
 const SelectPrediction = () => {
   const [availableDates, setAvailableDates] = useState([]);
+  const [latestDate, setLatestDate] = useState(null); // เก็บวันที่ล่าสุดจาก API
   const [selectedDate, setSelectedDate] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [predictionData, setPredictionData] = useState(null);
   const [fetchingPrediction, setFetchingPrediction] = useState(false);
-  const [legendVisibility, setLegendVisibility] = useState({});  useEffect(() => {
+  const [legendVisibility, setLegendVisibility] = useState({});useEffect(() => {
     try {
       const savedVisibility = localStorage.getItem(LEGEND_KEY);
       if (savedVisibility) {
@@ -273,23 +330,39 @@ const SelectPrediction = () => {
     } catch (error) {
       console.error('Error saving legend visibility settings:', error);
     }
-  };
-
-  useEffect(() => {
+  };  useEffect(() => {
     const loadAvailableDates = async () => {
       try {
         setIsLoading(true);
         const data = await fetchPredictionWeekDate();
         setAvailableDates(data);
-        const today = dayjs();
-        const lastWeek = today.subtract(9, 'day');
-        const lastWeekStr = lastWeek.format('YYYY-MM-DD');
-
-        const lastWeekAvailable = data.some(item => item.date === lastWeekStr);
-        if (lastWeekAvailable) {
-          setSelectedDate(lastWeek);
+        
+        // หาวันที่ล่าสุดจากข้อมูลที่ได้จาก API
+        if (data && data.length > 0) {
+          const sortedDates = [...data].sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
+          });
+          setLatestDate(sortedDates[0].date); // วันที่ล่าสุดจาก API
+        }
+        
+        // ตรวจสอบว่ามีวันที่ที่เคยเลือกไว้ใน localStorage หรือไม่
+        const savedDateStr = localStorage.getItem(SELECTED_DATE_KEY);
+        
+        if (savedDateStr && data.some(item => item.date === savedDateStr)) {
+          // ถ้ามีวันที่ที่เคยเลือกไว้และวันนั้นยังอยู่ในรายการที่เลือกได้ ให้ใช้วันนั้น
+          setSelectedDate(dayjs(savedDateStr));
         } else {
-          setSelectedDate(data.length > 0 ? dayjs(data[0].date) : null);
+          // ถ้าไม่มีวันที่ที่เคยเลือกไว้ หรือวันนั้นไม่อยู่ในรายการแล้ว ให้ใช้ค่าเริ่มต้นเป็น last week
+          const today = dayjs();
+          const lastWeek = today.subtract(6, 'day');
+          const lastWeekStr = lastWeek.format('YYYY-MM-DD');
+
+          const lastWeekAvailable = data.some(item => item.date === lastWeekStr);
+          if (lastWeekAvailable) {
+            setSelectedDate(lastWeek);
+          } else {
+            setSelectedDate(data.length > 0 ? dayjs(data[0].date) : null);
+          }
         }
       } catch (error) {
         console.error('Error loading prediction dates:', error);
@@ -331,7 +404,6 @@ const SelectPrediction = () => {
       );
     });
   };
-
   const handleDateSelect = (date) => {
     if (!date) return;
     setFetchingPrediction(true);
@@ -340,9 +412,23 @@ const SelectPrediction = () => {
       setSelectedDate(null);
       setTimeout(() => {
         setSelectedDate(date);
+        // บันทึกวันที่ที่ผู้ใช้เลือกลงใน localStorage
+        try {
+          const dateStr = dayjs(date).format('YYYY-MM-DD');
+          localStorage.setItem(SELECTED_DATE_KEY, dateStr);
+        } catch (error) {
+          console.error('Error saving selected date to localStorage:', error);
+        }
       }, 0);
     } else {
       setSelectedDate(date);
+      // บันทึกวันที่ที่ผู้ใช้เลือกลงใน localStorage
+      try {
+        const dateStr = dayjs(date).format('YYYY-MM-DD');
+        localStorage.setItem(SELECTED_DATE_KEY, dateStr);
+      } catch (error) {
+        console.error('Error saving selected date to localStorage:', error);
+      }
     }
   };
 
@@ -436,10 +522,9 @@ const SelectPrediction = () => {
         <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
       </div>
     );
-  }
-  const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
+  }  const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
-    : [];  const chartData = prepareChartData(rows, legendVisibility);return (
+    : [];  const chartData = prepareChartData(rows, legendVisibility, latestDate);return (
     <Card className="w-full mb-6 overflow-hidden border-amber-200/20 dark:border-amber-800/20">
       <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">        <div className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -456,7 +541,8 @@ const SelectPrediction = () => {
         </div>
       </CardHeader>
       <CardContent className="pt-6 pb-4">
-        <div className="flex flex-col md:flex-row gap-6">          <div className="md:w-3/5 flex-none">
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="md:w-3/5 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
@@ -472,7 +558,7 @@ const SelectPrediction = () => {
                   </div>
                 ) : rows.length > 0 ? (
                   <div className="h-[420px]">
-                    <Line data={chartData} options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility)} />
+                    <Line data={chartData} options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData)} />
                   </div>
                 ) :(
                   <div className="flex justify-center items-center h-[420px] text-muted-foreground">
@@ -511,7 +597,8 @@ const SelectPrediction = () => {
                 ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (<div className="max-h-[420px] overflow-y-auto overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                        <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
                             Date
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">

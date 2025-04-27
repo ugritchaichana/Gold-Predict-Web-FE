@@ -2,8 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import { formatCurrency } from '@/lib/utils';
 import { enUS } from 'date-fns/locale';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 const LEGEND_KEY = 'monthly-predict-legend-visibility';
+
+// ลงทะเบียน annotation plugin สำหรับ Chart.js
+import { Chart as ChartJS } from 'chart.js';
+ChartJS.register(annotationPlugin);
 
 const MonthlyPredictionChart = ({ data }) => {
   const chartRef = useRef(null);
@@ -22,17 +27,35 @@ const MonthlyPredictionChart = ({ data }) => {
     }
   }, []);
 
-  // ฟังก์ชันบันทึก legend visibility ลง localStorage
   const saveLegendVisibility = useCallback((vis) => {
     localStorage.setItem(LEGEND_KEY, JSON.stringify(vis));
   }, []);
-
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48">
         <p className="text-amber-700 dark:text-amber-300">No chart data available</p>
       </div>
     );
+  }
+
+  let currentMonth = null;
+  let isFoundNull = false;
+
+  const sortedData = [...data].sort((a, b) => {
+    return new Date(b.month_predict) - new Date(a.month_predict);
+  });
+
+  for (let i = 0; i < sortedData.length; i++) {
+    if (sortedData[i].actual_open === null && sortedData[i].actual_high === null && sortedData[i].actual_low === null) {
+      isFoundNull = true;
+    } else if (isFoundNull) {
+      currentMonth = sortedData[i].month_predict;
+      break;
+    }
+  }
+
+  if (!isFoundNull && sortedData.length > 0) {
+    currentMonth = sortedData[0].month_predict;
   }
 
   const months = data.map(item => item.month_predict);
@@ -116,11 +139,41 @@ const MonthlyPredictionChart = ({ data }) => {
     labels: months,
     datasets
   };
-
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
+      annotation: {
+        annotations: {
+          currentMonthLine: currentMonth ? {
+            type: 'line',
+            xMin: currentMonth,
+            xMax: currentMonth,
+            borderColor: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
+            borderWidth: 2,
+            borderDash: [6, 6],
+            label: {
+              display: true,
+              content: 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0M\u00A0o\u00A0n\u00A0t\u00A0h',
+              color: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
+              backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)',
+              position: 'start',
+              rotation: -90,
+              font: {
+                size: 14,
+                weight: 'bold',
+                family: 'Inter, Arial, sans-serif',
+                lineHeight: 1.2,
+              },
+              xAdjust: 20,
+              yAdjust: -20,
+              padding: { top: 8, bottom: 8, left: 12, right: 12 },
+              cornerRadius: 6,
+            },
+            z: 99,
+          } : {}
+        }
+      },
       legend: {
         position: 'top',
         labels: {
