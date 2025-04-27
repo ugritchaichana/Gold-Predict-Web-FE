@@ -9,27 +9,24 @@ import { formatCurrency } from '@/lib/utils';
 import { ThreeDot } from 'react-loading-indicators';
 
 const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyChartTab, loading = false }) => {
-  // สร้างข้อมูลสำหรับแสดงในตาราง (เรียงจากใหม่ไปเก่า)
   const [tableData, setTableData] = useState([]);
   const [isLoading, setIsLoading] = useState(loading);
-  // อัพเดทข้อมูลสำหรับตารางเมื่อ monthlyPredictions เปลี่ยนแปลง
   useEffect(() => {
     if (monthlyPredictions && monthlyPredictions.length > 0) {
-      // สร้าง array ใหม่และเรียงจากใหม่ไปเก่า
-      const reversedData = [...monthlyPredictions].reverse();
-      setTableData(reversedData);
+      const sortedData = [...monthlyPredictions].sort((a, b) => {
+        return new Date(b.month_predict) - new Date(a.month_predict);
+      });
+      setTableData(sortedData);
     } else {
       setTableData([]);
     }
   }, [monthlyPredictions]);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [paginatedData, setPaginatedData] = useState([]);
   const rowsPerPage = 6;
   const totalPages = Math.ceil(tableData.length / rowsPerPage);
 
-  // Update paginated data when page changes or predictions change
   useEffect(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
@@ -47,12 +44,10 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
       setCurrentPage(currentPage - 1);
     }
   };
-  // Reset to first page when tab changes
   useEffect(() => {
     setCurrentPage(1);
   }, [monthlyChartTab]);
   
-  // ตรวจสอบสถานะการโหลด
   useEffect(() => {
     setIsLoading(loading);
   }, [loading]);
@@ -66,15 +61,11 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
   }
 
   return (
-    // <Card className="overflow-hidden">
     <Card className="overflow-hidden border-amber-200/20 dark:border-amber-800/20">
       <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <CardTitle>Monthly Predictions</CardTitle>
-            {/* <CardTitle className="bg-gradient-to-r from-amber-600 to-yellow-500 text-transparent bg-clip-text">
-              Monthly Predictions
-            </CardTitle> */}
           </div>
           <div className="flex items-center gap-2">
             <Tabs value={monthlyChartTab} onValueChange={setMonthlyChartTab}>
@@ -131,7 +122,8 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
                           Predict High
-                        </th>                        <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
                           Actual High
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
@@ -147,7 +139,8 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                         <tr 
                           key={index} 
                           className="transition-colors hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
-                        >                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                             {(() => {
                               try {
                                 if (prediction.month_predict) {
@@ -190,7 +183,6 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                   </table>
                 </div>
                 
-                {/* Pagination controls */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between p-4 border-t border-amber-200/30 dark:border-amber-800/20 bg-gradient-to-r from-amber-50/50 to-amber-100/20 dark:from-amber-950/30 dark:to-amber-900/10">
                     <div className="text-sm text-amber-700 dark:text-amber-300">
