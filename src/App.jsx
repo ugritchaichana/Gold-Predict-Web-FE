@@ -5,7 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import Dashboard from "@/components/Dashboard";
 import Admin from "@/components/Admin";
-import DemoCalendar from "@/components/DemoCalendar";
+import DocumentPage from "@/components/DocumentPage";
+import ApiTesterPage from "@/components/ApiTesterPage";
 
 function App() {
   return (
@@ -26,20 +27,21 @@ function App() {
               </div>
             </header>
             
-            <main className="flex-1 container py-6">              <Routes>
+            <main className="flex-1 container py-6">
+              <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/democalendar" element={<DemoCalendar />} />
+                <Route path="/document" element={<DocumentPage />} />
+                <Route path="/api" element={<ApiTesterPage />} />
               </Routes>
             </main>
             
             <footer className="py-6 border-t">
               <div className="container flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-                <p>© {new Date().getFullYear()} Gold Prediction. All rights reserved.</p>
-                <div className="flex gap-4">
-                  <a href="#" className="hover:text-primary transition-colors">Terms</a>
-                  <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-                  <a href="#" className="hover:text-primary transition-colors">Contact</a>
+                <p>© {new Date().getFullYear()} Gold Prediction. All rights reserved.</p>                <div className="flex gap-4">
+                  <Link to="/admin" className="hover:text-primary transition-colors">Admin</Link>
+                  <Link to="/document" className="hover:text-primary transition-colors">Document</Link>
+                  <Link to="/api" className="hover:text-primary transition-colors">API</Link>
                 </div>
               </div>
             </footer>
