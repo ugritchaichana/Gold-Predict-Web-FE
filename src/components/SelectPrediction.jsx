@@ -55,9 +55,10 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
   
   const datasets = [
     {
-      label: 'Predicted Price',
+      label: 'Prediction Gold Bar (Buy)',
       data: rows.map(row => row.predict),
-      borderColor: 'rgb(34, 197, 94)',
+      borderColor: '#FFD54F',
+      // borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(34, 197, 94, 0.1)',
       borderWidth: 2.5,
       tension: 0.2,
@@ -66,9 +67,9 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
       hidden: legendVisibility && legendVisibility['Predicted Price'] === false,
     },
     {
-      label: 'Actual Price',
+      label: 'Actual Gold Bar (Buy)',
       data: rows.map(row => row.actual),
-      borderColor: '#3b82f6',
+      borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderWidth: 2,
       tension: 0.2,
@@ -664,7 +665,7 @@ const SelectPrediction = () => {
       </CardHeader>
       <CardContent className="pt-6 pb-4">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-3/5 flex-none">
+          <div className="md:w-3/6 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
@@ -700,7 +701,7 @@ const SelectPrediction = () => {
               </CardContent>
             </Card>
           </div>
-          <div className="md:w-2/5 flex-none">
+          <div className="md:w-3/6 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">              <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-base font-medium">
@@ -728,10 +729,10 @@ const SelectPrediction = () => {
                             Date
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Predicted
+                            Prediction Gold Bar (Buy)
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Actual
+                            Actual Gold Bar (Buy)
                           </th>
                         </tr>
                       </thead>
@@ -784,15 +785,16 @@ const SelectPrediction = () => {
                                   chartRef.current.setActiveElements([]);
                                   chartRef.current.update('none');
                                 }
-                              }, 50);                            }}
+                              }, 50);
+                            }}
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                               {dayjs(row.date).format('DD-MM-YYYY')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#FFD54F' }}>
                               <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-blue-600 dark:text-blue-400 font-medium">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#22C55E' }}>
                               <span className="font-mono">{row.actual ? `${row.actual.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
                             </td>
                           </tr>
@@ -808,7 +810,6 @@ const SelectPrediction = () => {
                         <path d="M12 8v4"></path>
                         <path d="M12 16h.01"></path>
                       </svg>
-                      {/* <p>No prediction data available</p> */}
                     </div>
                   </div>
                 )}

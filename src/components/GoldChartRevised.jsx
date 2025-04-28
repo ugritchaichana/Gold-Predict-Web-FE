@@ -114,7 +114,6 @@ const GoldChart = ({
       localStorage.setItem(key, JSON.stringify(vis));
     }
   };
-  // ลบการตรวจสอบข้อมูล Volume
   const hasVolumeData = false;
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -644,10 +643,9 @@ const GoldChart = ({
 
     datasets.forEach(dataset => {
       dataset.spanGaps = true;
-    });    // ลบการคำนวณที่เกี่ยวกับ Volume
+    });
     let volumeMax = undefined;
 
-    // Return chart.js compatible object
     return {
       labels: validActualData.map(item => item.x),
       datasets: datasets,
@@ -773,7 +771,7 @@ const GoldChart = ({
             } catch (error) {
               return 'Date error';
             }
-          },          label: (context) => {
+          }, label: (context) => {
             if (!context.dataset || !context.parsed) {
               return 'No data';
             }
