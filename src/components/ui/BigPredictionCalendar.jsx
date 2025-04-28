@@ -1,80 +1,60 @@
-import * as React from 'react';
-import { useEffect, useState } from 'react';
-import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { Box, CircularProgress } from '@mui/material';
-import thLocale from 'date-fns/locale/th';
-import { fetchPredictionWeekDate } from '@/services/apiService';
+import * as React from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { DayPicker } from "react-day-picker"
 
-export default function BigPredictionCalendar({ value, onChange }) {
-  const [availableDates, setAvailableDates] = useState([]);
-  const [loading, setLoading] = useState(true);
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
 
-  useEffect(() => {
-    async function loadDates() {
-      setLoading(true);
-      try {
-        const res = await fetchPredictionWeekDate();
-        const dates = Array.isArray(res.data)
-          ? res.data.map(item => item.date)
-          : [];
-        setAvailableDates(dates);
-        console.log('[BigPredictionCalendar] Available dates:', dates);
-      } catch (e) {
-        console.error('[BigPredictionCalendar] Error loading dates:', e);
-        setAvailableDates([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadDates();
-  }, []);
-
-  const isAvailable = (date) => {
-    const d = date.toISOString().split('T')[0];
-    return availableDates.includes(d);
-  };
-
-  const shouldDisableDate = (date) => !isAvailable(date);
-  const handleDateChange = (newDate) => {
-    console.log('[BigPredictionCalendar] Date selected:', newDate);
-    if (onChange) {
-      if (newDate && isAvailable(newDate)) {
-        onChange(newDate);
-      } else {
-        console.warn('[BigPredictionCalendar] Selected date not available:', newDate);
-      }
-    }
-  };
-
+function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  ...props
+}) {
   return (
-    <Box sx={{ maxWidth: 420, mx: 'auto', my: 2 }}>
-      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={thLocale}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <StaticDatePicker
-            displayStaticWrapperAs="desktop"
-            value={value}
-            onChange={handleDateChange}
-            shouldDisableDate={shouldDisableDate}
-            sx={{
-              '& .MuiPickersDay-root.Mui-disabled': {
-                backgroundColor: '#e5e7eb',
-                color: '#9ca3af',
-                pointerEvents: 'none',
-              },
-              '& .MuiPickersDay-root': {
-                fontWeight: 500,
-                fontSize: '1rem',
-              },
-            }}
-          />
-        )}
-      </LocalizationProvider>
-    </Box>
-  );
+    <DayPicker
+      showOutsideDays={showOutsideDays}
+      className={cn("p-3", className)}
+      classNames={{
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        month: "space-y-4",
+        caption: "flex justify-center pt-1 relative items-center",
+        caption_label: "text-sm font-medium",
+        nav: "space-x-1 flex items-center",
+        nav_button: cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        ),
+        nav_button_previous: "absolute left-1",
+        nav_button_next: "absolute right-1",
+        table: "w-full border-collapse space-y-1",
+        head_row: "flex",
+        head_cell:
+          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+        row: "flex w-full mt-2",
+        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        day: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+        ),
+        day_selected:
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        day_today: "bg-accent text-accent-foreground",
+        day_outside: "text-muted-foreground opacity-50",
+        day_disabled: "text-muted-foreground opacity-50",
+        day_range_middle:
+          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        day_hidden: "invisible",
+        ...classNames,
+      }}
+      components={{
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+      }}
+      {...props}
+    />
+  )
 }
+Calendar.displayName = "Calendar"
+
+export { Calendar }

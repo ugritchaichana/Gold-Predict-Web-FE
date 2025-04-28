@@ -814,7 +814,7 @@ const SelectPrediction = () => {
                         <path d="M12 8v4"></path>
                         <path d="M12 16h.01"></path>
                       </svg>
-                      <p>No prediction data available</p>
+                      {/* <p>No prediction data available</p> */}
                     </div>
                   </div>
                 )}

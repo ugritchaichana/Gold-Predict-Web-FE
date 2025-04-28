@@ -19,7 +19,7 @@ function Calendar({ value, onChange }) {
     palette: {
       mode: appTheme === 'dark' ? 'dark' : 'light',
       primary: {
-        main: appTheme === 'dark' ? '#f59e0b' : '#f59e0b', // ใช้สีแอมเบอร์ในทั้งสองโหมด
+        main: appTheme === 'dark' ? '#f59e0b' : '#f59e0b',
       },
       background: {
         default: appTheme === 'dark' ? '#09090b' : '#ffffff',
