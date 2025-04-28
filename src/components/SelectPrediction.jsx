@@ -578,18 +578,12 @@ const SelectPrediction = () => {
     const rows = [];
     
     const today = dayjs().format('YYYY-MM-DD');
-    
-    for (let i = 1; i <= 7; i++) {
+      for (let i = 1; i <= 7; i++) {
       const dateKey = `date_${i}`;
       const priceKey = `price_${i}`;
       
       if (predict[dateKey] && predict[priceKey] !== undefined) {
         const predictDate = predict[dateKey];
-        
-        if (predictDate === today) {
-          continue;
-        }
-        
         rows.push({
           date: predictDate,
           predict: predict[priceKey],
