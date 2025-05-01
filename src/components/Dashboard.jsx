@@ -269,13 +269,15 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
             predictions = predictionsResponse.predict_data_1y;
           } else if (predictionsResponse.predict_data_all) {
             predictions = predictionsResponse.predict_data_all;
-          }
-          if (predictions && predictions.labels && predictions.data) {
-            predictionData = predictions.labels.map((date, index) => ({
-              date,
-              predict: predictions.data[index]
-            }));
-            setPredictData(predictionData);
+          } if (predictions && predictions.labels && predictions.data) {
+              // Get the created_at timestamp from the API response or use current date
+              const createdAt = predictionsResponse.created_at || new Date().toISOString();
+              predictionData = predictions.labels.map((date, index) => ({
+                date,
+                predict: predictions.data[index],
+                created_at: createdAt
+              }));
+              setPredictData(predictionData);
           } else {
             setPredictData([]);
           }
@@ -448,38 +450,38 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Gold Chart</CardTitle>
-            <div className="flex gap-2">
-              <Card className="relative">
-                <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
-                  {/* เลือก Model ทำนาย */}
-                  Select Prediction Model
-                </div>
-                <CardContent className="pt-4 p-4">                  <Select
-                    value={selectedModel}
-                    onValueChange={(value) => {
-                      setSelectedModel(value);
-                      localStorage.setItem('selectedModel', value);
-                    }}
-                    disabled={loading || selectedCategory !== DataCategories.GOLD_TH}
-                  >
-                  <SelectTrigger className="w-[160px]">
-                      <SelectValue/>
-                    </SelectTrigger>
-                    <SelectContent className="w-[160px]">
-                      {Object.entries(Models).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
+            <CardTitle>Gold Chart</CardTitle>            <div className="flex gap-2">
+              {selectedCategory === DataCategories.GOLD_TH && (
+                <Card className="relative">
+                  <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
+                    Select Prediction Model
+                  </div>
+                  <CardContent className="pt-4 p-4">
+                    <Select
+                      value={selectedModel}
+                      onValueChange={(value) => {
+                        setSelectedModel(value);
+                        localStorage.setItem('selectedModel', value);
+                      }}
+                      disabled={loading}
+                    >
+                    <SelectTrigger className="w-[160px]">
+                        <SelectValue/>
+                      </SelectTrigger>
+                      <SelectContent className="w-[160px]">
+                        {Object.entries(Models).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="relative">
                 <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
-                  {/* ช่วงเวลา */}
                   Timeframe
                 </div>
                 <CardContent className="pt-4 p-4 flex items-center gap-2">
@@ -517,7 +519,8 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
                   Try Again
                 </Button>
               </div>
-            ) : (              <GoldChart
+            ) : (
+              <GoldChart
                 goldThData={goldThData}
                 goldUsData={goldUsData}
                 usdthbData={usdthbData}
@@ -529,14 +532,19 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
               />
             )}
           </div>
-        </CardContent>
+        </CardContent>        <div className="flex justify-end items-center px-6 pb-4">
+          {selectedCategory === DataCategories.GOLD_TH && predictData?.length > 0 && (
+            <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800/30">
+              <span className="text-gray-600 dark:text-gray-400">Latest updated prediction values</span>
+              <span className="text-gray-800 dark:text-gray-300 font-medium ml-1">{formatDateFns(new Date(), 'd MMMM yyyy')}</span>
+            </Badge>
+          )}
+        </div>
       </Card>
       
-      {/* Show SelectPrediction for Gold TH */}
       {selectedCategory === DataCategories.GOLD_TH && (
         <SelectPrediction />
       )}
-        {/* Show Monthly Predictions for Gold TH */}
       {selectedCategory === DataCategories.GOLD_TH && (
         <MonthlyPredictions
           monthlyPredictions={monthlyPredictions}
