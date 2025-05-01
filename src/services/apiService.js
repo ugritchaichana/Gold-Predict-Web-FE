@@ -156,10 +156,11 @@ export const fetchUSDTHB = async (timeframe = 'all') => {
   }
 };
 
-export const fetchPredictionsWithParams = async () => {
+export const fetchPredictionsWithParams = async (params = {}) => {
   try {
     const BASE_URL = getBaseUrl();
-    const fullUrl = `${BASE_URL}/predicts/week/get_week?display=chart`;
+    const model = params.model || '1';
+    const fullUrl = `${BASE_URL}/predicts/week/get_week?display=chart&model=${model}`;
     
     const response = await axios.get(fullUrl);
     

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { fetchGoldTH, fetchGoldUS, fetchUSDTHB, fetchPredictionsWithParams, fetchPredictionsMonth } from '@/services/apiService';
 import GoldChart from '@/components/GoldChartRevised';
 import { GoldCoinIcon, BarChartIcon, InfoIcon } from '@/components/icons';
@@ -46,6 +47,16 @@ const TimeFrames = {
   '1m': '1 Month',
   '1y': '1 Year',
   'all': 'All'
+};
+
+const Models = {
+  '1': 'Model 1',
+  '2': 'Model 2',
+  '3': 'Model 3',
+  '4': 'Model 4',
+  '5': 'Model 5',
+  '6': 'Model 6',
+  '7': 'Model 7',
 };
 
 const MonthlyPredictionChart = ({ data }) => {
@@ -150,6 +161,10 @@ const MonthlyPredictionChart = ({ data }) => {
 
 const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
   const [timeframe, setTimeframe] = useState('1m');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const savedModel = localStorage.getItem('selectedModel');
+    return savedModel !== null ? savedModel : '7';
+  });
   const [goldThData, setGoldThData] = useState([]);
   const [goldUsData, setGoldUsData] = useState([]);
   const [usdthbData, setUsdthbData] = useState([]);
@@ -197,7 +212,8 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       try {
         const today = new Date();
         let startDate = null;
-        let endDate = formatDateFns(today, 'yyyy-MM-dd');        switch (timeframe) {
+        let endDate = formatDateFns(today, 'yyyy-MM-dd');
+        switch (timeframe) {
           case '7d':
             startDate = formatDateFns(subDays(today, 7), 'yyyy-MM-dd');
             break;
@@ -220,10 +236,10 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
         } else if (selectedCategory === DataCategories.USDTHB) {
           dataResponse = await fetchUSDTHB(timeframe);
         }
-
-        const predictionsResponse = await fetchPredictionsWithParams();
+        const predictionsResponse = await fetchPredictionsWithParams({
+          model: selectedModel
+        });
         
-
         if (dataResponse && dataResponse.data) {
           const sortedData = dataResponse.data.sort((a, b) => new Date(a.date) - new Date(b.date));
           if (selectedCategory === DataCategories.GOLD_TH) {
@@ -275,7 +291,7 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
     };
 
     fetchData();
-  }, [timeframe, selectedCategory]);
+  }, [timeframe, selectedCategory, selectedModel]);
   const getLatestPrice = () => {
     if (loading) return null;
     let latestData;
@@ -432,19 +448,54 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle></CardTitle>
+            <CardTitle>Gold Chart</CardTitle>
             <div className="flex gap-2">
-              {Object.entries(TimeFrames).map(([key, label]) => (
-                <Button
-                  key={key}
-                  variant={timeframe === key ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimeframe(key)}
-                  disabled={loading}
-                >
-                  {label}
-                </Button>
-              ))}
+              <Card className="relative">
+                <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
+                  {/* เลือก Model ทำนาย */}
+                  Select Prediction Model
+                </div>
+                <CardContent className="pt-4 p-4">                  <Select
+                    value={selectedModel}
+                    onValueChange={(value) => {
+                      setSelectedModel(value);
+                      localStorage.setItem('selectedModel', value);
+                    }}
+                    disabled={loading || selectedCategory !== DataCategories.GOLD_TH}
+                  >
+                  <SelectTrigger className="w-[160px]">
+                      <SelectValue/>
+                    </SelectTrigger>
+                    <SelectContent className="w-[160px]">
+                      {Object.entries(Models).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              <Card className="relative">
+                <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
+                  {/* ช่วงเวลา */}
+                  Timeframe
+                </div>
+                <CardContent className="pt-4 p-4 flex items-center gap-2">
+                  {Object.entries(TimeFrames).map(([key, label]) => (
+                    <Button
+                      key={key}
+                      variant={timeframe === key ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTimeframe(key)}
+                      disabled={loading}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </CardHeader>
@@ -466,14 +517,14 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
                   Try Again
                 </Button>
               </div>
-            ) : (
-              <GoldChart
+            ) : (              <GoldChart
                 goldThData={goldThData}
                 goldUsData={goldUsData}
                 usdthbData={usdthbData}
                 predictData={predictData}
                 selectedCategory={selectedCategory}
                 timeframe={timeframe}
+                selectedModel={selectedModel}
                 loading={loading}
               />
             )}
