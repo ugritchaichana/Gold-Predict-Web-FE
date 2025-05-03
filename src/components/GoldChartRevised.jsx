@@ -783,6 +783,12 @@ const GoldChart = ({
               return 'Date error';
             }
           }, label: (context) => {
+            console.log('🟡 Tooltip debug →', {
+              label: context.dataset?.label,
+              x: context.parsed?.x,
+              y: context.parsed?.y,
+              raw: context.raw
+            });  // <<== เพิ่มตรงนี้
             if (!context.dataset || !context.parsed) {
               return 'No data';
             }
