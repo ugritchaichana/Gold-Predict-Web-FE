@@ -18,7 +18,7 @@ function App() {
               <div className="container flex h-16 items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Link to="/" className="text-2xl font-semibold bg-gradient-to-r from-yellow-500 to-amber-600 text-transparent bg-clip-text">
-                    Gold Prediction
+                    Gold Prediction DEV
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
