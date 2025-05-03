@@ -450,7 +450,8 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Gold Chart</CardTitle>            <div className="flex gap-2">
+            <CardTitle>Gold Chart</CardTitle>
+            <div className="flex gap-2">
               {selectedCategory === DataCategories.GOLD_TH && (
                 <Card className="relative">
                   <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
@@ -482,7 +483,7 @@ const Dashboard = () => {  const [selectedCategory, setSelectedCategory] = useSt
 
               <Card className="relative">
                 <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
-                  Timeframe
+                  Date Range
                 </div>
                 <CardContent className="pt-4 p-4 flex items-center gap-2">
                   {Object.entries(TimeFrames).map(([key, label]) => (

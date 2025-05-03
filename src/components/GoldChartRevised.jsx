@@ -521,7 +521,7 @@ const GoldChart = ({
             yAxisKey: 'y'
           }
         });
-      }      // ลบการแสดงข้อมูล Volume
+      }
     } else {
       datasets.push({
         label: `Close Price`,
@@ -665,8 +665,7 @@ const GoldChart = ({
     animation: {
       duration: 1000,
       easing: 'easeInOutQuad'
-    },
-    interaction: {
+    },    interaction: {
       mode: 'nearest',
       intersect: false,
       axis: 'x',
@@ -710,7 +709,7 @@ const GoldChart = ({
               const hidden = meta.hidden === true || chart.data.datasets[i].hidden === true;
               return {
                 text: dataset.label,
-                fillStyle: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+                fillStyle: hidden ? 'transparent' : dataset.borderColor,
                 strokeStyle: dataset.borderColor,
                 fontColor: dataset.borderColor,
                 lineWidth: hidden ? 2 : 0,
@@ -720,7 +719,7 @@ const GoldChart = ({
                 datasetIndex: i,
                 borderWidth: hidden ? 2 : 0,
                 borderColor: dataset.borderColor,
-                backgroundColor: hidden ? 'transparent' : dataset.borderColor, // กลวงโปร่งใสเมื่อปิด
+                backgroundColor: hidden ? 'transparent' : dataset.borderColor,
                 font: {
                   family: 'Inter',
                   size: 13,
@@ -747,14 +746,26 @@ const GoldChart = ({
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'rgba(255, 255, 255, 0.8)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: isDarkTheme ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)',
+        titleColor: isDarkTheme ? 'white' : 'black',
+        bodyColor: isDarkTheme ? 'white' : 'black',
+        borderColor: isDarkTheme ? 'rgba(255, 255, 255, 0)' : 'rgba(0, 0, 0, 0)',
         borderWidth: 1,
         padding: 12,
+        yAlign : 'top',
         cornerRadius: 8,
         displayColors: true,
+        titleFont: {
+          weight: 'bold',
+          lineHeight: 1.2,
+          family: 'Inter, Arial, sans-serif',
+        },
+        bodyFont: {
+          weight: 'normal',
+          lineHeight: 1.2,
+          family: 'Inter, Arial, sans-serif',
+        },
+        titleMarginBottom: 8,
         callbacks: {
           title: (context) => {
             try {

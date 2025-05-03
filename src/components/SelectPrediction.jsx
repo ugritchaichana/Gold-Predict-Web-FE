@@ -126,7 +126,8 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
         }
       }
     }
-  },  scales: {
+  },
+  scales: {
     x: {
       type: 'time',
       time: {
@@ -164,7 +165,8 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
       },
       beginAtZero: false
     }
-  },  plugins: {
+  },
+  plugins: {
     annotation: {
       annotations: (() => {
         if (chartData && chartData.lastActualDate) {
@@ -258,6 +260,7 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
       }
     },
     tooltip: {
+      enabled: false,
       backgroundColor: 'rgba(0, 0, 0, 0.8)',
       titleColor: 'white',
       bodyColor: 'rgba(255, 255, 255, 0.8)',
@@ -729,17 +732,21 @@ const SelectPrediction = () => {
                             Date
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Prediction Gold Bar (Buy)
+                            Prediction Gold
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Actual Gold Bar (Buy)
+                            Actual Gold
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
+                            Error
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
                         {[...rows].sort((a, b) => {
                           return new Date(b.date) - new Date(a.date);
-                        }).map((row, idx) => (                          <tr
+                        }).map((row, idx) => (
+                          <tr
                             key={idx} 
                             className={`transition-colors hover:bg-amber-100/70 dark:hover:bg-amber-800/40 ${hoveredDate === row.date ? 'bg-amber-100/70 dark:bg-amber-800/40' : ''}`}
                             onMouseEnter={() => {
@@ -796,6 +803,14 @@ const SelectPrediction = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#22C55E' }}>
                               <span className="font-mono">{row.actual ? `${row.actual.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-black dark:text-white">
+                              {row.actual && row.predict ? 
+                                <span className="font-mono">
+                                  {((Math.abs(row.actual - row.predict) / row.actual) * 100).toFixed(2)} %
+                                </span> : 
+                                '-'
+                              }
                             </td>
                           </tr>
                         ))}

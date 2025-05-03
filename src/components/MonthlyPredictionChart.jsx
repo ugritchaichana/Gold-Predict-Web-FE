@@ -229,7 +229,8 @@ const MonthlyPredictionChart = ({ data }) => {
           setLegendVisibility(newVis);
           saveLegendVisibility(newVis);
         }
-      },      tooltip: {
+      },
+      tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: 'white',
         bodyColor: 'rgba(255, 255, 255, 0.8)',
