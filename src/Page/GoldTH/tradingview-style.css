@@ -1,0 +1,256 @@
+/* TradingView-inspired style for date range picker */
+.tradingview-style {
+  font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+  --tv-blue: #2962FF;
+  --tv-blue-hover: #1E54E7;
+  --tv-green: #089981;
+  --tv-red: #F23645;
+  --tv-gray-1: #131722;
+  --tv-gray-2: #2A2E39;
+  --tv-gray-3: #434651;
+  --tv-gray-4: #9598A1;
+  --tv-border-color: #E0E3EB;
+}
+
+.tradingview-style button {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tradingview-style button:focus {
+  outline: none;
+}
+
+/* TradingView blue color */
+.bg-tradingview-blue {
+  background-color: var(--tv-blue);
+}
+
+.text-tradingview-blue {
+  color: var(--tv-blue);
+}
+
+/* Price display */
+.data-label {
+  font-size: 0.7rem;
+  color: var(--tv-gray-4);
+  font-weight: 500;
+}
+
+.data-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Animation */
+.tv-animate-hover {
+  transition: all 0.2s ease;
+}
+
+.tv-animate-hover:hover {
+  transform: translateY(-1px);
+  background-color: rgba(0,0,0,0.03);
+  border-radius: 4px;
+}
+
+/* Date picker container */
+.date-picker-container {
+  position: absolute;
+  z-index: 100;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background-color: #fff;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Custom date picker styling */
+.react-datepicker {
+  border: none !important;
+  box-shadow: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif !important;
+}
+
+.react-datepicker__header {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: var(--tv-blue) !important;
+  border-radius: 0.3em !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: rgba(41, 98, 255, 0.2) !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: rgba(41, 98, 255, 0.1) !important;
+}
+
+/* Charts styling */
+.tv-chart-container {
+  position: relative;
+  height: 500px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+
+/* Data panel styling */
+.tv-data-panel {
+  padding: 10px;
+  background-color: #fff;
+  border-bottom: 1px solid var(--tv-border-color);
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Crosshair styling */
+.crosshair-tooltip {
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 3px;
+  padding: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* TradingView inspired hover animations */
+.tv-animate-hover {
+  transition: all 0.2s ease;
+}
+.tv-animate-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Clean, modern data display */
+.data-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* TradingView inspired data labels */
+.data-label {
+  color: #787B86;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* TradingView inspired legend items */
+.tv-legend-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tv-legend-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tv-legend-marker {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* TradingView inspired buttons */
+.tv-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.tv-button-primary {
+  background-color: #2962FF;
+  color: white;
+}
+
+.tv-button-primary:hover {
+  background-color: #1E53E5;
+}
+
+.tv-button-secondary {
+  background-color: #F0F3FA;
+  color: #131722;
+}
+
+.tv-button-secondary:hover {
+  background-color: #E0E3EA;
+}
+
+/* TradingView tooltip */
+.tv-tooltip {
+  position: absolute;
+  padding: 6px 8px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+  font-size: 12px;
+  z-index: 100;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Settings dialog */
+.settings-dialog-trigger {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 5;
+  background-color: white;
+  border: 1px solid var(--tv-border-color);
+  border-radius: 4px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.settings-dialog-trigger:hover {
+  background-color: #f9fafb;
+}
+
+/* Current time */
+.current-time {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--tv-gray-3);
+}

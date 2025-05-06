@@ -7,6 +7,7 @@ import Dashboard from "@/components/Dashboard";
 import Admin from "@/components/Admin";
 import DocumentPage from "@/components/DocumentPage";
 import ApiTesterPage from "@/components/ApiTesterPage";
+import GoldTH from "@/Page/GoldTH/GoldTH";
 
 function App() {
   return (
@@ -27,12 +28,12 @@ function App() {
               </div>
             </header>
             
-            <main className="flex-1 container py-6">
-              <Routes>
+            <main className="flex-1 container py-6">              <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/document" element={<DocumentPage />} />
                 <Route path="/api" element={<ApiTesterPage />} />
+                <Route path="/goldth" element={<GoldTH />} />
               </Routes>
             </main>
             
@@ -42,6 +43,7 @@ function App() {
                   <Link to="/admin" className="hover:text-primary transition-colors">Admin</Link>
                   <Link to="/document" className="hover:text-primary transition-colors">Document</Link>
                   <Link to="/api" className="hover:text-primary transition-colors">API</Link>
+                  <Link to="/goldth" className="hover:text-primary transition-colors">GoldTH Price</Link>
                 </div>
               </div>
             </footer>
