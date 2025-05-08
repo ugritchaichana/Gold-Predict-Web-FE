@@ -1,60 +1,66 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, LineStyle } from 'lightweight-charts';
+import { createChart, LineStyle, CrosshairMode } from 'lightweight-charts'; // Added CrosshairMode
+import { format as formatDateFns, isValid } from 'date-fns'; // Added isValid
 
+// Chart base options
 const chartOptions = {
     layout: {
         textColor: 'black',
         background: { type: 'solid', color: 'white' },
     },
     crosshair: {
-        mode: 0,
+        mode: CrosshairMode.Normal, // Use enum for clarity
     },
+    // Optional: Add time scale options if needed, e.g., for date formatting
+    timeScale: {
+        // fixLeftEdge: true, // Optional: keeps the latest bar from being partially off-screen
+        // fixRightEdge: true, // Optional
+        // borderVisible: false,
+        // tickMarkFormatter: (time, tickMarkType, locale) => {
+        //     // Your custom date formatting for the time scale
+        //     const date = new Date(time * 1000);
+        //     return `${date.getDate()}/${date.getMonth() + 1}`;
+        // },
+    },
+    // Optional: Price scale options
+    // priceScale: {
+    // autoScale: true,
+    // position: 'right',
+    // },
 };
 
 const baseSeriesConfigs = {
     GOLD_TH: [
         { key: 'barBuyData', color: 'blue', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barBuyPredictData', color: '#42a5f5', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
         { key: 'barSellData', color: 'red', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         { key: 'ornamentBuyData', color: 'green', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         { key: 'ornamentSellData', color: 'orange', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'barBuyPredictData', color: '#42a5f5', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
-        { key: 'priceChangeData', color: 'purple', name: 'Price Change', addToChart: false, defaultVisible: true },
     ],
     GOLD_US: [
-        { key: 'ohlc', name: 'Gold US OHLC', addToChart: true, defaultVisible: true, type: 'candlestick' },
+        { key: 'ohlc', name: 'Gold US', addToChart: true, defaultVisible: true, type: 'candlestick' },
     ],
     USD_THB: [
-        { key: 'ohlc', name: 'USD/THB OHLC', addToChart: true, defaultVisible: true, type: 'candlestick' },
+        { key: 'ohlc', name: 'USD/THB', addToChart: true, defaultVisible: true, type: 'candlestick' },
     ],
 };
 
-// Helper function to process and sort time-series data
 const processTimeSeriesData = (data) => {
     if (!Array.isArray(data) || data.length === 0) {
         return [];
     }
-
-    // 1. Remove duplicates by time, keeping the last one encountered (or first, adjust as needed)
     const uniqueTimeData = [];
     const timeMap = new Map();
-    // Iterate in reverse to keep the last instance if a simple filter is used,
-    // or build map and then extract. For simplicity, let's use a Map to ensure uniqueness.
     for (const item of data) {
-        if (item && typeof item.time === 'number') { // Ensure item and time are valid
-             // If you want to keep the *last* entry for a duplicate time, you can overwrite.
-             // If you want to keep the *first*, check if map already has the time.
+        if (item && typeof item.time === 'number') {
             timeMap.set(item.time, item);
         }
     }
     timeMap.forEach(value => uniqueTimeData.push(value));
-
-
-    // 2. Sort by time in ascending order
     return uniqueTimeData.sort((a, b) => a.time - b.time);
 };
 
-
-const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
+const Chart = ({ chartData, category = 'GOLD_TH', dateRange }) => {
   const chartContainerRef = useRef(null);
   const currentSeriesConfigs = baseSeriesConfigs[category] || [];
 
@@ -72,7 +78,7 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
         initial[config.key] = config.defaultVisible;
     });
     setSeriesVisibility(initial);
-  }, [category, currentSeriesConfigs]);
+  }, [category]);
 
   useEffect(() => {
     if (!chartData) {
@@ -93,98 +99,132 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
     const seriesInstances = {};
 
     currentSeriesConfigs.forEach(config => {
-        if (!seriesVisibility[config.key] && config.key !== 'priceChangeData') { // priceChangeData is not on chart but in legend
-             // console.log(`Skipping series ${config.key} due to visibility state.`);
+        if (!seriesVisibility[config.key] && config.key !== 'priceChangeData') {
              return;
         }
 
-        if (config.addToChart || config.key === 'priceChangeData') { // priceChangeData needs its data for legend even if not on chart
-            let rawSeriesData;
-            let processedSeriesData;
+        if (config.addToChart || config.key === 'priceChangeData') {
+            let rawSeriesData = [];
+            let processedSeriesDataForChart = [];
 
             if (category === 'GOLD_TH') {
-                rawSeriesData = chartData[config.key];
-                processedSeriesData = processTimeSeriesData(rawSeriesData);
+                rawSeriesData = chartData[config.key] || [];
+                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
                 if (chartData.open && chartData.high && chartData.low && chartData.close) {
-                    // Combine and then process for OHLC
-                    // Ensure all arrays have the same length before zipping
                     const minLength = Math.min(
-                        chartData.open.length,
-                        chartData.high.length,
-                        chartData.low.length,
-                        chartData.close.length
+                        (chartData.open || []).length, (chartData.high || []).length,
+                        (chartData.low || []).length, (chartData.close || []).length
                     );
-
-                    rawSeriesData = chartData.open.slice(0, minLength).map((o, i) => ({
-                        time: o.time, // Assume time is consistent across o,h,l,c for the same index
-                        open: o.value,
-                        high: chartData.high[i]?.value,
-                        low: chartData.low[i]?.value,
-                        close: chartData.close[i]?.value,
+                    rawSeriesData = (chartData.open || []).slice(0, minLength).map((o, i) => ({
+                        time: o.time, open: o.value,
+                        high: (chartData.high || [])[i]?.value,
+                        low: (chartData.low || [])[i]?.value,
+                        close: (chartData.close || [])[i]?.value,
                     })).filter(d =>
                         d.high !== undefined && d.low !== undefined && d.close !== undefined &&
-                        typeof d.time === 'number' && // Ensure time is a number
-                        typeof d.open === 'number' &&
-                        typeof d.high === 'number' &&
-                        typeof d.low === 'number' &&
+                        typeof d.time === 'number' && typeof d.open === 'number' &&
+                        typeof d.high === 'number' && typeof d.low === 'number' &&
                         typeof d.close === 'number'
                     );
-                    processedSeriesData = processTimeSeriesData(rawSeriesData); // Process combined OHLC data
+                    processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
                 }
-            } else if (category === 'GOLD_US' || category === 'USD_THB') {
-                rawSeriesData = chartData[config.key]; // e.g., chartData.open, chartData.close (if plotting as lines)
-                processedSeriesData = processTimeSeriesData(rawSeriesData);
+            } else if (category === 'GOLD_US' || category === 'USD_THB') { // For individual lines if not candlestick
+                rawSeriesData = chartData[config.key] || [];
+                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             }
 
-
-            if (config.addToChart && processedSeriesData && Array.isArray(processedSeriesData) && processedSeriesData.length > 0) {
-                // console.log(`Adding series ${config.key} with ${processedSeriesData.length} points. First point time: ${processedSeriesData[0]?.time}`);
+            if (config.addToChart && processedSeriesDataForChart && processedSeriesDataForChart.length > 0) {
                 try {
                     if (config.type === 'candlestick') {
                         seriesInstances[config.key] = chart.addCandlestickSeries({
                             upColor: '#26a69a', downColor: '#ef5350',
                             borderDownColor: '#ef5350', borderUpColor: '#26a69a',
                             wickDownColor: '#ef5350', wickUpColor: '#26a69a',
-                            visible: seriesVisibility[config.key], // Visibility applied here
-                            title: config.name,
+                            visible: seriesVisibility[config.key],
                         });
                     } else {
                         seriesInstances[config.key] = chart.addLineSeries({
                             color: config.color,
                             lineWidth: 2,
-                            visible: seriesVisibility[config.key], // Visibility applied here
-                            title: config.name,
+                            visible: seriesVisibility[config.key],
                             lineStyle: config.lineStyle || LineStyle.Solid,
                         });
                     }
-                    seriesInstances[config.key].setData(processedSeriesData);
+                    seriesInstances[config.key].setData(processedSeriesDataForChart);
                 } catch (e) {
                     console.error(`Error setting data for series ${config.key}:`, e);
-                    console.error("Problematic data for this series:", processedSeriesData.slice(0, 10)); // Log first few points
-                    // Find the problematic index if possible from error message
                     const match = e.message?.match(/index=(\d+)/);
                     if (match && match[1]) {
                         const problematicIndex = parseInt(match[1], 10);
-                        console.error("Data around problematic index:", processedSeriesData.slice(Math.max(0, problematicIndex - 2), problematicIndex + 3));
+                        console.error("Data around problematic index:", processedSeriesDataForChart.slice(Math.max(0, problematicIndex - 2), problematicIndex + 3));
+                    } else {
+                        console.error("Problematic data sample:", processedSeriesDataForChart.slice(0,5));
                     }
                 }
-            } else if (config.addToChart) {
-                // console.log(`No data or empty processed data for series ${config.key} to add to chart.`);
             }
-            // Store processed data for legend even if not added to chart (e.g. priceChangeData)
-             if (config.key === 'priceChangeData' && processedSeriesData) {
-                // This is a bit of a hack, normally legend would use data from seriesInstances
-                // But priceChangeData isn't a chart series. We'll need to handle its default value.
-                // For now, ensure chartData itself holds the processed version if it's used by legend directly
-                if (chartData[config.key]) chartData[config.key] = processedSeriesData;
+            // Store processed data for legend (especially for non-chart series like priceChangeData)
+            if (config.key === 'priceChangeData' && chartData[config.key]) {
+                 // Ensure chartData used by legend logic (getDefaultValue) has the processed data.
+                 // It's better if getDefaultValue processes its own data if it's not from seriesInstances.
+                 // For now, we assume getDefaultValue for priceChangeData will use chartData[config.key]
+                 // and that array should be the processed one if possible.
+                 // This is a bit tricky as chartData is a prop.
             }
         }
     });
 
-    // ... (rest of the legend creation and update logic) ...
-    // Make sure legend logic uses `currentSeriesConfigs` and `chartData` (which might contain processed data for non-chart series)
+    const formatDate = (timestamp) => {
+        if (!timestamp && timestamp !== 0) return 'N/A';
+        const date = new Date(timestamp * 1000);
+        return isValid(date) ? formatDateFns(date, 'dd MMM yy') : 'N/A';
+    };
 
+    // Determine the effective 'to' timestamp for the visible range
+    let effectiveToTimestamp;
+    const originalToTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : null;
+
+    let maxPredictionTimestamp = null;
+    if (chartData?.barBuyPredictData && chartData.barBuyPredictData.length > 0) {
+        // Ensure predictions are sorted to find the true latest point
+        const processedPredictions = processTimeSeriesData(chartData.barBuyPredictData);
+        if (processedPredictions.length > 0) {
+            maxPredictionTimestamp = processedPredictions[processedPredictions.length - 1].time;
+        }
+    }
+
+    if (originalToTimestamp && maxPredictionTimestamp) {
+        effectiveToTimestamp = Math.max(originalToTimestamp, maxPredictionTimestamp);
+    } else if (maxPredictionTimestamp) {
+        effectiveToTimestamp = maxPredictionTimestamp;
+    } else if (originalToTimestamp) {
+        effectiveToTimestamp = originalToTimestamp;
+    } else {
+        effectiveToTimestamp = null; // Will lead to fitContent if from is also missing
+    }
+    
+    // Set visible range after all series data is set
+    if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
+        const fromTimestamp = Math.floor(dateRange.from.getTime() / 1000);
+        // Ensure 'from' is not after 'to'; if so, fitContent might be better or adjust 'from'.
+        // For now, we assume 'from' is reasonably set.
+        if (fromTimestamp <= effectiveToTimestamp) { 
+            chart.timeScale().setVisibleRange({
+                from: fromTimestamp,
+                to: effectiveToTimestamp,
+            });
+        } else {
+            // This case (from > to) might indicate an issue with dateRange logic upstream
+            // or very short/specific prediction data. Fallback to fitContent.
+            console.warn(`Chart.jsx: fromTimestamp (${fromTimestamp}) > effectiveToTimestamp (${effectiveToTimestamp}). Falling back to fitContent.`);
+            chart.timeScale().fitContent();
+        }
+    } else {
+        chart.timeScale().fitContent(); 
+    }
+
+
+    // --- Legend Setup ---
     const styledLegendContainer = document.createElement('div');
     styledLegendContainer.style = `
       position: absolute; left: 12px; top: 12px; z-index: 1001;
@@ -212,22 +252,21 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
 
     const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
         const leftBox = legendElement.children[0];
-        const rightBox = legendElement.children[1];
-        
-        const displayColor = configForStyle.type === 'candlestick' ? (isVisibleConfig ? '#26a69a' : 'grey') : configForStyle.color;
+        const valueBox = legendElement.children[1];
+        const displayColor = configForStyle.type === 'candlestick' ? (isVisibleConfig ? '#26a69a' : 'grey') : (configForStyle.color || 'grey');
 
         legendElement.style.opacity = isVisibleConfig ? '1' : '0.5';
         legendElement.style.borderColor = isVisibleConfig ? displayColor : 'grey';
         if (leftBox) leftBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
         
-        if (rightBox) {
-            rightBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
+        if (valueBox) {
+            valueBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
             if (configForStyle.type !== 'candlestick') {
-                 rightBox.style.background = isVisibleConfig ? displayColor : 'grey';
-                 rightBox.style.color = 'white';
+                 valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
+                 valueBox.style.color = 'white';
             } else {
-                rightBox.style.background = 'transparent';
-                rightBox.style.color = isVisibleConfig ? 'black' : 'grey';
+                valueBox.style.background = 'transparent';
+                valueBox.style.color = isVisibleConfig ? 'black' : 'grey';
             }
         }
     };
@@ -237,70 +276,54 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
       if (category === 'GOLD_TH' && chartData[config.key]) {
           legendDataExists = true;
       } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
-          if (config.type === 'candlestick' && chartData.open) legendDataExists = true;
+          if (config.type === 'candlestick' && chartData.open) legendDataExists = true; // Check for ohlc data presence
           else if (chartData[config.key] && config.type !== 'candlestick') legendDataExists = true;
       }
-      // For priceChangeData, it might not have a direct corresponding series on chart, but legend is needed
-      if (!legendDataExists && config.key !== 'priceChangeData') return;
-
+      if (!legendDataExists && config.key !== 'priceChangeData') return; // priceChangeData handled separately if needed
 
       const legendRow = document.createElement('div');
-      const legendBorderColor = config.type === 'candlestick' ? (seriesVisibility[config.key] ? '#26a69a' : 'grey') : config.color;
+      const legendBorderColor = config.type === 'candlestick' ? (seriesVisibility[config.key] ? '#26a69a' : 'grey') : (config.color || 'grey');
       legendRow.style = `
         display: flex; align-items: center; border: 1px solid ${legendBorderColor};
         border-radius: 4px; overflow: hidden; box-sizing: border-box;
         cursor: pointer; transition: opacity 0.2s ease, border-color 0.2s ease;
       `;
-      const leftBox = document.createElement('div');
-      leftBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
-      leftBox.textContent = config.name;
-      legendRow.appendChild(leftBox);
+      const nameBox = document.createElement('div');
+      nameBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
+      nameBox.textContent = config.name;
+      legendRow.appendChild(nameBox);
 
-      if (config.type !== 'candlestick' || category === 'GOLD_TH' || config.key === 'priceChangeData') {
-          const rightBox = document.createElement('div');
-          const bgColor = config.type === 'candlestick' ? 'transparent' : (config.color || 'transparent');
-          const textColor = config.type === 'candlestick' ? 'black' : 'white';
-          rightBox.style = `
-            background: ${bgColor}; 
-            color: ${textColor}; padding: 4px 8px; text-align: center; min-width: 75px;
+      const valueBox = document.createElement('div');
+      if (config.type !== 'candlestick' || category === 'GOLD_TH') {
+          valueBox.style = `
+            background: ${config.color || 'transparent'}; 
+            color: white; padding: 4px 8px; text-align: center; min-width: 75px;
           `;
-          rightBox.textContent = (config.key === 'priceChangeData' && chartData.priceChangeData && chartData.priceChangeData.length > 0)
-            ? Number(chartData.priceChangeData[chartData.priceChangeData.length-1].value).toFixed(2)
-            : '0.00'; // Default or last value for priceChangeData
-          legendRow.appendChild(rightBox);
-      } else if (config.type === 'candlestick') { // Specific legend for OHLC
-          const rightBox = document.createElement('div');
-          rightBox.style = `
+          valueBox.textContent = '0.00';
+      } else { // Candlestick legend for GOLD_US, USD_THB
+          valueBox.style = `
             background: transparent; color: black; 
-            padding: 4px 8px; text-align: left; min-width: 150px; font-size: 10px;
-          `; // Adjusted for OHLC display
-          rightBox.textContent = 'O: - H: - L: - C: -'; // Placeholder
-          legendRow.appendChild(rightBox);
+            padding: 4px 8px; text-align: left; min-width: 160px; font-size: 10px; white-space: nowrap;
+          `;
+          valueBox.textContent = 'O: - H: - L: - C: -';
       }
-      
+      legendRow.appendChild(valueBox);
       styledLegendContainer.appendChild(legendRow);
       
-      const legendItem = { element: legendRow, config: config, clickHandler: null };
+      const legendItem = { element: legendRow, config: config, nameBox, valueBox, clickHandler: null };
       seriesLegendElements.push(legendItem);
-
       updateLegendStyle(legendRow, seriesVisibility[config.key], config);
 
       legendItem.clickHandler = () => {
         setSeriesVisibility(prevVisibility => {
             const newVisibilityForKey = !prevVisibility[config.key];
-            const updatedVisibility = { ...prevVisibility, [config.key]: newVisibilityForKey };
-            
-            // If series is on chart, apply visibility option.
-            // For candlestick, it's more complex: ideally, remove/re-add series,
-            // or rely on useEffect to re-render based on the new visibility state.
-            // The current setup will trigger useEffect re-render, which rebuilds series.
             if (config.addToChart && seriesInstances[config.key] && seriesInstances[config.key].applyOptions) {
                  seriesInstances[config.key].applyOptions({ visible: newVisibilityForKey });
             }
-            // For candlestick, the re-render from useEffect will handle its visibility
-            // by either adding it or not based on seriesVisibility[config.key].
-
-            return updatedVisibility;
+            // For candlestick, visibility is handled by not adding it if !seriesVisibility[config.key]
+            // or by full re-render. The applyOptions({visible}) might not work directly.
+            // The component will re-render due to setSeriesVisibility, and useEffect will rebuild series.
+            return { ...prevVisibility, [config.key]: newVisibilityForKey };
         });
       };
       legendRow.addEventListener('click', legendItem.clickHandler);
@@ -308,8 +331,8 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
 
     chartContainerRef.current.appendChild(styledLegendContainer);
 
-    requestAnimationFrame(() => {
-        if (!dateLegendRow.isConnected) return;
+    requestAnimationFrame(() => { // Ensure dateLegendRow is in DOM for height calculation
+        if (!dateLegendRow || !dateLegendRow.isConnected) return;
         const dateLegendHeight = dateLegendRow.offsetHeight;
         if (dateLegendHeight > 0) {
             seriesLegendElements.forEach(item => {
@@ -320,185 +343,152 @@ const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
         }
     });
 
-    const formatDate = (timestamp) => {
-        if (!timestamp && timestamp !==0) return 'N/A';
-        const date = new Date(timestamp * 1000);
-        if (isNaN(date.getTime())) return 'N/A';
-        const day = date.getDate().toString().padStart(2, '0');
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const month = monthNames[date.getMonth()];
-        const year = date.getFullYear().toString().slice(-2);
-        return `${day} ${month} '${year}`;
-    };
-    
-    let firstTimeSeriesData = [];
-    if (category === 'GOLD_TH' && chartData.barBuyData) {
-        firstTimeSeriesData = chartData.barBuyData;
-    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.open) {
-        firstTimeSeriesData = chartData.open; // Assuming 'open' data is sorted and can be used for default date
-    } else if (chartData.barBuyPredictData && chartData.barBuyPredictData.length > 0) {
-        firstTimeSeriesData = chartData.barBuyPredictData;
+    // Get default date from the (already date-filtered) chartData
+    let dataForDefaultDate = [];
+    if (category === 'GOLD_TH' && chartData.barBuyData && chartData.barBuyData.length > 0) { // Prioritize actual data
+      dataForDefaultDate = chartData.barBuyData;
+    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.open && chartData.open.length > 0) { // Prioritize actual data
+      dataForDefaultDate = chartData.open;
+    } else if (chartData.barBuyPredictData && chartData.barBuyPredictData.length > 0) { // Fallback to predictions if no actual
+      dataForDefaultDate = chartData.barBuyPredictData;
+    } else if (category === 'GOLD_TH' && chartData.barSellData && chartData.barSellData.length > 0) { // Further fallback for GOLD_TH
+        dataForDefaultDate = chartData.barSellData;
     }
-    // Ensure firstTimeSeriesData is sorted if it comes from raw chartData
-    const processedFirstTimeSeriesData = processTimeSeriesData(firstTimeSeriesData);
-    const lastDataPointForDate = processedFirstTimeSeriesData.length > 0 ? processedFirstTimeSeriesData[processedFirstTimeSeriesData.length - 1] : null;
-    const defaultDate = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
-    if (dateRightBox.isConnected) dateRightBox.textContent = defaultDate;
+    // Add more fallbacks if necessary for other primary series
 
-    const getDefaultValue = (dataArray, valueKey = 'value') => {
-        const sortedArray = processTimeSeriesData(dataArray); // Ensure it's sorted for reliable last point
+
+    const processedDataForDefaultDate = processTimeSeriesData(dataForDefaultDate);
+    const lastDataPointForDate = processedDataForDefaultDate.length > 0 ? processedDataForDefaultDate[processedDataForDefaultDate.length - 1] : null;
+    if (dateRightBox) dateRightBox.textContent = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
+
+    // Function to get default value (last point in the filtered and processed data)
+    const getDefaultValue = (dataArrayInput, valueKey = 'value') => {
+        const sortedArray = processTimeSeriesData(dataArrayInput || []);
         const lastPoint = sortedArray.length > 0 ? sortedArray[sortedArray.length - 1] : null;
-        return lastPoint ? lastPoint[valueKey] : 0;
+        return lastPoint ? lastPoint[valueKey] : null; // Return null if no data
     };
     
-    const defaultValues = {};
-    currentSeriesConfigs.forEach(config => {
-        let dataArrayForKey;
-        let valueKey = 'value';
-
-        if (category === 'GOLD_TH') {
-            dataArrayForKey = chartData[config.key];
-        } else if (category === 'GOLD_US' || category === 'USD_THB') {
-            if (config.type === 'candlestick') {
-                dataArrayForKey = chartData.close; 
-                valueKey = 'value'; 
-            } else {
-                dataArrayForKey = chartData[config.key];
-            }
-        } else if (config.key === 'priceChangeData') { // Handle priceChangeData specifically
-            dataArrayForKey = chartData[config.key];
-        }
-
-
-        if (dataArrayForKey && Array.isArray(dataArrayForKey)) {
-            defaultValues[config.key] = getDefaultValue(dataArrayForKey, valueKey);
-        } else {
-            defaultValues[config.key] = 0;
-        }
-    });
-
+    const defaultDisplayValues = {}; // For initial legend display
     seriesLegendElements.forEach(item => {
-      const legendConfig = item.config;
-      const rightBox = item.element.querySelector('div:last-child');
-
-      if (rightBox && defaultValues[legendConfig.key] !== undefined) {
-        if (legendConfig.type === 'candlestick' && category !== 'GOLD_TH') {
-            const closeVal = defaultValues[legendConfig.key]; // This is the default 'close' value
-            // For initial display, just show close. Crosshair move will update with OHL C.
-            rightBox.textContent = `C: ${Number(closeVal).toFixed(2)}`;
+        const config = item.config;
+        let val = null;
+        if (config.type === 'candlestick' && category !== 'GOLD_TH') {
+            const openVal = getDefaultValue(chartData.open, 'value');
+            const highVal = getDefaultValue(chartData.high, 'value');
+            const lowVal = getDefaultValue(chartData.low, 'value');
+            const closeVal = getDefaultValue(chartData.close, 'value');
+            if (closeVal !== null) { // Only display if close value exists
+                 item.valueBox.textContent = `O:${openVal?.toFixed(2) || '-'} H:${highVal?.toFixed(2) || '-'} L:${lowVal?.toFixed(2) || '-'} C:${closeVal?.toFixed(2) || '-'}`;
+            } else {
+                 item.valueBox.textContent = 'O: - H: - L: - C: -';
+            }
+            defaultDisplayValues[config.key] = { open: openVal, high: highVal, low: lowVal, close: closeVal }; // Store for crosshair
         } else {
-            rightBox.textContent = Number(defaultValues[legendConfig.key]).toFixed(2);
+            val = getDefaultValue(chartData[config.key], 'value');
+            if (val !== null) item.valueBox.textContent = Number(val).toFixed(2);
+            else item.valueBox.textContent = '-';
+            defaultDisplayValues[config.key] = val;
         }
-      }
     });
+
+    // Log the latest 10 predictions filtered by date range
+    const latestPredictionsInRange = chartData?.barBuyPredictData?.filter(data => {
+        const fromTimestamp = dateRange?.from ? Math.floor(dateRange.from.getTime() / 1000) : 0;
+        const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
+        return data.time >= fromTimestamp && data.time <= toTimestamp;
+    }).slice(-10) || [];
+    console.log('Latest 10 Predictions (Filtered by Date Range):', latestPredictionsInRange);
+
+    // Log the 10 predictions currently displayed (filtered by date range)
+    const displayedPredictions = chartData?.barBuyPredictData?.filter(data => {
+        const fromTimestamp = dateRange?.from ? Math.floor(dateRange.from.getTime() / 1000) : 0;
+        const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
+        return data.time >= fromTimestamp && data.time <= toTimestamp;
+    }).slice(0, 10) || [];
+    console.log('Displayed Predictions in Date Range:', displayedPredictions);
 
     chart.subscribeCrosshairMove(param => {
-      const hoveredTime = param.time;
-      const currentHoveredDate = hoveredTime ? formatDate(hoveredTime) : defaultDate;
-      if (dateRightBox.isConnected) dateRightBox.textContent = currentHoveredDate;
+        const currentTimeAtCrosshair = param.time;
 
-      seriesLegendElements.forEach(item => {
-        const legendConfig = item.config;
-        const rightBox = item.element.querySelector('div:last-child');
-        if (!rightBox || !item.element.isConnected) return;
-        
-        const isLegendEffectivelyVisible = seriesVisibility[legendConfig.key];
-        if (!isLegendEffectivelyVisible) {
-            return; 
+        // Update Date Legend
+        if (dateRightBox) {
+            if (currentTimeAtCrosshair !== undefined) {
+                dateRightBox.textContent = formatDate(currentTimeAtCrosshair);
+            } else {
+                // Crosshair out of chart, revert to default date
+                dateRightBox.textContent = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
+            }
         }
 
-        let valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0;
-        let ohlcValues = null;
+        seriesLegendElements.forEach(item => {
+            const config = item.config;
+            const seriesInstance = seriesInstances[config.key];
+            let displayValue = '-'; // Default to '-'
 
-        if (hoveredTime) {
-            const seriesInstance = seriesInstances[legendConfig.key];
-            // param.seriesData might be an empty map if crosshair is on whitespace
-            const seriesPoint = (param.seriesData && seriesInstance && param.seriesData.size > 0) ? param.seriesData.get(seriesInstance) : null;
-
-            if (seriesPoint) {
-                if (legendConfig.type === 'candlestick') {
-                    ohlcValues = seriesPoint; 
-                    valueToDisplay = seriesPoint.close; 
-                } else {
-                    valueToDisplay = seriesPoint.value !== undefined ? seriesPoint.value : (seriesPoint.close !== undefined ? seriesPoint.close : 0);
-                }
-            } else { 
-                let dataArrayForLookup;
-                let valueKeyForLookup = 'value';
-                if (category === 'GOLD_TH') {
-                    dataArrayForLookup = chartData[legendConfig.key];
-                } else if (category === 'GOLD_US' || category === 'USD_THB') {
-                    if (legendConfig.type === 'candlestick') {
-                        // Construct the full OHLC point from individual arrays for the hoveredTime
-                        const openPoint = chartData.open?.find(p => p.time === hoveredTime);
-                        const highPoint = chartData.high?.find(p => p.time === hoveredTime);
-                        const lowPoint = chartData.low?.find(p => p.time === hoveredTime);
-                        const closePoint = chartData.close?.find(p => p.time === hoveredTime);
-                        if (openPoint && highPoint && lowPoint && closePoint) {
-                            ohlcValues = {
-                                time: hoveredTime,
-                                open: openPoint.value,
-                                high: highPoint.value,
-                                low: lowPoint.value,
-                                close: closePoint.value,
-                            };
-                            valueToDisplay = closePoint.value;
-                        } else {
-                             valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback if any part of OHLC is missing
+            if (currentTimeAtCrosshair !== undefined) { // Crosshair is IN the chart area
+                if (seriesInstance) {
+                    const pointData = param.seriesData ? param.seriesData.get(seriesInstance) : null;
+                    if (pointData) {
+                        if (config.type === 'candlestick' && category !== 'GOLD_TH') {
+                            const open = pointData.open !== undefined ? pointData.open.toFixed(2) : '-';
+                            const high = pointData.high !== undefined ? pointData.high.toFixed(2) : '-';
+                            const low = pointData.low !== undefined ? pointData.low.toFixed(2) : '-';
+                            const close = pointData.close !== undefined ? pointData.close.toFixed(2) : '-';
+                            displayValue = `O:${open} H:${high} L:${low} C:${close}`;
+                        } else if (pointData.value !== undefined) { // For line series
+                            displayValue = pointData.value.toFixed(2);
                         }
-                    } else {
-                         dataArrayForLookup = chartData[legendConfig.key];
+                        // If pointData exists but doesn't have expected properties (value/ohlc), displayValue remains '-'
                     }
+                    // If no pointData for this series at this time (series has a gap), displayValue remains '-'
                 }
-                 if (dataArrayForLookup && Array.isArray(dataArrayForLookup)) {
-                     const pointFromOriginalData = processTimeSeriesData(dataArrayForLookup).find(p => p.time === hoveredTime); // Search in processed data
-                     if (pointFromOriginalData) valueToDisplay = pointFromOriginalData[valueKeyForLookup];
-                     else valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback
-                } else if (!ohlcValues) { // If not candlestick and no direct lookup array
-                     valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback
-                }
+                // If no seriesInstance (should not happen if config exists), displayValue remains '-'
+            } else { // Crosshair is OUT of the chart area
+                // Revert to default values, but only if the series is currently visible
+                if (seriesVisibility[config.key]) {
+                    const defaultVal = defaultDisplayValues[config.key];
+                    if (defaultVal !== null && defaultVal !== undefined) {
+                        if (config.type === 'candlestick' && typeof defaultVal === 'object') {
+                            const open = defaultVal.open !== undefined ? defaultVal.open.toFixed(2) : '-';
+                            const high = defaultVal.high !== undefined ? defaultVal.high.toFixed(2) : '-';
+                            const low = defaultVal.low !== undefined ? defaultVal.low.toFixed(2) : '-';
+                            const close = defaultVal.close !== undefined ? defaultVal.close.toFixed(2) : '-';
+                            displayValue = `O:${open} H:${high} L:${low} C:${close}`;
+                        } else if (typeof defaultVal === 'number') {
+                            displayValue = defaultVal.toFixed(2);
+                        }
+                    }
+                } 
+                // If series is hidden, or no default value, displayValue remains '-'
             }
-        }
-        
-        if (legendConfig.type === 'candlestick' && category !== 'GOLD_TH') {
-            if (ohlcValues) {
-                rightBox.innerHTML = `O:${Number(ohlcValues.open).toFixed(2)} H:${Number(ohlcValues.high).toFixed(2)} L:${Number(ohlcValues.low).toFixed(2)} C:${Number(ohlcValues.close).toFixed(2)}`;
-            } else { // Fallback if ohlcValues couldn't be determined for hoveredTime
-                 rightBox.textContent = `C: ${Number(valueToDisplay).toFixed(2)}`;
+
+            if (item.valueBox) {
+                item.valueBox.textContent = displayValue;
             }
-        } else {
-            rightBox.textContent = Number(valueToDisplay).toFixed(2);
-        }
-      });
+        });
     });
 
-    chart.timeScale().fitContent();
+    // --- Cleanup ---
     const currentChart = chart;
     const currentContainer = styledLegendContainer;
     const currentSeriesLegendElements = [...seriesLegendElements];
 
     return () => {
-      currentSeriesLegendElements.forEach(item => {
-        if (item.element && item.clickHandler) {
-          item.element.removeEventListener('click', item.clickHandler);
+        currentSeriesLegendElements.forEach(legendItem => {
+            if (legendItem.clickHandler) {
+                legendItem.element.removeEventListener('click', legendItem.clickHandler);
+            }
+        });
+        if (currentContainer && currentContainer.parentNode) {
+            currentContainer.parentNode.removeChild(currentContainer);
         }
-      });
-      if (currentChart) currentChart.remove();
-      if (chartContainerRef.current && currentContainer && chartContainerRef.current.contains(currentContainer)) {
-        chartContainerRef.current.removeChild(currentContainer);
-      }
+        if (currentChart) {
+            currentChart.remove();
+        }
     };
-  }, [chartData, category, seriesVisibility, currentSeriesConfigs]);
+  }, [chartData, category, dateRange, seriesVisibility]); // Re-run effect if these change
 
-  return (
-    <div
-      ref={chartContainerRef}
-      style={{
-        position: 'relative', width: '100%', height: '400px',
-        minWidth: 300, minHeight: 200,
-      }}
-    />
-  );
+  return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }} />;
 };
 
 export default Chart;
