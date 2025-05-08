@@ -9,7 +9,7 @@ import { DayPicker } from 'react-day-picker';
 
 // Define preset ranges to match TradingView example
 export const PRESETS = [
-  { label: "5D", range: "5D", tooltip: "5 Days" },
+  { label: "7D", range: "7D", tooltip: "7 Days" },
   { label: "1M", range: "1M", tooltip: "1 Month" },
   { label: "3M", range: "3M", tooltip: "3 Months" },
   { label: "6M", range: "6M", tooltip: "6 Months" },
@@ -37,15 +37,14 @@ function DateRangePickerTH({
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isPopoverOpen = isOpen !== undefined ? isOpen : internalIsOpen;
   const setIsPopoverOpen = onOpenChange || setInternalIsOpen;
-
   // Function to calculate date range based on preset and latestDate
   const calculatePresetRange = useCallback((presetRange, endDate = latestDate) => {
     const end = endOfDay(endDate); // Use end of the latest available day
     let start;
 
     switch (presetRange) {
-      case '5D':
-        start = startOfDay(subDays(end, 4));
+      case '7D':
+        start = startOfDay(subDays(end, 6)); // 7 days including end date
         break;
       case '1M':
         start = startOfDay(subMonths(end, 1));

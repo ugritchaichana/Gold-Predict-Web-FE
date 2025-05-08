@@ -19,9 +19,9 @@ const Selector = ({ selections, onToggle }) => {
     ornamentSell: '#6A1B9A', // Purple
     priceChange: '#4CAF50', // Green
   };
-  
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.prediction ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('prediction')}>
+    <div className="grid grid-cols-3 gap-4 mt-3">
+      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.prediction ? 'bg-blue-50 border border-blue-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('prediction')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.prediction }}></span>
           <Checkbox.Root
@@ -36,11 +36,10 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="prediction">
-          Predict (BP)
-        </label>
-      </div>      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.barBuy ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('barBuy')}>
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-blue-600 transition-colors" htmlFor="prediction">
+          Bar Buy (Predict)
+        </label></div>
+      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.barBuy ? 'bg-yellow-50 border border-yellow-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('barBuy')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.barBuy }}></span>
           <Checkbox.Root
@@ -55,13 +54,10 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="barBuy">
-          Bar Buy (BB)
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-amber-600 transition-colors" htmlFor="barBuy">
+          Bar Buy
         </label>
-      </div>
-
-      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.barSell ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('barSell')}>
+      </div>      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.barSell ? 'bg-amber-50 border border-amber-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('barSell')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.barSell }}></span>
           <Checkbox.Root
@@ -76,13 +72,12 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="barSell">
-          Bar Sell (BS)
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-amber-700 transition-colors" htmlFor="barSell">
+          Bar Sell
         </label>
       </div>
 
-      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.ornamentBuy ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('ornamentBuy')}>
+      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.ornamentBuy ? 'bg-teal-50 border border-teal-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('ornamentBuy')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.ornamentBuy }}></span>
           <Checkbox.Root
@@ -97,13 +92,12 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="ornamentBuy">
-          Ornament Buy (OB)
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-teal-600 transition-colors" htmlFor="ornamentBuy">
+          Ornament Buy
         </label>
       </div>
 
-      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.ornamentSell ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('ornamentSell')}>
+      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.ornamentSell ? 'bg-purple-50 border border-purple-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('ornamentSell')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.ornamentSell }}></span>
           <Checkbox.Root
@@ -118,13 +112,12 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="ornamentSell">
-          Ornament Sell (OS)
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-purple-600 transition-colors" htmlFor="ornamentSell">
+          Ornament Sell
         </label>
       </div>
 
-      <div className={`flex items-center gap-2 p-2 rounded tv-animate-hover ${selections.priceChange ? 'bg-gray-100' : ''} cursor-pointer`} onClick={() => onToggle('priceChange')}>
+      <div className={`flex items-center gap-2 p-2 rounded-lg tv-animate-hover ${selections.priceChange ? 'bg-green-50 border border-green-100' : 'border border-transparent'} cursor-pointer hover:bg-gray-50 transition-colors`} onClick={() => onToggle('priceChange')}>
         <div className="flex items-center justify-center">
           <span className="block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: seriesColors.priceChange }}></span>
           <Checkbox.Root
@@ -139,9 +132,8 @@ const Selector = ({ selections, onToggle }) => {
               </svg>
             </Checkbox.Indicator>
           </Checkbox.Root>
-        </div>
-        <label className="text-sm font-medium text-gray-700 select-none cursor-pointer" htmlFor="priceChange">
-          Price Change (BC)
+        </div>        <label className="text-sm font-medium text-gray-800 select-none cursor-pointer hover:text-green-600 transition-colors" htmlFor="priceChange">
+          Price Change
         </label>
       </div>
     </div>

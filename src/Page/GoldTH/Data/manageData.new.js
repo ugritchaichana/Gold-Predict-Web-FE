@@ -6,7 +6,7 @@ import { parseISO, format, isValid } from 'date-fns';
  * @returns {Object} - ข้อมูลที่แปลงรูปแบบแล้ว
  */
 export const transformGoldData = (goldData) => {
-  // ตรวจสอบรูปแบบข้อมูล
+  // ตรวจสอบรูปแบบข้อมูลแบบใหม่ (Array ของ object ที่มี Bar Buy และ time)
   const isNewDataFormat = Array.isArray(goldData) && 
                          goldData.length > 0 && 
                          goldData[0] && 
@@ -28,94 +28,69 @@ export const transformGoldData = (goldData) => {
     // Create a temporary array to hold all data points with their timestamps
     const dataPoints = [];
 
-    for (const item of goldData) {      // Format for lightweight charts (time in seconds)
-      try {
-        const time = item.time || 0;
-        
-        // Skip invalid timestamps (zero or negative)
-        if (time <= 0) continue;
-        
-        // Validate the timestamp before using it
-        if (time < 10000) {
-          console.warn(`Very small timestamp detected: ${time}, skipping data point`);
-          continue;
-        }
-        
-        // Create a date object to validate
-        const dateObj = new Date(time * 1000);
-        
-        // Validate the year
-        if (!isValid(dateObj) || dateObj.getFullYear() < 2000 || dateObj.getFullYear() > 2050) {
-          console.warn(`Invalid date from timestamp ${time}: ${dateObj.toISOString()}, skipping data point`);
-          continue;
-        }
-        
-        dataPoints.push({
-          time,
-          date: dateObj.toISOString(),
-          barBuy: parseFloat(item['Bar Buy']) || 0,
-          barSell: parseFloat(item['Bar Sell']) || 0,
-          ornamentBuy: parseFloat(item['Ornament Buy']) || 0,
-          ornamentSell: parseFloat(item['Ornament Sell']) || 0,
-          barPriceChange: parseFloat(item['Price Change']) || 0,
-        });
-      } catch (e) {
-        console.error("Error processing data point:", e);
-        continue;
-      }
-    }    dataPoints.sort((a, b) => a.time - b.time);
-    
-    // Implementation of processDataPoints function
-    const processedData = {
-      barBuy: [],
-      barSell: [],
-      ornamentBuy: [],
-      ornamentSell: [],
-      barPriceChange: [],
-      timestamps: [],
-      dates: [],
-    };
+    for (const item of goldData) {
+      // Format for lightweight charts (time in seconds)
+      const time = item.time || 0;
+      
+      // Skip invalid timestamps (zero or negative)
+      if (time <= 0) continue;
+      
+      dataPoints.push({
+        time,
+        date: new Date(time * 1000).toISOString(),
+        barBuy: parseFloat(item['Bar Buy']) || 0,
+        barSell: parseFloat(item['Bar Sell']) || 0,
+        ornamentBuy: parseFloat(item['Ornament Buy']) || 0,
+        ornamentSell: parseFloat(item['Ornament Sell']) || 0,
+        barPriceChange: parseFloat(item['Price Change']) || 0,
+      });
+    }
+
+    // Sort data points by time in ascending order
+    dataPoints.sort((a, b) => a.time - b.time);
     
     // Now build the transformed data with sorted points
     for (const point of dataPoints) {
-      processedData.timestamps.push({
+      transformedData.timestamps.push({
         time: point.time,
         value: point.barBuy
       });
       
-      processedData.barBuy.push({
+      transformedData.barBuy.push({
         time: point.time,
         value: point.barBuy
       });
       
-      processedData.barSell.push({
+      transformedData.barSell.push({
         time: point.time,
         value: point.barSell
       });
       
-      processedData.ornamentBuy.push({
+      transformedData.ornamentBuy.push({
         time: point.time,
         value: point.ornamentBuy
       });
       
-      processedData.ornamentSell.push({
+      transformedData.ornamentSell.push({
         time: point.time,
         value: point.ornamentSell
       });
       
-      processedData.barPriceChange.push({
+      transformedData.barPriceChange.push({
         time: point.time,
         value: point.barPriceChange,
         color: point.barPriceChange >= 0 ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255, 82, 82, 0.8)',
       });
       
-      processedData.dates.push({
-        date: new Date(point.time * 1000).toISOString(),
-        time: point.time,
-      });
+      if (point.date) {
+        transformedData.dates.push({
+          date: point.date,
+          time: point.time,
+        });
+      }
     }
     
-    return processedData;
+    return transformedData;
   }
   
   // กรณีเป็นข้อมูลรูปแบบเดิม (goldData.data.labels และ goldData.data.datasets)
@@ -127,11 +102,21 @@ export const transformGoldData = (goldData) => {
       ornamentSell: [],
       barPriceChange: [],
       timestamps: [],
+      dates: [],
     };
   }
 
   try {
     const { labels, datasets } = goldData.data;
+    const transformedData = {
+      barBuy: [],
+      barSell: [],
+      ornamentBuy: [],
+      ornamentSell: [],
+      barPriceChange: [],
+      timestamps: [],
+      dates: [],
+    };
     
     // Find dataset indexes
     const datesetIndex = datasets.findIndex(set => set.label === 'Date');
@@ -207,7 +192,8 @@ export const transformGoldData = (goldData) => {
         time: point.time,
       });
     }
-      return transformedData;
+      
+    return transformedData;
   } catch (error) {
     console.error("Error transforming gold data:", error);
     return {
@@ -234,12 +220,12 @@ export const transformPredictionData = (predictionData) => {
 
   try {
     const { labels, data } = predictionData;
-    const transformedData = labels.map((label, index) => {      // Convert string date to timestamp (seconds since epoch)
+    const transformedData = labels.map((label, index) => {
+      // Convert string date to timestamp (seconds since epoch)
       let time;
       try {
-        // First try to parse as ISO date
         const dateObj = parseISO(label);
-        if (isValid(dateObj) && dateObj.getFullYear() >= 2000 && dateObj.getFullYear() <= 2050) {
+        if (isValid(dateObj)) {
           // Convert to seconds since epoch
           time = Math.floor(dateObj.getTime() / 1000);
         } else {
@@ -249,34 +235,11 @@ export const transformPredictionData = (predictionData) => {
             // Assuming DD-MM-YY format
             const dateStr = `20${parts[2]}-${parts[1]}-${parts[0]}`;
             const newDateObj = parseISO(dateStr);
-            
-            // Validate the parsed date
-            if (isValid(newDateObj) && newDateObj.getFullYear() >= 2000 && newDateObj.getFullYear() <= 2050) {
-              time = Math.floor(newDateObj.getTime() / 1000);
-            } else {
-              console.warn(`Invalid date after parsing: ${label} -> ${dateStr}`);
-              // Use current time plus index days as fallback
-              time = Math.floor(Date.now() / 1000) + index * 86400;
-            }
+            time = Math.floor(newDateObj.getTime() / 1000);
           } else {
-            // Try parsing as timestamp in seconds or milliseconds
-            const numValue = parseInt(label, 10);
-            if (!isNaN(numValue)) {
-              // If it's a timestamp, convert appropriately
-              const timestamp = numValue.toString().length <= 10 ? numValue * 1000 : numValue;
-              const timestampDate = new Date(timestamp);
-              
-              if (isValid(timestampDate) && timestampDate.getFullYear() >= 2000 && timestampDate.getFullYear() <= 2050) {
-                time = Math.floor(timestamp / 1000);
-              } else {
-                console.warn(`Invalid timestamp date: ${label} -> ${timestampDate}`);
-                time = Math.floor(Date.now() / 1000) + index * 86400;
-              }
-            } else {
-              console.warn(`Invalid date format: ${label}`);
-              // Use current time plus index days as fallback
-              time = Math.floor(Date.now() / 1000) + index * 86400;
-            }
+            console.warn(`Invalid date format: ${label}`);
+            // Use current time plus index days as fallback
+            time = Math.floor(Date.now() / 1000) + index * 86400;
           }
         }
       } catch (error) {
@@ -349,59 +312,27 @@ export const mergeGoldData = (existingData, newData) => {
 /**
  * จัดรูปแบบวันที่สำหรับแสดงผล
  * @param {string|number|Date} date - วันที่ในรูปแบบ timestamp, string หรือ Date object
- * @returns {string} - วันที่ในรูปแบบ DD-MM-YYYY HH:mm
+ * @returns {string} - วันที่ในรูปแบบ DD-MM-YYYY
  */
 export const formatDate = (date) => {
   try {
     // Handle null or undefined
     if (date === null || date === undefined) {
-      return format(new Date(), 'dd-MM-yyyy HH:mm'); // Current date and time as fallback
+      return 'Invalid Date';
     }
     
     // Handle Date object
     if (date instanceof Date) {
-      if (isValid(date)) {
-        // Additional validation for reasonable years
-        if (date.getFullYear() >= 2000 && date.getFullYear() <= 2050) {
-          return format(date, 'dd-MM-yyyy HH:mm');
-        } else {
-          console.warn(`Date outside reasonable range: ${date}, using current time instead`);
-          return format(new Date(), 'dd-MM-yyyy HH:mm');
-        }
-      }
-      // If the date object is invalid, use current date
-      return format(new Date(), 'dd-MM-yyyy HH:mm');
+      return format(date, 'dd-MM-yyyy');
     }
     
     // Handle number (timestamp)
     if (typeof date === 'number') {
-      // Check for invalid timestamps (too small or negative - often causes 1970 dates)
-      if (date < 10000) {
-        console.warn(`Invalid timestamp detected: ${date}, using current time instead`);
-        return format(new Date(), 'dd-MM-yyyy HH:mm');
-      }
-      
       // Check if timestamp is in seconds (10 digits) or milliseconds (13 digits)
       const timestamp = date.toString().length <= 10 ? date * 1000 : date;
-      
-      try {
-        const dateObj = new Date(timestamp);
-        
-        // Validate the date object - check if it's not too far in the past (1970-1980) or future
-        if (isValid(dateObj)) {
-          if (dateObj.getFullYear() >= 2000 && dateObj.getFullYear() <= 2050) {
-            return format(dateObj, 'dd-MM-yyyy HH:mm');
-          } else {
-            console.warn(`Invalid date year from timestamp: ${date}, using current time instead`);
-            return format(new Date(), 'dd-MM-yyyy HH:mm');
-          }
-        } else {
-          console.warn(`Invalid date from timestamp: ${date}, using current time instead`);
-          return format(new Date(), 'dd-MM-yyyy HH:mm');
-        }
-      } catch (e) {
-        console.error(`Error creating date from timestamp ${date}:`, e);
-        return format(new Date(), 'dd-MM-yyyy HH:mm');
+      const dateObj = new Date(timestamp);
+      if (isValid(dateObj)) {
+        return format(dateObj, 'dd-MM-yyyy');
       }
     } 
     // Handle string
@@ -410,36 +341,33 @@ export const formatDate = (date) => {
       const ddmmyyRegex = /^(\d{1,2})-(\d{1,2})-(\d{2})$/;
       if (ddmmyyRegex.test(date)) {
         const parts = date.split('-');
-        const currentTime = format(new Date(), 'HH:mm');
-        return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-20${parts[2]} ${currentTime}`;
+        return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-20${parts[2]}`;
       }
       
       // Check if it's in DD-MM-YYYY format
       const ddmmyyyyRegex = /^(\d{1,2})-(\d{1,2})-(\d{4})$/;
       if (ddmmyyyyRegex.test(date)) {
         const parts = date.split('-');
-        const currentTime = format(new Date(), 'HH:mm');
-        return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]} ${currentTime}`;
+        return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
       }
       
       // Try to parse using parseISO for ISO format dates
       const parsed = parseISO(date);
       if (isValid(parsed)) {
-        return format(parsed, 'dd-MM-yyyy HH:mm');
+        return format(parsed, 'dd-MM-yyyy');
       }
       
       // Fallback: try creating a new Date object
       const dateObj = new Date(date);
       if (isValid(dateObj)) {
-        return format(dateObj, 'dd-MM-yyyy HH:mm');
+        return format(dateObj, 'dd-MM-yyyy');
       }
     }
     
-    // If all else fails, return current date and time
-    return format(new Date(), 'dd-MM-yyyy HH:mm');
+    return 'Invalid Date';
   } catch (error) {
     console.error('Error formatting date:', error);
-    return format(new Date(), 'dd-MM-yyyy HH:mm'); // Current date as fallback
+    return 'Invalid Date';
   }
 };
 
