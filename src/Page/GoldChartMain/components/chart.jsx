@@ -1,63 +1,89 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react'; // Added useMemo
-import { createChart } from 'lightweight-charts';
-import { useChartData } from '../hook/fetchData';
+import React, { useEffect, useRef, useState } from 'react';
+import { createChart, LineStyle } from 'lightweight-charts';
 
 const chartOptions = {
     layout: {
         textColor: 'black',
         background: { type: 'solid', color: 'white' },
     },
+    crosshair: {
+        mode: 0,
+    },
 };
 
-// Define series configurations outside the component or memoize if derived from props
-const staticSeriesConfigs = [
-    { key: 'barBuyData', color: 'blue', name: 'Bar Buy', addToChart: true, defaultVisible: true },
-    { key: 'barSellData', color: 'red', name: 'Bar Sell', addToChart: true, defaultVisible: true },
-    { key: 'ornamentBuyData', color: 'green', name: 'Ornament Buy', addToChart: true, defaultVisible: true },
-    { key: 'ornamentSellData', color: 'orange', name: 'Ornament Sell', addToChart: true, defaultVisible: true },
-    { key: 'priceChangeData', color: 'purple', name: 'Price Change', addToChart: false, defaultVisible: true },
-];
+const baseSeriesConfigs = {
+    GOLD_TH: [
+        { key: 'barBuyData', color: 'blue', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barSellData', color: 'red', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentBuyData', color: 'green', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentSellData', color: 'orange', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barBuyPredictData', color: '#42a5f5', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
+        { key: 'priceChangeData', color: 'purple', name: 'Price Change', addToChart: false, defaultVisible: true },
+    ],
+    GOLD_US: [
+        { key: 'ohlc', name: 'Gold US OHLC', addToChart: true, defaultVisible: true, type: 'candlestick' },
+    ],
+    USD_THB: [
+        { key: 'ohlc', name: 'USD/THB OHLC', addToChart: true, defaultVisible: true, type: 'candlestick' },
+    ],
+};
 
-const Chart = ({ symbolName = '' }) => {
-  const { data, isLoading, isError, error } = useChartData();
+// Helper function to process and sort time-series data
+const processTimeSeriesData = (data) => {
+    if (!Array.isArray(data) || data.length === 0) {
+        return [];
+    }
+
+    // 1. Remove duplicates by time, keeping the last one encountered (or first, adjust as needed)
+    const uniqueTimeData = [];
+    const timeMap = new Map();
+    // Iterate in reverse to keep the last instance if a simple filter is used,
+    // or build map and then extract. For simplicity, let's use a Map to ensure uniqueness.
+    for (const item of data) {
+        if (item && typeof item.time === 'number') { // Ensure item and time are valid
+             // If you want to keep the *last* entry for a duplicate time, you can overwrite.
+             // If you want to keep the *first*, check if map already has the time.
+            timeMap.set(item.time, item);
+        }
+    }
+    timeMap.forEach(value => uniqueTimeData.push(value));
+
+
+    // 2. Sort by time in ascending order
+    return uniqueTimeData.sort((a, b) => a.time - b.time);
+};
+
+
+const Chart = ({ chartData, category = 'GOLD_TH', symbolName = '' }) => {
   const chartContainerRef = useRef(null);
-
-  // Use staticSeriesConfigs directly
-  const seriesConfigs = staticSeriesConfigs;
+  const currentSeriesConfigs = baseSeriesConfigs[category] || [];
 
   const [seriesVisibility, setSeriesVisibility] = useState(() => {
     const initial = {};
-    seriesConfigs.forEach(config => {
+    currentSeriesConfigs.forEach(config => {
         initial[config.key] = config.defaultVisible;
     });
     return initial;
   });
 
-  // Effect to reset visibility when symbolName (and thus data) changes
   useEffect(() => {
-    // console.log('SymbolName changed, resetting visibility');
     const initial = {};
-    seriesConfigs.forEach(config => {
+    currentSeriesConfigs.forEach(config => {
         initial[config.key] = config.defaultVisible;
     });
     setSeriesVisibility(initial);
-  }, [symbolName, seriesConfigs]); // seriesConfigs is stable if defined outside
+  }, [category, currentSeriesConfigs]);
 
-  // Main effect for chart rendering
   useEffect(() => {
-    // console.log('Chart useEffect triggered. isLoading:', isLoading, 'isError:', isError, 'data:', !!data, 'seriesVisibility:', seriesVisibility);
-    if (isLoading || isError || !data || !data.barBuyData) {
-        // console.log('Chart useEffect: Pre-condition not met, returning.');
+    if (!chartData) {
+        if (chartContainerRef.current) chartContainerRef.current.innerHTML = '';
         return;
     }
     if (!chartContainerRef.current) {
-        // console.log('Chart useEffect: No chart container ref.');
         return;
     }
 
-    // console.log('Chart useEffect: Clearing and creating chart.');
     chartContainerRef.current.innerHTML = '';
-
     const chart = createChart(chartContainerRef.current, {
       ...chartOptions,
       width: chartContainerRef.current.clientWidth,
@@ -66,35 +92,105 @@ const Chart = ({ symbolName = '' }) => {
 
     const seriesInstances = {};
 
-    seriesConfigs.forEach(config => {
-        if (config.addToChart && data[config.key] && data[config.key].length > 0) {
-            seriesInstances[config.key] = chart.addLineSeries({
-                color: config.color,
-                lineWidth: 2,
-                visible: seriesVisibility[config.key], // Directly use state
-                title: config.name, // For default tooltip
-            });
-            seriesInstances[config.key].setData(data[config.key]);
-            // console.log(`Series ${config.key} added, visible: ${seriesVisibility[config.key]}`);
+    currentSeriesConfigs.forEach(config => {
+        if (!seriesVisibility[config.key] && config.key !== 'priceChangeData') { // priceChangeData is not on chart but in legend
+             // console.log(`Skipping series ${config.key} due to visibility state.`);
+             return;
+        }
+
+        if (config.addToChart || config.key === 'priceChangeData') { // priceChangeData needs its data for legend even if not on chart
+            let rawSeriesData;
+            let processedSeriesData;
+
+            if (category === 'GOLD_TH') {
+                rawSeriesData = chartData[config.key];
+                processedSeriesData = processTimeSeriesData(rawSeriesData);
+            } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
+                if (chartData.open && chartData.high && chartData.low && chartData.close) {
+                    // Combine and then process for OHLC
+                    // Ensure all arrays have the same length before zipping
+                    const minLength = Math.min(
+                        chartData.open.length,
+                        chartData.high.length,
+                        chartData.low.length,
+                        chartData.close.length
+                    );
+
+                    rawSeriesData = chartData.open.slice(0, minLength).map((o, i) => ({
+                        time: o.time, // Assume time is consistent across o,h,l,c for the same index
+                        open: o.value,
+                        high: chartData.high[i]?.value,
+                        low: chartData.low[i]?.value,
+                        close: chartData.close[i]?.value,
+                    })).filter(d =>
+                        d.high !== undefined && d.low !== undefined && d.close !== undefined &&
+                        typeof d.time === 'number' && // Ensure time is a number
+                        typeof d.open === 'number' &&
+                        typeof d.high === 'number' &&
+                        typeof d.low === 'number' &&
+                        typeof d.close === 'number'
+                    );
+                    processedSeriesData = processTimeSeriesData(rawSeriesData); // Process combined OHLC data
+                }
+            } else if (category === 'GOLD_US' || category === 'USD_THB') {
+                rawSeriesData = chartData[config.key]; // e.g., chartData.open, chartData.close (if plotting as lines)
+                processedSeriesData = processTimeSeriesData(rawSeriesData);
+            }
+
+
+            if (config.addToChart && processedSeriesData && Array.isArray(processedSeriesData) && processedSeriesData.length > 0) {
+                // console.log(`Adding series ${config.key} with ${processedSeriesData.length} points. First point time: ${processedSeriesData[0]?.time}`);
+                try {
+                    if (config.type === 'candlestick') {
+                        seriesInstances[config.key] = chart.addCandlestickSeries({
+                            upColor: '#26a69a', downColor: '#ef5350',
+                            borderDownColor: '#ef5350', borderUpColor: '#26a69a',
+                            wickDownColor: '#ef5350', wickUpColor: '#26a69a',
+                            visible: seriesVisibility[config.key], // Visibility applied here
+                            title: config.name,
+                        });
+                    } else {
+                        seriesInstances[config.key] = chart.addLineSeries({
+                            color: config.color,
+                            lineWidth: 2,
+                            visible: seriesVisibility[config.key], // Visibility applied here
+                            title: config.name,
+                            lineStyle: config.lineStyle || LineStyle.Solid,
+                        });
+                    }
+                    seriesInstances[config.key].setData(processedSeriesData);
+                } catch (e) {
+                    console.error(`Error setting data for series ${config.key}:`, e);
+                    console.error("Problematic data for this series:", processedSeriesData.slice(0, 10)); // Log first few points
+                    // Find the problematic index if possible from error message
+                    const match = e.message?.match(/index=(\d+)/);
+                    if (match && match[1]) {
+                        const problematicIndex = parseInt(match[1], 10);
+                        console.error("Data around problematic index:", processedSeriesData.slice(Math.max(0, problematicIndex - 2), problematicIndex + 3));
+                    }
+                }
+            } else if (config.addToChart) {
+                // console.log(`No data or empty processed data for series ${config.key} to add to chart.`);
+            }
+            // Store processed data for legend even if not added to chart (e.g. priceChangeData)
+             if (config.key === 'priceChangeData' && processedSeriesData) {
+                // This is a bit of a hack, normally legend would use data from seriesInstances
+                // But priceChangeData isn't a chart series. We'll need to handle its default value.
+                // For now, ensure chartData itself holds the processed version if it's used by legend directly
+                if (chartData[config.key]) chartData[config.key] = processedSeriesData;
+            }
         }
     });
 
+    // ... (rest of the legend creation and update logic) ...
+    // Make sure legend logic uses `currentSeriesConfigs` and `chartData` (which might contain processed data for non-chart series)
+
     const styledLegendContainer = document.createElement('div');
     styledLegendContainer.style = `
-      position: absolute;
-      left: 12px;
-      top: 12px;
-      z-index: 1001; /* Ensure legend is on top */
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-size: 12px;
-      font-family: sans-serif;
-      line-height: 18px;
-      font-weight: 300;
-      background: rgba(255, 255, 255, 0.85); /* Slightly more opaque */
-      padding: 8px;
-      border-radius: 4px;
+      position: absolute; left: 12px; top: 12px; z-index: 1001;
+      display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
+      font-family: sans-serif; line-height: 18px; font-weight: 300;
+      background: rgba(255, 255, 255, 0.85); padding: 8px; border-radius: 4px;
     `;
 
     const dateLegendRow = document.createElement('div');
@@ -114,71 +210,100 @@ const Chart = ({ symbolName = '' }) => {
 
     const seriesLegendElements = [];
 
-    const updateLegendStyle = (legendElement, isVisibleConfig, configColor) => {
+    const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
         const leftBox = legendElement.children[0];
         const rightBox = legendElement.children[1];
-        if (isVisibleConfig) {
-            legendElement.style.opacity = '1';
-            legendElement.style.borderColor = configColor;
-            if (leftBox) leftBox.style.textDecoration = 'none';
-            if (rightBox) rightBox.style.textDecoration = 'none';
-        } else {
-            legendElement.style.opacity = '0.5';
-            legendElement.style.borderColor = 'grey';
-            if (leftBox) leftBox.style.textDecoration = 'line-through';
-            if (rightBox) rightBox.style.textDecoration = 'line-through';
+        
+        const displayColor = configForStyle.type === 'candlestick' ? (isVisibleConfig ? '#26a69a' : 'grey') : configForStyle.color;
+
+        legendElement.style.opacity = isVisibleConfig ? '1' : '0.5';
+        legendElement.style.borderColor = isVisibleConfig ? displayColor : 'grey';
+        if (leftBox) leftBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
+        
+        if (rightBox) {
+            rightBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
+            if (configForStyle.type !== 'candlestick') {
+                 rightBox.style.background = isVisibleConfig ? displayColor : 'grey';
+                 rightBox.style.color = 'white';
+            } else {
+                rightBox.style.background = 'transparent';
+                rightBox.style.color = isVisibleConfig ? 'black' : 'grey';
+            }
         }
     };
 
-    seriesConfigs.forEach(config => {
-      if (!data[config.key] || data[config.key].length === 0) return;
+    currentSeriesConfigs.forEach(config => {
+      let legendDataExists = false;
+      if (category === 'GOLD_TH' && chartData[config.key]) {
+          legendDataExists = true;
+      } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
+          if (config.type === 'candlestick' && chartData.open) legendDataExists = true;
+          else if (chartData[config.key] && config.type !== 'candlestick') legendDataExists = true;
+      }
+      // For priceChangeData, it might not have a direct corresponding series on chart, but legend is needed
+      if (!legendDataExists && config.key !== 'priceChangeData') return;
+
 
       const legendRow = document.createElement('div');
-      // Store config key on the element for easier access in handler if needed, or use closure
-      // legendRow.dataset.seriesKey = config.key; 
+      const legendBorderColor = config.type === 'candlestick' ? (seriesVisibility[config.key] ? '#26a69a' : 'grey') : config.color;
       legendRow.style = `
-        display: flex; align-items: center; border: 1px solid ${config.color};
+        display: flex; align-items: center; border: 1px solid ${legendBorderColor};
         border-radius: 4px; overflow: hidden; box-sizing: border-box;
         cursor: pointer; transition: opacity 0.2s ease, border-color 0.2s ease;
       `;
       const leftBox = document.createElement('div');
       leftBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
       leftBox.textContent = config.name;
-      const rightBox = document.createElement('div');
-      rightBox.style = `background: ${config.color}; color: white; padding: 4px 8px; text-align: center; min-width: 75px;`;
-      rightBox.textContent = '0.00';
-      
       legendRow.appendChild(leftBox);
-      legendRow.appendChild(rightBox);
+
+      if (config.type !== 'candlestick' || category === 'GOLD_TH' || config.key === 'priceChangeData') {
+          const rightBox = document.createElement('div');
+          const bgColor = config.type === 'candlestick' ? 'transparent' : (config.color || 'transparent');
+          const textColor = config.type === 'candlestick' ? 'black' : 'white';
+          rightBox.style = `
+            background: ${bgColor}; 
+            color: ${textColor}; padding: 4px 8px; text-align: center; min-width: 75px;
+          `;
+          rightBox.textContent = (config.key === 'priceChangeData' && chartData.priceChangeData && chartData.priceChangeData.length > 0)
+            ? Number(chartData.priceChangeData[chartData.priceChangeData.length-1].value).toFixed(2)
+            : '0.00'; // Default or last value for priceChangeData
+          legendRow.appendChild(rightBox);
+      } else if (config.type === 'candlestick') { // Specific legend for OHLC
+          const rightBox = document.createElement('div');
+          rightBox.style = `
+            background: transparent; color: black; 
+            padding: 4px 8px; text-align: left; min-width: 150px; font-size: 10px;
+          `; // Adjusted for OHLC display
+          rightBox.textContent = 'O: - H: - L: - C: -'; // Placeholder
+          legendRow.appendChild(rightBox);
+      }
+      
       styledLegendContainer.appendChild(legendRow);
       
-      const legendItem = { element: legendRow, config: config }; // Keep for potential direct manipulation if needed
+      const legendItem = { element: legendRow, config: config, clickHandler: null };
       seriesLegendElements.push(legendItem);
 
-      updateLegendStyle(legendRow, seriesVisibility[config.key], config.color);
+      updateLegendStyle(legendRow, seriesVisibility[config.key], config);
 
-      const clickHandler = () => {
-        // console.log(`Legend clicked: ${config.name}`);
+      legendItem.clickHandler = () => {
         setSeriesVisibility(prevVisibility => {
             const newVisibilityForKey = !prevVisibility[config.key];
             const updatedVisibility = { ...prevVisibility, [config.key]: newVisibilityForKey };
             
-            // console.log(`Updating visibility for ${config.key} to ${newVisibilityForKey}`);
-            
-            if (config.addToChart && seriesInstances[config.key]) {
-                seriesInstances[config.key].applyOptions({ visible: newVisibilityForKey });
+            // If series is on chart, apply visibility option.
+            // For candlestick, it's more complex: ideally, remove/re-add series,
+            // or rely on useEffect to re-render based on the new visibility state.
+            // The current setup will trigger useEffect re-render, which rebuilds series.
+            if (config.addToChart && seriesInstances[config.key] && seriesInstances[config.key].applyOptions) {
+                 seriesInstances[config.key].applyOptions({ visible: newVisibilityForKey });
             }
-            // The style update will be handled by the re-render of useEffect,
-            // but for instant feedback, we can call it here too.
-            // updateLegendStyle(legendRow, newVisibilityForKey, config.color); 
-            // However, it's better to let the useEffect re-render handle this for consistency with state.
+            // For candlestick, the re-render from useEffect will handle its visibility
+            // by either adding it or not based on seriesVisibility[config.key].
 
             return updatedVisibility;
         });
       };
-      legendRow.addEventListener('click', clickHandler);
-      // Store handler for cleanup
-      legendItem.clickHandler = clickHandler;
+      legendRow.addEventListener('click', legendItem.clickHandler);
     });
 
     chartContainerRef.current.appendChild(styledLegendContainer);
@@ -196,100 +321,181 @@ const Chart = ({ symbolName = '' }) => {
     });
 
     const formatDate = (timestamp) => {
-      const date = new Date(timestamp * 1000);
-      const day = date.getDate().toString().padStart(2, '0');
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = monthNames[date.getMonth()];
-      const year = date.getFullYear().toString().slice(-2);
-      return `${day} ${month} '${year}`;
+        if (!timestamp && timestamp !==0) return 'N/A';
+        const date = new Date(timestamp * 1000);
+        if (isNaN(date.getTime())) return 'N/A';
+        const day = date.getDate().toString().padStart(2, '0');
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = monthNames[date.getMonth()];
+        const year = date.getFullYear().toString().slice(-2);
+        return `${day} ${month} '${year}`;
     };
-
-    const lastBarBuyDataPoint = data.barBuyData && data.barBuyData.length > 0 ? data.barBuyData[data.barBuyData.length - 1] : null;
-    const defaultDate = lastBarBuyDataPoint ? formatDate(lastBarBuyDataPoint.time) : 'N/A';
+    
+    let firstTimeSeriesData = [];
+    if (category === 'GOLD_TH' && chartData.barBuyData) {
+        firstTimeSeriesData = chartData.barBuyData;
+    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.open) {
+        firstTimeSeriesData = chartData.open; // Assuming 'open' data is sorted and can be used for default date
+    } else if (chartData.barBuyPredictData && chartData.barBuyPredictData.length > 0) {
+        firstTimeSeriesData = chartData.barBuyPredictData;
+    }
+    // Ensure firstTimeSeriesData is sorted if it comes from raw chartData
+    const processedFirstTimeSeriesData = processTimeSeriesData(firstTimeSeriesData);
+    const lastDataPointForDate = processedFirstTimeSeriesData.length > 0 ? processedFirstTimeSeriesData[processedFirstTimeSeriesData.length - 1] : null;
+    const defaultDate = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
     if (dateRightBox.isConnected) dateRightBox.textContent = defaultDate;
 
-    const getDefaultValue = (dataArray) => {
-        const lastPoint = dataArray && dataArray.length > 0 ? dataArray[dataArray.length - 1] : null;
-        return lastPoint ? lastPoint.value : 0;
+    const getDefaultValue = (dataArray, valueKey = 'value') => {
+        const sortedArray = processTimeSeriesData(dataArray); // Ensure it's sorted for reliable last point
+        const lastPoint = sortedArray.length > 0 ? sortedArray[sortedArray.length - 1] : null;
+        return lastPoint ? lastPoint[valueKey] : 0;
     };
     
     const defaultValues = {};
-    seriesConfigs.forEach(config => {
-        if (data[config.key]) {
-            defaultValues[config.key] = getDefaultValue(data[config.key]);
+    currentSeriesConfigs.forEach(config => {
+        let dataArrayForKey;
+        let valueKey = 'value';
+
+        if (category === 'GOLD_TH') {
+            dataArrayForKey = chartData[config.key];
+        } else if (category === 'GOLD_US' || category === 'USD_THB') {
+            if (config.type === 'candlestick') {
+                dataArrayForKey = chartData.close; 
+                valueKey = 'value'; 
+            } else {
+                dataArrayForKey = chartData[config.key];
+            }
+        } else if (config.key === 'priceChangeData') { // Handle priceChangeData specifically
+            dataArrayForKey = chartData[config.key];
+        }
+
+
+        if (dataArrayForKey && Array.isArray(dataArrayForKey)) {
+            defaultValues[config.key] = getDefaultValue(dataArrayForKey, valueKey);
+        } else {
+            defaultValues[config.key] = 0;
         }
     });
 
     seriesLegendElements.forEach(item => {
-      const rightBox = item.element.children[1];
-      if (rightBox && defaultValues[item.config.key] !== undefined) {
-        rightBox.textContent = defaultValues[item.config.key].toFixed(2);
+      const legendConfig = item.config;
+      const rightBox = item.element.querySelector('div:last-child');
+
+      if (rightBox && defaultValues[legendConfig.key] !== undefined) {
+        if (legendConfig.type === 'candlestick' && category !== 'GOLD_TH') {
+            const closeVal = defaultValues[legendConfig.key]; // This is the default 'close' value
+            // For initial display, just show close. Crosshair move will update with OHL C.
+            rightBox.textContent = `C: ${Number(closeVal).toFixed(2)}`;
+        } else {
+            rightBox.textContent = Number(defaultValues[legendConfig.key]).toFixed(2);
+        }
       }
-      // Style is now applied when legend is created based on seriesVisibility state
     });
 
     chart.subscribeCrosshairMove(param => {
-      const hoveredDate = param.time ? formatDate(param.time) : defaultDate;
-      if (dateRightBox.isConnected) dateRightBox.textContent = hoveredDate;
+      const hoveredTime = param.time;
+      const currentHoveredDate = hoveredTime ? formatDate(hoveredTime) : defaultDate;
+      if (dateRightBox.isConnected) dateRightBox.textContent = currentHoveredDate;
 
       seriesLegendElements.forEach(item => {
-        const rightBox = item.element.children[1];
+        const legendConfig = item.config;
+        const rightBox = item.element.querySelector('div:last-child');
         if (!rightBox || !item.element.isConnected) return;
         
-        const isLegendEffectivelyVisible = seriesVisibility[item.config.key];
+        const isLegendEffectivelyVisible = seriesVisibility[legendConfig.key];
         if (!isLegendEffectivelyVisible) {
-            // Value is kept but text-decoration: line-through is applied by updateLegendStyle
             return; 
         }
 
-        let value = defaultValues[item.config.key] !== undefined ? defaultValues[item.config.key] : 0;
+        let valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0;
+        let ohlcValues = null;
 
-        if (item.config.addToChart && param.time && param.seriesData && seriesInstances[item.config.key]) {
-            const seriesPoint = param.seriesData.get(seriesInstances[item.config.key]);
+        if (hoveredTime) {
+            const seriesInstance = seriesInstances[legendConfig.key];
+            // param.seriesData might be an empty map if crosshair is on whitespace
+            const seriesPoint = (param.seriesData && seriesInstance && param.seriesData.size > 0) ? param.seriesData.get(seriesInstance) : null;
+
             if (seriesPoint) {
-                 value = seriesPoint.value !== undefined ? seriesPoint.value : (seriesPoint.close !== undefined ? seriesPoint.close : 0);
-            }
-        } else if (!item.config.addToChart && param.time) {
-            // Logic for non-chart series (like Price Change)
-            const dataArray = data[item.config.key];
-            if (dataArray) {
-                // Simplified: find exact match or use default.
-                const foundPoint = dataArray.find(p => p.time === param.time);
-                value = foundPoint ? foundPoint.value : (defaultValues[item.config.key] !== undefined ? defaultValues[item.config.key] : 0);
+                if (legendConfig.type === 'candlestick') {
+                    ohlcValues = seriesPoint; 
+                    valueToDisplay = seriesPoint.close; 
+                } else {
+                    valueToDisplay = seriesPoint.value !== undefined ? seriesPoint.value : (seriesPoint.close !== undefined ? seriesPoint.close : 0);
+                }
+            } else { 
+                let dataArrayForLookup;
+                let valueKeyForLookup = 'value';
+                if (category === 'GOLD_TH') {
+                    dataArrayForLookup = chartData[legendConfig.key];
+                } else if (category === 'GOLD_US' || category === 'USD_THB') {
+                    if (legendConfig.type === 'candlestick') {
+                        // Construct the full OHLC point from individual arrays for the hoveredTime
+                        const openPoint = chartData.open?.find(p => p.time === hoveredTime);
+                        const highPoint = chartData.high?.find(p => p.time === hoveredTime);
+                        const lowPoint = chartData.low?.find(p => p.time === hoveredTime);
+                        const closePoint = chartData.close?.find(p => p.time === hoveredTime);
+                        if (openPoint && highPoint && lowPoint && closePoint) {
+                            ohlcValues = {
+                                time: hoveredTime,
+                                open: openPoint.value,
+                                high: highPoint.value,
+                                low: lowPoint.value,
+                                close: closePoint.value,
+                            };
+                            valueToDisplay = closePoint.value;
+                        } else {
+                             valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback if any part of OHLC is missing
+                        }
+                    } else {
+                         dataArrayForLookup = chartData[legendConfig.key];
+                    }
+                }
+                 if (dataArrayForLookup && Array.isArray(dataArrayForLookup)) {
+                     const pointFromOriginalData = processTimeSeriesData(dataArrayForLookup).find(p => p.time === hoveredTime); // Search in processed data
+                     if (pointFromOriginalData) valueToDisplay = pointFromOriginalData[valueKeyForLookup];
+                     else valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback
+                } else if (!ohlcValues) { // If not candlestick and no direct lookup array
+                     valueToDisplay = defaultValues[legendConfig.key] !== undefined ? defaultValues[legendConfig.key] : 0; // Fallback
+                }
             }
         }
-        rightBox.textContent = value.toFixed(2);
+        
+        if (legendConfig.type === 'candlestick' && category !== 'GOLD_TH') {
+            if (ohlcValues) {
+                rightBox.innerHTML = `O:${Number(ohlcValues.open).toFixed(2)} H:${Number(ohlcValues.high).toFixed(2)} L:${Number(ohlcValues.low).toFixed(2)} C:${Number(ohlcValues.close).toFixed(2)}`;
+            } else { // Fallback if ohlcValues couldn't be determined for hoveredTime
+                 rightBox.textContent = `C: ${Number(valueToDisplay).toFixed(2)}`;
+            }
+        } else {
+            rightBox.textContent = Number(valueToDisplay).toFixed(2);
+        }
       });
     });
 
     chart.timeScale().fitContent();
+    const currentChart = chart;
+    const currentContainer = styledLegendContainer;
+    const currentSeriesLegendElements = [...seriesLegendElements];
 
     return () => {
-      // console.log('Chart useEffect: Cleanup');
-      seriesLegendElements.forEach(item => {
+      currentSeriesLegendElements.forEach(item => {
         if (item.element && item.clickHandler) {
           item.element.removeEventListener('click', item.clickHandler);
         }
       });
-      chart.remove();
-      if (chartContainerRef.current && chartContainerRef.current.contains(styledLegendContainer)) {
-        chartContainerRef.current.removeChild(styledLegendContainer);
+      if (currentChart) currentChart.remove();
+      if (chartContainerRef.current && currentContainer && chartContainerRef.current.contains(currentContainer)) {
+        chartContainerRef.current.removeChild(currentContainer);
       }
     };
-  }, [data, isLoading, isError, symbolName, seriesVisibility, seriesConfigs]); // seriesVisibility is crucial here
-
-  if (isLoading) return <div>Loading...</div>;
-  if (isError) return <div>Error: {error?.message || 'Unknown error'}</div>;
+  }, [chartData, category, seriesVisibility, currentSeriesConfigs]);
 
   return (
     <div
       ref={chartContainerRef}
       style={{
-        position: 'relative',
-        width: '100%',
-        height: '400px',
-        minWidth: 300,
-        minHeight: 200,
+        position: 'relative', width: '100%', height: '400px',
+        minWidth: 300, minHeight: 200,
       }}
     />
   );

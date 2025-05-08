@@ -7,10 +7,12 @@ import DateRange from './components/dateRange';
 import GoldChart from './components/GoldChart';
 import PredictionBadge from './components/predictionBadge';
 
+// These are the display names and also the keys used by Tabs component
+// Ensure these keys match what's expected by useChartData and Chart components for API_URLS and baseSeriesConfigs
 const DataCategories = {
   GOLD_TH: 'Gold TH',
   GOLD_US: 'Gold US',
-  USDTHB: 'USD THB'
+  USD_THB: 'USD THB' // Make sure this key 'USD_THB' matches the one in API_URLS and baseSeriesConfigs
 };
 
 const TimeFrames = {
@@ -31,44 +33,45 @@ const Models = {
 };
 
 const GoldChartMain = () => {
-  const [selectedCategory, setSelectedCategory] = useState(DataCategories.GOLD_TH);
+  // Initialize with the KEY of the default category
+  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH'); 
   const [timeframe, setTimeframe] = useState('1m');
   const [selectedModel, setSelectedModel] = useState('7');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   
-  const mockPrice = selectedCategory === DataCategories.GOLD_US ? 2380.45 : 38750.00;
-  const mockPreviousPrice = selectedCategory === DataCategories.GOLD_US ? 2350.20 : 38500.00;
+  // Mock data should ideally be fetched or updated based on selectedCategory
+  const mockPrice = selectedCategory === 'GOLD_US' ? 2380.45 : 38750.00;
+  const mockPreviousPrice = selectedCategory === 'GOLD_US' ? 2350.20 : 38500.00;
   const mockChange = mockPrice - mockPreviousPrice;
   const mockPercentChange = (mockChange / mockPreviousPrice) * 100;
-  const mockDate = new Date();  return (
+  const mockDate = new Date();
+  
+  return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4">
         <LastPrice 
-          loading={loading}
           price={mockPrice}
           priceChange={mockChange}
           percentChange={mockPercentChange}
           date={mockDate}
-          currency={selectedCategory === DataCategories.GOLD_US ? 'USD' : 'THB'}
-        />        <DataCategory
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          dataCategories={DataCategories}
-          loading={loading}
-          hasPredictionData={selectedCategory === DataCategories.GOLD_TH}
+          currency={selectedCategory === 'GOLD_US' ? 'USD' : 'THB'}
         />
-      </div>      <Card>
+        <DataCategory
+          selectedCategory={selectedCategory} // This is the key, e.g., 'GOLD_TH'
+          setSelectedCategory={setSelectedCategory} // This function expects a key
+          dataCategories={DataCategories} // This is the object {GOLD_TH: 'Gold TH', ...}
+          hasPredictionData={selectedCategory === 'GOLD_TH'}
+        />
+      </div>
+        <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Gold Chart</CardTitle>
             <div className="flex gap-2">
-              {selectedCategory === DataCategories.GOLD_TH && (
+              {selectedCategory === 'GOLD_TH' && (
                 <SelectPredictModel 
                   selectedModel={selectedModel}
                   setSelectedModel={setSelectedModel}
                   models={Models}
-                  loading={loading}
                 />
               )}
 
@@ -76,20 +79,19 @@ const GoldChartMain = () => {
                 timeframe={timeframe}
                 setTimeframe={setTimeframe}
                 timeFrames={TimeFrames}
-                loading={loading}
               />
             </div>
           </div>
-        </CardHeader>        <CardContent>
+        </CardHeader>
+        <CardContent>
           <GoldChart
-            loading={loading}
-            error={error}
-            onRetry={() => window.location.reload()}
-            category={selectedCategory}
+            category={selectedCategory} // Pass the key
             timeframe={timeframe}
+            selectedModel={selectedModel}
           />
-        </CardContent>        <div className="flex justify-end items-center px-6 pb-4">
-          {selectedCategory === DataCategories.GOLD_TH && (
+        </CardContent>
+        <div className="flex justify-end items-center px-6 pb-4">
+          {selectedCategory === 'GOLD_TH' && (
             <PredictionBadge date={new Date()} />
           )}
         </div>
