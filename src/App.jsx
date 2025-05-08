@@ -8,6 +8,7 @@ import Admin from "@/components/Admin";
 import DocumentPage from "@/components/DocumentPage";
 import ApiTesterPage from "@/components/ApiTesterPage";
 import GoldTH from "@/Page/GoldTH/GoldTH";
+import GoldChartMain from './Page/GoldChartMain/GoldChartMain';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/document" element={<DocumentPage />} />
                 <Route path="/api" element={<ApiTesterPage />} />
                 <Route path="/goldth" element={<GoldTH />} />
+                <Route path="/goldchart" element={<GoldChartMain />} />
               </Routes>
             </main>
             
@@ -44,6 +46,7 @@ function App() {
                   <Link to="/document" className="hover:text-primary transition-colors">Document</Link>
                   <Link to="/api" className="hover:text-primary transition-colors">API</Link>
                   <Link to="/goldth" className="hover:text-primary transition-colors">GoldTH Price</Link>
+                  <Link to="/goldchart" className="hover:text-primary transition-colors">Gold Chart</Link>
                 </div>
               </div>
             </footer>
