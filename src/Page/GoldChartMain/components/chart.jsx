@@ -50,56 +50,30 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
     if (!Array.isArray(data) || data.length === 0) {
         return [];
     }
-    const uniqueTimeData = [];
-    const timeMap = new Map();
-    
-    for (const item of data) {
-        if (!item || typeof item.time !== 'number') {
-            console.warn(`Invalid data entry (missing time or not a number):`, item);
-            continue;
-        }
-        
-        // For candlestick data (OHLC format)
+    // Normalize and sort data; assume API returns unique timestamps
+    const result = data
+      .filter(item => item && typeof item.time === 'number')
+      .map(item => {
         if (isCandlestick) {
-            // Handle OHLC data - open, high, low, close properties
-            // Convert any string values to numbers and provide defaults
-            const processedItem = {
-                time: item.time,
-                open: Number(item.open || 0),
-                high: Number(item.high || 0),
-                low: Number(item.low || 0),
-                close: Number(item.close || 0)
-            };
-            
-            if (!timeMap.has(item.time)) {
-                timeMap.set(item.time, processedItem);
-            } else {
-                console.warn(`Duplicate time detected: ${item.time}, skipping entry.`);
-            }
-        } 
-        // For regular time series data (value format)
-        else if (typeof item.value === 'number' || typeof item.value === 'string') {
-            const processedItem = {
-                time: item.time,
-                value: Number(item.value)
-            };
-            
-            if (!timeMap.has(item.time)) {
-                timeMap.set(item.time, processedItem);
-            } else {
-                console.warn(`Duplicate time detected: ${item.time}, skipping entry.`);
-            }
-        } else {
-            console.warn(`Invalid data entry (missing value property):`, item);
+          return {
+            time: item.time,
+            open: Number(item.open),
+            high: Number(item.high),
+            low: Number(item.low),
+            close: Number(item.close),
+          };
         }
-    }
-    
-    timeMap.forEach(value => uniqueTimeData.push(value));
-    return uniqueTimeData.sort((a, b) => a.time - b.time);
+        return {
+          time: item.time,
+          value: Number(item.value),
+        };
+      });
+    // Sort by time
+    return result.sort((a, b) => a.time - b.time);
 };
 
 const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => {
-  // Process and debug chart data before using it
+  // Process and debug chart data before using it (use full data set)
   const chartData = debugChartData(rawChartData, category);
   
   const chartContainerRef = useRef(null);
@@ -137,8 +111,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
       height: chartContainerRef.current.clientHeight,
     });
 
-    const seriesInstances = {};    // Debug the chart data
-    console.log(`Chart component received data for ${category}:`, chartData);
+    const seriesInstances = {};
+    // Removed debug log
 
     currentSeriesConfigs.forEach(config => {
         if (!seriesVisibility[config.key] && config.key !== 'priceChangeData') {
@@ -152,8 +126,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
                 processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
                 // Handle candlestick data as OHLC array (should be provided by our debug utility)
-                if (Array.isArray(chartData.ohlc)) {
-                    console.log(`Using OHLC array for ${category}, ${chartData.ohlc.length} items`);
+                    if (Array.isArray(chartData.ohlc)) {
+                    // Removed debug log
                     // Ensure the data is valid for candlestick chart
                     rawSeriesData = chartData.ohlc.filter(item => 
                         item && typeof item.time === 'number' && 
@@ -167,10 +141,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
                     processedSeriesDataForChart = rawSeriesData;
                     
                     // Log the data we're using
-                    console.log(`Processed ${rawSeriesData.length} valid OHLC data points for ${category}`);
-                    if (rawSeriesData.length > 0) {
-                        console.log("Sample data:", rawSeriesData.slice(0, 3));
-                    }
+                    // Removed debug log
+                    // Removed debug log
                 }
             } else if (category === 'GOLD_US' || category === 'USD_THB') { // For individual lines if not candlestick
                 rawSeriesData = chartData[config.key] || [];
@@ -248,21 +220,20 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
     // Set visible range after all series data is set
     if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
         const fromTimestamp = Math.floor(dateRange.from.getTime() / 1000);
-        // Ensure 'from' is not after 'to'; if so, fitContent might be better or adjust 'from'.
-        // For now, we assume 'from' is reasonably set.
-        if (fromTimestamp <= effectiveToTimestamp) { 
-            chart.timeScale().setVisibleRange({
-                from: fromTimestamp,
-                to: effectiveToTimestamp,
-            });
+        if (fromTimestamp <= effectiveToTimestamp) {
+            // Attempt to set visible range, fallback on error
+            try {
+                chart.timeScale().setVisibleRange({ from: fromTimestamp, to: effectiveToTimestamp });
+            } catch (e) {
+                console.warn('Chart.jsx: setVisibleRange error, falling back to fitContent.', e);
+                chart.timeScale().fitContent();
+            }
         } else {
-            // This case (from > to) might indicate an issue with dateRange logic upstream
-            // or very short/specific prediction data. Fallback to fitContent.
-            console.warn(`Chart.jsx: fromTimestamp (${fromTimestamp}) > effectiveToTimestamp (${effectiveToTimestamp}). Falling back to fitContent.`);
+            // If 'from' is after 'to', fallback
             chart.timeScale().fitContent();
         }
     } else {
-        chart.timeScale().fitContent(); 
+        chart.timeScale().fitContent();
     }
 
 
@@ -386,15 +357,17 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
     });
 
     // Get default date from the (already date-filtered) chartData
+    // Determine default date source: use primary series per category
     let dataForDefaultDate = [];
-    if (category === 'GOLD_TH' && chartData.barBuyData && chartData.barBuyData.length > 0) { // Prioritize actual data
+    if (category === 'GOLD_TH' && chartData.barBuyData?.length) {
       dataForDefaultDate = chartData.barBuyData;
-    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.open && chartData.open.length > 0) { // Prioritize actual data
-      dataForDefaultDate = chartData.open;
-    } else if (chartData.barBuyPredictData && chartData.barBuyPredictData.length > 0) { // Fallback to predictions if no actual
+    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.ohlc?.length) {
+      // Use OHLC data for default date in candlestick charts
+      dataForDefaultDate = chartData.ohlc;
+    } else if (chartData.barBuyPredictData?.length) {
       dataForDefaultDate = chartData.barBuyPredictData;
-    } else if (category === 'GOLD_TH' && chartData.barSellData && chartData.barSellData.length > 0) { // Further fallback for GOLD_TH
-        dataForDefaultDate = chartData.barSellData;
+    } else if (category === 'GOLD_TH' && chartData.barSellData?.length) {
+      dataForDefaultDate = chartData.barSellData;
     }
     // Add more fallbacks if necessary for other primary series
 
@@ -417,16 +390,16 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
         const config = item.config;
         let val = null;
         if (config.type === 'candlestick' && category !== 'GOLD_TH') {
-            const openVal = getDefaultValue(chartData.open, 'value');
-            const highVal = getDefaultValue(chartData.high, 'value');
-            const lowVal = getDefaultValue(chartData.low, 'value');
-            const closeVal = getDefaultValue(chartData.close, 'value');
-            if (closeVal !== null) { // Only display if close value exists
-                 item.valueBox.textContent = `O:${openVal?.toFixed(2) || '-'} H:${highVal?.toFixed(2) || '-'} L:${lowVal?.toFixed(2) || '-'} C:${closeVal?.toFixed(2) || '-'}`;
+            // Use the last OHLC point directly for legend (avoid processing raw arrays)
+            const ohlcArr = chartData.ohlc || [];
+            const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
+            if (last) {
+                const { open, high, low, close } = last;
+                item.valueBox.textContent = `O:${open.toFixed(2)} H:${high.toFixed(2)} L:${low.toFixed(2)} C:${close.toFixed(2)}`;
             } else {
-                 item.valueBox.textContent = 'O: - H: - L: - C: -';
+                item.valueBox.textContent = 'O: - H: - L: - C: -';
             }
-            defaultDisplayValues[config.key] = { open: openVal, high: highVal, low: lowVal, close: closeVal }; // Store for crosshair
+            defaultDisplayValues[config.key] = last || {}; // Store for crosshair
         } else {
             val = getDefaultValue(chartData[config.key], 'value');
             if (val !== null) item.valueBox.textContent = Number(val).toFixed(2);
@@ -441,7 +414,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
         const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
         return data.time >= fromTimestamp && data.time <= toTimestamp;
     }).slice(-10) || [];
-    console.log('Latest 10 Predictions (Filtered by Date Range):', latestPredictionsInRange);
+    // Removed debug log
 
     // Log the 10 predictions currently displayed (filtered by date range)
     const displayedPredictions = chartData?.barBuyPredictData?.filter(data => {
@@ -449,7 +422,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
         const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
         return data.time >= fromTimestamp && data.time <= toTimestamp;
     }).slice(0, 10) || [];
-    console.log('Displayed Predictions in Date Range:', displayedPredictions);
+    // Removed debug log
 
     chart.subscribeCrosshairMove(param => {
         const currentTimeAtCrosshair = param.time;

@@ -9,11 +9,6 @@ const ChartWrapper = ({ chartData, category, dateRange }) => {
   // The chartData is now expected to be fully processed by debugChartData in GoldChart.jsx
   // No further complex processing or OHLC construction should be needed here.
   
-  console.log(`ChartWrapper: Received data for ${category}`, {
-    hasChartData: !!chartData,
-    ohlcLength: chartData?.ohlc?.length,
-    sampleOhlc: chartData?.ohlc?.slice(0,3)
-  });
 
   // Don't render anything if there's no data
   if (!chartData) {

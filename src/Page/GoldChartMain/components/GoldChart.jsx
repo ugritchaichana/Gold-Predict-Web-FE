@@ -6,10 +6,6 @@ import ChartWrapper from './ChartWrapper';
 import { useChartData } from '../hook/fetchData';
 import { debugChartData } from './chart.debug';
 
-/**
- * A component that displays gold price charts for different categories (GOLD_TH, GOLD_US, USD_THB)
- * with support for date range filtering and prediction data for GOLD_TH
- */
 const GoldChart = ({
   onRetry = () => window.location.reload(),
   category = 'GOLD_TH',
@@ -18,17 +14,14 @@ const GoldChart = ({
   onFullDataLoaded
 }) => {
   const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
-  console.log('chartDataFull ->>> ',chartDataFull);
-
-  // Log data on initial load
+  // Log selection changes: category, dateRange, selectedModel
   useEffect(() => {
-    if (chartDataFull) {
-      console.log(`GoldChart: Received ${category} data:`, {
-        hasData: !!chartDataFull,
-        dataKeys: chartDataFull ? Object.keys(chartDataFull) : []
-      });
-    }
-  }, [chartDataFull, category]);
+    console.log(
+      `GoldChart: Selection changed - category=${category}, dateRange=${
+        dateRange ? `${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}` : 'none'
+      }, model=${selectedModel}`
+    );
+  }, [category, dateRange, selectedModel]);
 
   useEffect(() => {
     if (chartDataFull && onFullDataLoaded) {
@@ -37,17 +30,13 @@ const GoldChart = ({
   }, [chartDataFull, onFullDataLoaded]);
 
   const dataForChart = useMemo(() => {
-    console.log("GoldChart: useMemo triggered. Data ready:", chartDataFull ? true : false);
     
     if (!chartDataFull) {
-      console.log("GoldChart: No chartDataFull, returning null.");
       return null;
     }
     
-    // Use our debug utility to validate and fix chart data
     const debuggedData = debugChartData(chartDataFull, category);
     
-    // Return the debugged data which has been validated and fixed if needed
     return debuggedData;
   }, [chartDataFull, category]);
 
