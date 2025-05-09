@@ -37,7 +37,7 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
         isError: isErrorHistorical,
         error: errorHistorical,
     } = useQuery({
-        queryKey: ['historicalData', category], // Query key depends on category
+        queryKey: ['historicalData', category],
         queryFn: () => fetchDataFromUrl(historicalUrl, `Historical data for ${category}`),
         enabled: !!historicalUrl, // Only run query if URL exists
     });
@@ -77,36 +77,126 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
 
     if (isError) {
         return { data: null, isLoading: false, isError: true, error: combinedError };
-    }
-
-    // Structure the data based on category
+    }    // Helper function to adjust time to 5:00:00 PM for GOLD_TH items
+    const adjustTimeToFivePM = (dataArray) => {
+        if (!Array.isArray(dataArray)) return dataArray;
+        
+        return dataArray.map(item => {
+            if (item && typeof item.time === 'number' && isFinite(item.time)) {
+                const date = new Date(item.time * 1000);
+                date.setHours(17, 0, 0, 0); // Set to 5:00:00 PM
+                return { ...item, time: Math.floor(date.getTime() / 1000) };
+            }
+            return item;
+        });
+    };    // Structure the data based on category
     let structuredData = {};
     if (historicalData) {
         if (category === 'GOLD_TH') {
+            // Process historical data arrays to set time to 5:00 PM
+            const processedData = {};
+            for (const key in historicalData) {
+                if (Array.isArray(historicalData[key])) {
+                    processedData[key] = adjustTimeToFivePM(historicalData[key]);
+                } else {
+                    processedData[key] = historicalData[key];
+                }
+            }
+
+            // Also process prediction data
+            const processedPredictData = adjustTimeToFivePM(predictData || []);
+
             structuredData = {
-                ...historicalData, // barBuyData, barSellData, etc.
-                barBuyPredictData: predictData || [],
+                ...processedData,
+                barBuyPredictData: processedPredictData,
             };
         } else if (category === 'GOLD_US' || category === 'USD_THB') {
-            // For GoldUS and USDTHB, the historicalData is an object like {open: [], high: [], low: [], close: []}
-            // We can pass this structure directly or transform it if needed.
-            // For now, let's assume Chart.jsx will be adapted to handle this.
-            structuredData = historicalData;
+            let ohlcDataToProcess = [];
+            
+            if (Array.isArray(historicalData.ohlc) && historicalData.ohlc.length > 0) {
+                ohlcDataToProcess = historicalData.ohlc;
+            } else if (
+                Array.isArray(historicalData.open) && 
+                Array.isArray(historicalData.high) && 
+                Array.isArray(historicalData.low) && 
+                Array.isArray(historicalData.close)
+            ) {
+                const minLength = Math.min(
+                    historicalData.open.length,
+                    historicalData.high.length,
+                    historicalData.low.length,
+                    historicalData.close.length
+                );
+                const tempOhlc = [];
+                for (let i = 0; i < minLength; i++) {
+                    const openItem = historicalData.open[i];
+                    const highItem = historicalData.high[i];
+                    const lowItem = historicalData.low[i];
+                    const closeItem = historicalData.close[i];
+                    if (openItem && highItem && lowItem && closeItem && 
+                        typeof openItem.time === 'number' && 
+                        typeof openItem.value === 'number' &&
+                        typeof highItem.value === 'number' &&
+                        typeof lowItem.value === 'number' &&
+                        typeof closeItem.value === 'number') {
+                        tempOhlc.push({
+                            time: openItem.time,
+                            open: openItem.value,
+                            high: highItem.value,
+                            low: lowItem.value,
+                            close: closeItem.value
+                        });
+                    }
+                }
+                ohlcDataToProcess = tempOhlc;
+            }
+
+            // Sort by time and filter out duplicates, keeping the first occurrence
+            const timeSet = new Set();
+            const uniqueSortedOhlc = ohlcDataToProcess
+                .filter(item => item && typeof item.time === 'number') // Ensure item and time are valid
+                .sort((a, b) => a.time - b.time) // Sort by time
+                .filter(item => {
+                    const isDuplicate = timeSet.has(item.time);
+                    if (!isDuplicate) {
+                        timeSet.add(item.time);
+                    }
+                    return !isDuplicate; // Keep only unique timestamps
+                })
+                .map(item => ({ // Ensure correct data types
+                    time: item.time,
+                    open: Number(item.open || 0),
+                    high: Number(item.high || 0),
+                    low: Number(item.low || 0),
+                    close: Number(item.close || 0)
+                }));
+
+            structuredData = {
+                ...historicalData, // Spread other potential properties
+                ohlc: uniqueSortedOhlc
+            };
+            
+            // Add logging to debug data structure
+            console.log(`fetchData: Processed data for ${category}:`, {
+                hasOhlc: !!structuredData.ohlc,
+                ohlcLength: structuredData.ohlc ? structuredData.ohlc.length : 0,
+                sampleItem: structuredData.ohlc && structuredData.ohlc.length > 0 ? 
+                    structuredData.ohlc[0] : null
+            });
         } else {
             structuredData = historicalData; // Default fallback
         }
     } else if (category === 'GOLD_TH' && predictData) {
-        // Case where historical might fail but predict succeeds (less likely but possible)
-        structuredData = { barBuyPredictData: predictData };
+        structuredData = { barBuyPredictData: adjustTimeToFivePM(predictData) }; // Use predict data if historical is missing
     }
-
-
     return {
         data: structuredData,
         isLoading: false,
         isError: false,
         error: null,
     };
+
+    
 };
 
 export { useChartData, API_URLS }; // Export API_URLS if GoldChartMain needs it for category keys
