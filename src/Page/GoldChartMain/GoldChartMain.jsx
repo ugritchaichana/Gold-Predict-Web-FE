@@ -176,6 +176,7 @@ const GoldChartMain = () => {
             category={selectedCategory}
             selectedModel={selectedModel}
             dateRange={currentDateRange}
+            activeDateOption={activeDateOption} // Ensure this line is present and correct
             onFullDataLoaded={(allData) => {
                 const earliest = getEarliestAvailableDate(allData);
                 if (earliest && isValid(earliest)) {

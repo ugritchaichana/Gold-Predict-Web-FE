@@ -39,6 +39,7 @@
     "clsx": "1.2.1",
     "date-fns": "2.30.0",
     "dayjs": "1.11.10",
+    "fancy-canvas": "^2.1.0",
     "lightweight-charts": "4.1.1",
     "lucide-react": "0.236.0",
     "next-themes": "0.2.1",

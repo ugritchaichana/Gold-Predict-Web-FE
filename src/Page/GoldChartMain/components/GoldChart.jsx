@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import { addHours, startOfDay } from 'date-fns';
 import { ThreeDot } from 'react-loading-indicators';
 import { InfoIcon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -11,17 +12,23 @@ const GoldChart = ({
   category = 'GOLD_TH',
   selectedModel = '7',
   dateRange,
+  activeDateOption,
   onFullDataLoaded
 }) => {
   const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
-  // Log selection changes: category, dateRange, selectedModel
   useEffect(() => {
-    console.log(
-      `GoldChart: Selection changed - category=${category}, dateRange=${
-        dateRange ? `${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}` : 'none'
-      }, model=${selectedModel}`
-    );
-  }, [category, dateRange, selectedModel]);
+console.log(
+`category=${category}
+dateRange=${ dateRange ? `${dateRange.from.toISOString()}
+to ${dateRange.to.toISOString()}` : 'none'}
+activeDateOption=${activeDateOption}
+model=${selectedModel}`
+);
+  }, [category, dateRange, selectedModel, activeDateOption]); // Added activeDateOption to dependency array
+
+  const todayTimestamp = addHours(startOfDay(new Date()), 17).getTime();
+  
+
 
   useEffect(() => {
     if (chartDataFull && onFullDataLoaded) {
@@ -72,7 +79,7 @@ const GoldChart = ({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full">
-           <p>No data available for the selected criteria.</p>
+          <p>No data available for the selected criteria.</p>
         </div>
       )}
     </div>

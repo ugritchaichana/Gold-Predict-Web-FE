@@ -35,6 +35,19 @@ function DateRangePicker({
     const end = endOfDay(endDate);
     let start;
 
+    // Handle YTD and ALL presets directly to ensure specific logic
+    if (presetRange === 'YTD') {
+      // For YTD, the range is always from the start of the 'endDate'\'s year.
+      return { from: startOfYear(end), to: end };
+    }
+    if (presetRange === 'ALL') {
+      if (earliestDate && isValid(earliestDate)) {
+        return { from: startOfDay(earliestDate), to: end };
+      }
+      return { from: startOfYear(new Date(0)), to: end }; // Fallback for ALL
+    }
+
+    // Handle other fixed-duration presets
     switch (presetRange) {
       case '7D':
         start = startOfDay(subDays(end, 6));
@@ -48,27 +61,26 @@ function DateRangePicker({
       case '6M':
         start = startOfDay(subMonths(end, 6));
         break;
-      case 'YTD':
-        start = startOfYear(end);
-        break;
       case '1Y':
         start = startOfDay(subYears(end, 1));
         break;
       case '5Y':
         start = startOfDay(subYears(end, 5));
         break;
-      case 'ALL':
       default:
-        if (earliestDate && isValid(earliestDate)) {
-          return { from: startOfDay(earliestDate), to: end };
-        }
-        return { from: startOfYear(new Date(0)), to: end }; // Fallback to a very early date if no earliestDate
+        // This case should ideally not be hit if all PRESETS are covered.
+        // If it is, 'start' might be undefined, and !isValid(start) below will handle it.
+        console.warn(`Unknown preset range: ${presetRange}`);
+        start = startOfYear(new Date(0)); // Fallback for unknown presets
+        break;
     }
 
+    // Clamp with earliestDate for presets other than YTD/ALL (this check is now naturally bypassed for YTD/ALL due to early returns)
     if (earliestDate && isValid(earliestDate) && start < earliestDate) {
       start = startOfDay(earliestDate);
     }
 
+    // Validate final start date
     if (!isValid(start)) {
       const fallbackStart = earliestDate && isValid(earliestDate) ? 
         startOfDay(earliestDate) : startOfYear(new Date(0));

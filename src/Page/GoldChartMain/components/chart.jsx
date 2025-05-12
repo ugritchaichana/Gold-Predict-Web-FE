@@ -13,22 +13,22 @@ const chartOptions = {
     crosshair: {
         mode: CrosshairMode.Normal, // Use enum for clarity
     },
-    // Optional: Add time scale options if needed, e.g., for date formatting
     timeScale: {
-        // fixLeftEdge: true, // Optional: keeps the latest bar from being partially off-screen
-        // fixRightEdge: true, // Optional
-        // borderVisible: false,
-        // tickMarkFormatter: (time, tickMarkType, locale) => {
-        //     // Your custom date formatting for the time scale
-        //     const date = new Date(time * 1000);
-        //     return `${date.getDate()}/${date.getMonth() + 1}`;
-        // },
+        fixLeftEdge: true, // Optional: keeps the latest bar from being partially off-screen
+        fixRightEdge: true, // Optional
+        borderVisible: false,
+        tickMarkFormatter: (time, tickMarkType, locale) => {
+            const date = new Date(time * 1000);
+            // Format: dd MMM 'yy (e.g., 10 May '25)
+            return formatDateFns(date, "dd MMM ''yy"); 
+        },
+        allowTickMarksCompression: false, // Added this line
     },
     // Optional: Price scale options
-    // priceScale: {
-    // autoScale: true,
-    // position: 'right',
-    // },
+    priceScale: {
+        autoScale: true,
+        position: 'right',
+    },
 };
 
 const baseSeriesConfigs = {
@@ -223,15 +223,14 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
         }
     } else {
         chart.timeScale().fitContent();
-    }
+    }    // Removed VertLine implementation
 
 const currentDateTimestamp = Math.floor(new Date(new Date().setHours(17, 0, 0, 0)).getTime() / 1000);
-const lastestDateTimestampGoldTH = chartData?.barBuyData?.length ? chartData.barBuyData[chartData.barBuyData.length - 1].time : null;
-console.log('Current date timestamp:', currentDateTimestamp);
+// const lastestDateTimestampGoldTH = chartData?.barBuyData?.length ? chartData.barBuyData[chartData.barBuyData.length - 1].time : null; // Original line
 if (seriesInstances.barBuyPredictData) {
     seriesInstances.barBuyPredictData.setMarkers([
         {
-            time: lastestDateTimestampGoldTH,
+            time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
             position: 'aboveBar',
             color: '#23b8a6',
             shape: 'arrowDown',
@@ -239,7 +238,7 @@ if (seriesInstances.barBuyPredictData) {
             size: 1.3,
         },
         {
-            time: lastestDateTimestampGoldTH,
+            time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
             position: 'inBar',
             color: '#23b8a6',
             shape: 'circle',
