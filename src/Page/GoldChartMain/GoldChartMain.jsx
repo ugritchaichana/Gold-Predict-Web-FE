@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // Import subMonths and subYears
-import { endOfDay, startOfDay, subDays, subMonths, subYears, isValid } from 'date-fns';
+import { endOfDay, startOfDay, subDays, subMonths, subYears, startOfYear, isValid } from 'date-fns';
 import LastPrice from './components/lastPrice';
 import DataCategory from './components/dataCategory';
 import SelectPredictModel from './components/selectPredictModel';
@@ -66,10 +66,9 @@ const GoldChartMain = () => {
 
     switch (preset.range) {
       case '7D': start = startOfDay(subDays(end, 6)); break;
-      case '1M': start = startOfDay(subMonths(end, 1)); break;
-      case '3M': start = startOfDay(subMonths(end, 3)); break;
+      case '1M': start = startOfDay(subMonths(end, 1)); break;      case '3M': start = startOfDay(subMonths(end, 3)); break;
       case '6M': start = startOfDay(subMonths(end, 6)); break;
-      // case 'YTD': start = startOfYear(end); break; // Ensure startOfYear is imported if used
+      case 'YTD': start = startOfYear(end); break;
       case '1Y': start = startOfDay(subYears(end, 1)); break;
       case '5Y': start = startOfDay(subYears(end, 5)); break;
       case 'ALL':
