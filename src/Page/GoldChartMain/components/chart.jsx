@@ -228,7 +228,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             let rawSeriesData = [];
             let processedSeriesDataForChart = [];            if (category === 'GOLD_TH') {
                 rawSeriesData = chartData[config.key] || [];
-                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);            } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
+                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
+            } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
                 if (Array.isArray(chartData.ohlc)) {
                     rawSeriesData = chartData.ohlc.filter(item => 
                         item && typeof item.time === 'number' && 
