@@ -202,9 +202,13 @@ const GoldChartMain = () => {
           />
         </CardContent>
         <div className="flex justify-between items-center px-6 pb-4">
-          <div>
-            {selectedCategory === 'GOLD_TH' && ( <PredictionBadge date={new Date()} /> )}
-          </div>
+          {selectedCategory === 'GOLD_TH' ? (
+            <PredictionBadge date={new Date()} />
+          ) : (
+            <div className="bg-gray-100 px-3 py-1 rounded-md border border-gray-300 text-sm text-muted-foreground">
+              &nbsp;
+            </div>
+          )}
           <CurrentTime />
         </div>
       </Card>
