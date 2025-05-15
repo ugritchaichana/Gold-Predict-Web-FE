@@ -55,11 +55,11 @@ const GoldChart = ({
         lastValue = lastDataPoint.value;
         lastTime = lastDataPoint.time;
         percentChange = previousDataPoint ? ((lastValue - previousDataPoint.value) / previousDataPoint.value) * 100 : 0;
-        console.log(`Last data point for category ${category}: value=${lastValue}, time=${new Date(lastTime * 1000).toISOString()}, percentChange=${percentChange.toFixed(2)}%`);
+        // console.log(`Last data point for category ${category}: value=${lastValue}, time=${new Date(lastTime * 1000).toISOString()}, percentChange=${percentChange.toFixed(2)}%`);
         
         // Ensure we call onLastPriceUpdate with valid data
         if (onLastPriceUpdate && lastValue && lastTime) {
-          console.log("Calling onLastPriceUpdate with values:", { value: lastValue, time: lastTime, percentChange, dataCategory: category });
+          // console.log("Calling onLastPriceUpdate with values:", { value: lastValue, time: lastTime, percentChange, dataCategory: category });
           onLastPriceUpdate({ 
             value: lastValue, 
             time: lastTime, 

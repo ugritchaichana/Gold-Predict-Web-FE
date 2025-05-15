@@ -1,35 +1,62 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createChart, LineStyle, CrosshairMode, LineType } from 'lightweight-charts'; // Added CrosshairMode
-import { format as formatDateFns, isValid } from 'date-fns'; // Added isValid
+import React, { useEffect, useRef, useState, useContext } from 'react';
+import { createChart, LineStyle, CrosshairMode, LineType } from 'lightweight-charts';
+import { format as formatDateFns, isValid } from 'date-fns';
 import { debugChartData } from './chart.debug.js';
+import { useTheme } from '@/components/theme-provider';
 
 
-// Chart base options
-const chartOptions = {
+// Chart base options with theme support - no transitions
+const getChartOptions = (theme) => ({
     layout: {
-        textColor: 'black',
-        background: { type: 'solid', color: 'white' },
-    },
-    crosshair: {
-        mode: CrosshairMode.Normal, // Use enum for clarity
+        textColor: theme === 'dark' ? '#e1e1e1' : '#333333',
+        background: { 
+            type: 'solid', 
+            color: theme === 'dark' ? '#1a1a1a' : '#ffffff' 
+        },
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+        // Remove transition for instant theme change
+    },crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+            color: theme === 'dark' ? '#555555' : '#e1e1e1',
+            labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+            style: LineStyle.Dashed,
+        },
+        horzLine: {
+            color: theme === 'dark' ? '#555555' : '#e1e1e1',
+            labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+            style: LineStyle.Dashed,
+        },
     },
     timeScale: {
-        fixLeftEdge: true, // Optional: keeps the latest bar from being partially off-screen
-        fixRightEdge: true, // Optional
+        fixLeftEdge: true,
+        fixRightEdge: true,
         borderVisible: false,
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
+        timeVisible: true,
         tickMarkFormatter: (time, tickMarkType, locale) => {
             const date = new Date(time * 1000);
-            // Format: dd MMM 'yy (e.g., 10 May '25)
-            return formatDateFns(date, "dd MMM ''yy"); 
+            return formatDateFns(date, "dd MMM ''yy");
         },
-        allowTickMarksCompression: false, // Added this line
+        allowTickMarksCompression: false,
     },
-    // Optional: Price scale options
     priceScale: {
         autoScale: true,
         position: 'right',
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
+    },    grid: {
+        vertLines: {
+            color: theme === 'dark' ? '#292929' : '#f0f0f0',
+            style: LineStyle.Solid,
+        },
+        horzLines: {
+            color: theme === 'dark' ? '#292929' : '#f0f0f0',
+            style: LineStyle.Solid,
+        },    },
+    animation: {
+        duration: 0, // set to zero for instant changes
     },
-};
+});
 
 const baseSeriesConfigs = {
     GOLD_TH: [
@@ -137,6 +164,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
   
   const chartContainerRef = useRef(null);
   
+  // Get current theme from context
+  const { theme } = useTheme();
+  
   // For GOLD_TH, we always use line style
   const effectiveChartStyle = category === 'GOLD_TH' ? 'line' : chartStyle;
     // Get the appropriate series configs based on category and chart style
@@ -180,44 +210,73 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         initial[config.key] = config.defaultVisible;
     });
     setSeriesVisibility(initial);
-  }, [category, effectiveChartStyle]);
-
-  useEffect(() => {
-    if (!chartData) {
-        if (chartContainerRef.current) chartContainerRef.current.innerHTML = '';
-        return;
-    }
+  }, [category, effectiveChartStyle]);  useEffect(() => {
+    // ตรวจสอบว่ามี DOM element สำหรับกราฟหรือไม่
     if (!chartContainerRef.current) {
-        return;
+      return;
     }
+    
+    // ล้าง container เพื่อสร้างกราฟใหม่ทุกครั้ง
     chartContainerRef.current.innerHTML = '';
     
+    // แม้ไม่มีข้อมูลก็ยังสร้างกราฟเปล่าเพื่อให้แสดงผลไว้
+    const chartDataToUse = chartData || {};
+
     // Create container for legends that will be placed above the chart
     const styledLegendContainer = document.createElement('div');
     styledLegendContainer.style = `
       position: relative; 
       display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
       font-family: sans-serif; line-height: 18px; font-weight: 300;
-      background: white; padding: 8px; border-bottom: 1px solid #e5e7eb;
+      background: ${theme === 'dark' ? '#1a1a1a' : '#ffffff'}; 
+      color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
+      padding: 8px; 
+      border-bottom: 1px solid ${theme === 'dark' ? '#444444' : '#e5e7eb'};
       margin-bottom: 8px;
+      visibility: visible;
+      opacity: 1;
+      z-index: 5;
     `;
     
     // Create a container for the actual chart
     const chartElement = document.createElement('div');
-    chartElement.style = `position: relative; width: 100%; height: calc(100% - 40px);`;
+    chartElement.style = `
+      position: relative; 
+      width: 100%; 
+      height: calc(100% - 40px);
+    `;
     
-    // Add the legend container first, followed by the chart container
+    // Force immediate DOM update to ensure containers are properly mounted
     chartContainerRef.current.appendChild(styledLegendContainer);
     chartContainerRef.current.appendChild(chartElement);
     
+    // Apply the chart options based on the current theme
     const chart = createChart(chartElement, {
-      ...chartOptions,
+      ...getChartOptions(theme),
       width: chartElement.clientWidth,
       height: chartElement.clientHeight,
+      handleScale: {
+        axisPressedMouseMove: true,
+      },
+      handleScroll: {
+        pressedMouseMove: true,
+      },
+      timeScale: {
+        timeVisible: true,
+        rightOffset: 12,
+        barSpacing: 10,
+        fixLeftEdge: true,
+        lockVisibleTimeRangeOnResize: true,
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
+        tickMarkFormatter: (time) => {
+          const date = new Date(time * 1000);
+          return formatDateFns(date, "dd MMM ''yy");
+        },
+        rightBarStaysOnScroll: true,
+      },
     });
 
     const seriesInstances = {};
-    // Removed debug log
 
     currentSeriesConfigs.forEach(config => {
         if (!seriesVisibility[config.key] && config.key !== 'priceChangeData') {
@@ -226,16 +285,19 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
 
         if (config.addToChart || config.key === 'priceChangeData') {
             let rawSeriesData = [];
-            let processedSeriesDataForChart = [];            if (category === 'GOLD_TH') {
-                rawSeriesData = chartData[config.key] || [];
+            let processedSeriesDataForChart = [];
+
+            if (category === 'GOLD_TH') {
+                rawSeriesData = chartDataToUse[config.key] || [];
                 processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
-                if (Array.isArray(chartData.ohlc)) {
-                    rawSeriesData = chartData.ohlc.filter(item => 
+                if (Array.isArray(chartDataToUse.ohlc)) {
+                    rawSeriesData = chartDataToUse.ohlc.filter(item => 
                         item && typeof item.time === 'number' && 
                         typeof item.open === 'number' && 
                         typeof item.high === 'number' && 
                         typeof item.low === 'number' && 
+                        typeof item.close === 'number' && 
                         typeof item.close === 'number'
                     );
                     
@@ -243,7 +305,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 }
             } else if (category === 'GOLD_US' || category === 'USD_THB') {
                 // For line chart style with OHLC data
-                rawSeriesData = chartData[config.key] || [];
+                rawSeriesData = chartDataToUse[config.key] || [];
                 processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             }
 
@@ -267,16 +329,10 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                     seriesInstances[config.key].setData(processedSeriesDataForChart);
                 } catch (e) {
                     console.error(`Error setting data for series ${config.key}:`, e);
-                    const match = e.message?.match(/index=(\d+)/);
-                    if (match && match[1]) {
-                        const problematicIndex = parseInt(match[1], 10);
-                        console.error("Data around problematic index:", processedSeriesDataForChart.slice(Math.max(0, problematicIndex - 2), problematicIndex + 3));
-                    } else {
-                        console.error("Problematic data sample:", processedSeriesDataForChart.slice(0,5));
-                    }
                 }
             }
-            if (config.key === 'priceChangeData' && chartData[config.key]) {                 // This section handles ensuring chartData is properly processed for legend logic
+            if (config.key === 'priceChangeData' && chartData[config.key]) {                 
+                // This section handles ensuring chartData is properly processed for legend logic
             }
         }
     });
@@ -291,10 +347,10 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
 
     let effectiveToTimestamp;
     const originalToTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : null;
-
     let maxPredictionTimestamp = null;
-    if (chartData?.barBuyPredictData && chartData.barBuyPredictData.length > 0) {
-        const processedPredictions = processTimeSeriesData(chartData.barBuyPredictData);
+    
+    if (chartDataToUse?.barBuyPredictData && chartDataToUse.barBuyPredictData.length > 0) {
+        const processedPredictions = processTimeSeriesData(chartDataToUse.barBuyPredictData);
         if (processedPredictions.length > 0) {
             maxPredictionTimestamp = processedPredictions[processedPredictions.length - 1].time;
         }
@@ -327,11 +383,11 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     }    // Removed VertLine implementation
 
     const currentDateTimestamp = Math.floor(new Date(new Date().setHours(17, 0, 0, 0)).getTime() / 1000);
-    // const lastestDateTimestampGoldTH = chartData?.barBuyData?.length ? chartData.barBuyData[chartData.barBuyData.length - 1].time : null; // Original line
+    
     if (seriesInstances.barBuyPredictData) {
         seriesInstances.barBuyPredictData.setMarkers([
             {
-                time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
+                time: currentDateTimestamp,
                 position: 'aboveBar',
                 color: '#23b8a6',
                 shape: 'arrowDown',
@@ -339,7 +395,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 size: 1.3,
             },
             {
-                time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
+                time: currentDateTimestamp,
                 position: 'inBar',
                 color: '#23b8a6',
                 shape: 'circle',
@@ -348,29 +404,56 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         ]);
     }
 
+    // Create legends with improved styling
     const dateLegendRow = document.createElement('div');
     dateLegendRow.style = `
-      display: flex; align-items: center; border: 1px solid black;
+      display: flex; align-items: center; 
+      border: 1px solid ${theme === 'dark' ? '#555555' : '#444444'};
       border-radius: 4px; overflow: hidden; box-sizing: border-box; cursor: default;
+      opacity: 1;
+      visibility: visible;
     `;
+    
     const dateLeftBox = document.createElement('div');
-    dateLeftBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
+    dateLeftBox.style = `
+      background: transparent; 
+      padding: 4px 8px; 
+      text-align: left; 
+      color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
+    `;
     dateLeftBox.textContent = 'Date';
+    
     const dateRightBox = document.createElement('div');
-    dateRightBox.style = `background: black; color: white; padding: 4px 8px; text-align: center; min-width: 100px;`;
+    dateRightBox.style = `
+      background: ${theme === 'dark' ? '#444444' : '#333333'}; 
+      color: ${theme === 'dark' ? '#ffffff' : '#ffffff'}; 
+      padding: 4px 8px; 
+      text-align: center; 
+      min-width: 100px;
+    `;
     dateRightBox.textContent = 'N/A';
+    
     dateLegendRow.appendChild(dateLeftBox);
     dateLegendRow.appendChild(dateRightBox);
     styledLegendContainer.appendChild(dateLegendRow);
 
-    const seriesLegendElements = [];    const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
+    const seriesLegendElements = [];
+
+    const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
+        if (!legendElement || !legendElement.children || legendElement.children.length < 2) return;
+        
         const leftBox = legendElement.children[0];
         const valueBox = legendElement.children[1];
         const displayColor = configForStyle.type === 'candlestick' ? (isVisibleConfig ? '#26a69a' : 'grey') : (configForStyle.color || 'grey');
 
         legendElement.style.opacity = isVisibleConfig ? '1' : '0.5';
         legendElement.style.borderColor = isVisibleConfig ? displayColor : 'grey';
-        if (leftBox) leftBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
+        legendElement.style.visibility = 'visible';
+        
+        if (leftBox) {
+            leftBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
+            leftBox.style.color = theme === 'dark' ? '#e1e1e1' : '#333333';
+        }
         
         if (valueBox) {
             valueBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
@@ -381,17 +464,19 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
 
     currentSeriesConfigs.forEach(config => {
         let legendDataExists = false;
-        if (category === 'GOLD_TH' && chartData[config.key]) {
+        if (category === 'GOLD_TH' && chartDataToUse[config.key]) {
             legendDataExists = true;
         } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
             if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
-                legendDataExists = chartData.ohlc && chartData.ohlc.length > 0;
-            } else if (config.type === 'candlestick' && chartData.ohlc && chartData.ohlc.length > 0) {
+                legendDataExists = chartDataToUse.ohlc && chartDataToUse.ohlc.length > 0;
+            } else if (config.type === 'candlestick' && chartDataToUse.ohlc && chartDataToUse.ohlc.length > 0) {
                 legendDataExists = true;
-            } else if (effectiveChartStyle === 'line' && chartData[config.key] && chartData[config.key].length > 0) {
+            } else if (effectiveChartStyle === 'line' && chartDataToUse[config.key] && chartDataToUse[config.key].length > 0) {
                 legendDataExists = true;
             }
         }
+        
+        // Show legends even if no data exists
         if (!legendDataExists && config.key !== 'priceChangeData') return;
 
         const legendRow = document.createElement('div');
@@ -399,12 +484,23 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         legendRow.style = `
             display: flex; align-items: center; border: 1px solid ${legendBorderColor};
             border-radius: 4px; overflow: hidden; box-sizing: border-box;
-            ${effectiveChartStyle === 'candlestick' ? '' : 'cursor: pointer;'} transition: opacity 0.2s ease, border-color 0.2s ease;
+            ${effectiveChartStyle === 'candlestick' ? '' : 'cursor: pointer;'} 
+            opacity: 1;
+            visibility: visible;
+            color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
         `;
+      
       const nameBox = document.createElement('div');
-      nameBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
+      nameBox.style = `
+        background: transparent; 
+        padding: 4px 8px; 
+        text-align: left; 
+        color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
+      `;
       nameBox.textContent = config.name;
-      legendRow.appendChild(nameBox);      const valueBox = document.createElement('div');
+      legendRow.appendChild(nameBox);
+      
+      const valueBox = document.createElement('div');
       valueBox.style = `
         background: ${config.color || (config.type === 'candlestick' ? '#26a69a' : 'transparent')}; 
         color: white; padding: 4px 8px; text-align: center; min-width: 75px;
@@ -421,6 +517,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       const legendItem = { element: legendRow, config: config, nameBox, valueBox, clickHandler: null };
       seriesLegendElements.push(legendItem);
       updateLegendStyle(legendRow, seriesVisibility[config.key], config);
+      
       legendItem.clickHandler = () => {
         if (effectiveChartStyle === 'candlestick') return;
         
@@ -429,11 +526,16 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             if (config.addToChart && seriesInstances[config.key] && seriesInstances[config.key].applyOptions) {
                 seriesInstances[config.key].applyOptions({ visible: newVisibilityForKey });
             }
+            updateLegendStyle(legendRow, newVisibilityForKey, config);
             return { ...prevVisibility, [config.key]: newVisibilityForKey };
         });
-    };
-        legendRow.addEventListener('click', legendItem.clickHandler);
-    });    requestAnimationFrame(() => {
+      };
+      
+      legendRow.addEventListener('click', legendItem.clickHandler);
+    });
+
+    // Force legends to have consistent height
+    setTimeout(() => {
         if (!dateLegendRow || !dateLegendRow.isConnected) return;
         const dateLegendHeight = dateLegendRow.offsetHeight;
         if (dateLegendHeight > 0) {
@@ -443,22 +545,24 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 }
             });
         }
-    });    let dataForDefaultDate = [];
-    if (category === 'GOLD_TH' && chartData.barBuyData?.length) {
-        dataForDefaultDate = chartData.barBuyData;
+    }, 0);
+
+    let dataForDefaultDate = [];
+    if (category === 'GOLD_TH' && chartDataToUse.barBuyData?.length) {
+        dataForDefaultDate = chartDataToUse.barBuyData;
     } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
-        if (effectiveChartStyle === 'candlestick' && chartData.ohlc?.length) {
-            dataForDefaultDate = chartData.ohlc;
+        if (effectiveChartStyle === 'candlestick' && chartDataToUse.ohlc?.length) {
+            dataForDefaultDate = chartDataToUse.ohlc;
         } else if (effectiveChartStyle === 'line') {
-            if (chartData.closeData?.length) dataForDefaultDate = chartData.closeData;
-            else if (chartData.openData?.length) dataForDefaultDate = chartData.openData;
-            else if (chartData.highData?.length) dataForDefaultDate = chartData.highData;
-            else if (chartData.lowData?.length) dataForDefaultDate = chartData.lowData;
+            if (chartDataToUse.closeData?.length) dataForDefaultDate = chartDataToUse.closeData;
+            else if (chartDataToUse.openData?.length) dataForDefaultDate = chartDataToUse.openData;
+            else if (chartDataToUse.highData?.length) dataForDefaultDate = chartDataToUse.highData;
+            else if (chartDataToUse.lowData?.length) dataForDefaultDate = chartDataToUse.lowData;
         }
-    } else if (chartData.barBuyPredictData?.length) {
-        dataForDefaultDate = chartData.barBuyPredictData;
-    } else if (category === 'GOLD_TH' && chartData.barSellData?.length) {
-        dataForDefaultDate = chartData.barSellData;
+    } else if (chartDataToUse.barBuyPredictData?.length) {
+        dataForDefaultDate = chartDataToUse.barBuyPredictData;
+    } else if (category === 'GOLD_TH' && chartDataToUse.barSellData?.length) {
+        dataForDefaultDate = chartDataToUse.barSellData;
     }
 
     const processedDataForDefaultDate = processTimeSeriesData(dataForDefaultDate);
@@ -474,10 +578,13 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     };
     
     const defaultDisplayValues = {};
+
     seriesLegendElements.forEach(item => {
         const config = item.config;
-        let val = null;        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick' && (category === 'GOLD_US' || category === 'USD_THB')) {
-            const ohlcArr = chartData.ohlc || [];
+        let val = null;
+
+        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick' && (category === 'GOLD_US' || category === 'USD_THB')) {
+            const ohlcArr = chartDataToUse.ohlc || [];
             const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
             if (last) {
                 const { close } = last;
@@ -485,8 +592,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             } else {
                 item.valueBox.textContent = '-';
             }
-            defaultDisplayValues[config.key] = last || {};        } else if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick' && (category === 'GOLD_US' || category === 'USD_THB')) {
-            const ohlcArr = chartData.ohlc || [];
+            defaultDisplayValues[config.key] = last || {};
+        } else if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick' && (category === 'GOLD_US' || category === 'USD_THB')) {
+            const ohlcArr = chartDataToUse.ohlc || [];
             const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
             if (last) {
                 const ohlcType = config.key.split('_')[1];
@@ -500,20 +608,20 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             }
             defaultDisplayValues[config.key] = last || {};
         } else {
-            val = getDefaultValue(chartData[config.key], 'value');
+            val = getDefaultValue(chartDataToUse[config.key], 'value');
             if (val !== null) item.valueBox.textContent = Number(val).toFixed(2);
             else item.valueBox.textContent = '-';
             defaultDisplayValues[config.key] = val;
         }
     });
 
-    const latestPredictionsInRange = chartData?.barBuyPredictData?.filter(data => {
+    const latestPredictionsInRange = chartDataToUse?.barBuyPredictData?.filter(data => {
         const fromTimestamp = dateRange?.from ? Math.floor(dateRange.from.getTime() / 1000) : 0;
         const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
         return data.time >= fromTimestamp && data.time <= toTimestamp;
     }).slice(-10) || [];
 
-    const displayedPredictions = chartData?.barBuyPredictData?.filter(data => {
+    const displayedPredictions = chartDataToUse?.barBuyPredictData?.filter(data => {
         const fromTimestamp = dateRange?.from ? Math.floor(dateRange.from.getTime() / 1000) : 0;
         const toTimestamp = dateRange?.to ? Math.floor(dateRange.to.getTime() / 1000) : Infinity;
         return data.time >= fromTimestamp && data.time <= toTimestamp;
@@ -522,14 +630,17 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     chart.subscribeCrosshairMove(param => {
         const currentTimeAtCrosshair = param.time;
 
-        if (dateRightBox) {
+        if (dateRightBox && dateRightBox.isConnected) {
             if (currentTimeAtCrosshair !== undefined) {
                 dateRightBox.textContent = formatDate(currentTimeAtCrosshair);
             } else {
                 dateRightBox.textContent = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
             }
         }
+        
         seriesLegendElements.forEach(item => {
+            if (!item.valueBox || !item.valueBox.isConnected) return;
+            
             const config = item.config;
             const seriesInstance = seriesInstances[config.key];
             let displayValue = '-';
@@ -581,24 +692,27 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         });
     });
 
+    // Save references for cleanup
     const currentChart = chart;
     const currentContainer = styledLegendContainer;
-    const currentSeriesLegendElements = [...seriesLegendElements];
+    const currentLegends = [...seriesLegendElements];
 
+    // Clean up function
     return () => {
-        currentSeriesLegendElements.forEach(legendItem => {
-            if (legendItem.clickHandler) {
+        // Remove event listeners
+        currentLegends.forEach(legendItem => {
+            if (legendItem.clickHandler && legendItem.element) {
                 legendItem.element.removeEventListener('click', legendItem.clickHandler);
             }
         });
-        if (currentContainer && currentContainer.parentNode) {
-            currentContainer.parentNode.removeChild(currentContainer);
-        }
+        
+        // Remove chart instance
         if (currentChart) {
             currentChart.remove();
         }
     };
-  }, [chartData, category, chartStyle, effectiveChartStyle, dateRange, seriesVisibility]);
+  }, [chartData, category, chartStyle, effectiveChartStyle, dateRange, seriesVisibility, theme]);  
+  
   return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} />;
 };
 

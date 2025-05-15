@@ -15,8 +15,10 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }) {
-  const getSystemPreference = () => 
-    window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  const getSystemPreference = () => {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  }
+  
   const [theme, setThemeState] = useState(() => {
     return localStorage.getItem(storageKey) || getSystemPreference()
   })
@@ -26,26 +28,21 @@ export function ThemeProvider({
     // console.log('Theme change timestamp:', new Date().toISOString());
     setThemeState(newTheme);
   }
+  
   useEffect(() => {
     const root = window.document.documentElement
     
-    root.style.transition = "background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease"
+    // ลบ transition ออกเพื่อให้เปลี่ยนธีมแบบทันที
+    root.style.transition = ""
     
-    document.head.insertAdjacentHTML(
-      'beforeend',
-      `<style>
-        * {
-          transition: background-color 0.8s ease, color 0.8s ease, border-color 0.8s ease, fill 0.8s ease, stroke 0.8s ease !important;
-        }
-      </style>`
-    )
+    // ลบ global style transitions ออก
+    const oldStyleElement = document.getElementById("theme-transitions")
+    if (oldStyleElement) {
+      oldStyleElement.remove()
+    }
     
     root.classList.remove("light", "dark")
     root.classList.add(theme)
-    
-    return () => {
-      root.style.transition = ""
-    }
   }, [theme])
 
   const value = {
