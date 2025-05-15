@@ -373,46 +373,43 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         
         if (valueBox) {
             valueBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
-            // Consistent style for all legends (GoldTH, GoldUS, USDTHB)
             valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
             valueBox.style.color = 'white';
         }
     };
 
-    currentSeriesConfigs.forEach(config => {      let legendDataExists = false;
-      if (category === 'GOLD_TH' && chartData[config.key]) {
-          legendDataExists = true;
-      } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
-          if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
-              // OHLC individual legends should be shown when in candlestick mode
-              legendDataExists = chartData.ohlc && chartData.ohlc.length > 0;
-          } else if (config.type === 'candlestick' && chartData.ohlc && chartData.ohlc.length > 0) {
-              legendDataExists = true; // Check for ohlc data presence
-          } else if (effectiveChartStyle === 'line' && chartData[config.key] && chartData[config.key].length > 0) {
-              legendDataExists = true; // Check for line data presence
-          }
-      }
-      if (!legendDataExists && config.key !== 'priceChangeData') return; // priceChangeData handled separately if needed
+    currentSeriesConfigs.forEach(config => {
+        let legendDataExists = false;
+        if (category === 'GOLD_TH' && chartData[config.key]) {
+            legendDataExists = true;
+        } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
+            if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
+                legendDataExists = chartData.ohlc && chartData.ohlc.length > 0;
+            } else if (config.type === 'candlestick' && chartData.ohlc && chartData.ohlc.length > 0) {
+                legendDataExists = true;
+            } else if (effectiveChartStyle === 'line' && chartData[config.key] && chartData[config.key].length > 0) {
+                legendDataExists = true;
+            }
+        }
+        if (!legendDataExists && config.key !== 'priceChangeData') return;
 
-      const legendRow = document.createElement('div');
-      const legendBorderColor = config.type === 'candlestick' ? (seriesVisibility[config.key] ? '#26a69a' : 'grey') : (config.color || 'grey');
-      legendRow.style = `
-        display: flex; align-items: center; border: 1px solid ${legendBorderColor};
-        border-radius: 4px; overflow: hidden; box-sizing: border-box;
-        cursor: pointer; transition: opacity 0.2s ease, border-color 0.2s ease;
-      `;
+        const legendRow = document.createElement('div');
+        const legendBorderColor = config.type === 'candlestick' ? (seriesVisibility[config.key] ? '#26a69a' : 'grey') : (config.color || 'grey');
+        legendRow.style = `
+            display: flex; align-items: center; border: 1px solid ${legendBorderColor};
+            border-radius: 4px; overflow: hidden; box-sizing: border-box;
+            ${effectiveChartStyle === 'candlestick' ? '' : 'cursor: pointer;'} transition: opacity 0.2s ease, border-color 0.2s ease;
+        `;
       const nameBox = document.createElement('div');
       nameBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
       nameBox.textContent = config.name;
       legendRow.appendChild(nameBox);      const valueBox = document.createElement('div');
-      // All legends should have the same style as GoldTH legends as requested
       valueBox.style = `
         background: ${config.color || (config.type === 'candlestick' ? '#26a69a' : 'transparent')}; 
         color: white; padding: 4px 8px; text-align: center; min-width: 75px;
       `;
       
       if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
-          // For candlestick, we'll update the text dynamically but keep the same style
           valueBox.textContent = 'OHLC';
       } else {
           valueBox.textContent = '0.00';
@@ -423,8 +420,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       const legendItem = { element: legendRow, config: config, nameBox, valueBox, clickHandler: null };
       seriesLegendElements.push(legendItem);
       updateLegendStyle(legendRow, seriesVisibility[config.key], config);
-
       legendItem.clickHandler = () => {
+        if (effectiveChartStyle === 'candlestick') return;
+        
         setSeriesVisibility(prevVisibility => {
             const newVisibilityForKey = !prevVisibility[config.key];
             if (config.addToChart && seriesInstances[config.key] && seriesInstances[config.key].applyOptions) {
@@ -451,7 +449,6 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         if (effectiveChartStyle === 'candlestick' && chartData.ohlc?.length) {
             dataForDefaultDate = chartData.ohlc;
         } else if (effectiveChartStyle === 'line') {
-            // For line chart, use any available OHLC data series
             if (chartData.closeData?.length) dataForDefaultDate = chartData.closeData;
             else if (chartData.openData?.length) dataForDefaultDate = chartData.openData;
             else if (chartData.highData?.length) dataForDefaultDate = chartData.highData;
@@ -483,7 +480,6 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
             if (last) {
                 const { close } = last;
-                // Display only the close price for the main candlestick legend
                 item.valueBox.textContent = close.toFixed(2);
             } else {
                 item.valueBox.textContent = '-';
@@ -492,7 +488,6 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             const ohlcArr = chartData.ohlc || [];
             const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
             if (last) {
-                // Get the specific OHLC component (open, high, low)
                 const ohlcType = config.key.split('_')[1];
                 if (last[ohlcType] !== undefined) {
                     item.valueBox.textContent = last[ohlcType].toFixed(2);
@@ -536,13 +531,14 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         seriesLegendElements.forEach(item => {
             const config = item.config;
             const seriesInstance = seriesInstances[config.key];
-            let displayValue = '-';            if (currentTimeAtCrosshair !== undefined) {                // For OHLC separate legends in candlestick mode
+            let displayValue = '-';
+            if (currentTimeAtCrosshair !== undefined) {
                 if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
-                    const mainSeries = seriesInstances['ohlc']; // The main candlestick series
+                    const mainSeries = seriesInstances['ohlc'];
                     if (mainSeries) {
                         const pointData = param.seriesData ? param.seriesData.get(mainSeries) : null;
                         if (pointData) {
-                            const ohlcType = config.key.split('_')[1]; // Extract 'open', 'high', 'low'
+                            const ohlcType = config.key.split('_')[1];
                             if (pointData[ohlcType] !== undefined) {
                                 displayValue = pointData[ohlcType].toFixed(2);
                             }
@@ -552,7 +548,6 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                     const pointData = param.seriesData ? param.seriesData.get(seriesInstance) : null;
                     if (pointData) {                        
                         if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
-                            // For main candlestick legend, show close price
                             const close = pointData.close !== undefined ? pointData.close.toFixed(2) : '-';
                             displayValue = close;
                         } else if (pointData.value !== undefined) {
@@ -562,13 +557,13 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 }
             } else {
                 if (seriesVisibility[config.key]) {
-                    const defaultVal = defaultDisplayValues[config.key];                    if (defaultVal !== null && defaultVal !== undefined) {                        
+                    const defaultVal = defaultDisplayValues[config.key];
+                    if (defaultVal !== null && defaultVal !== undefined) {                        
                         if (config.type === 'candlestick' && typeof defaultVal === 'object') {
-                            // For main candlestick legend, show close price
                             const close = defaultVal.close !== undefined ? defaultVal.close.toFixed(2) : '-';
-                            displayValue = close;                        } else if (config.key.startsWith('ohlc_') && typeof defaultVal === 'object') {
-                            // For separate OHLC legends
-                            const ohlcType = config.key.split('_')[1]; // Extract 'open', 'high', 'low'
+                            displayValue = close;
+                        } else if (config.key.startsWith('ohlc_') && typeof defaultVal === 'object') {
+                            const ohlcType = config.key.split('_')[1];
                             if (defaultVal[ohlcType] !== undefined) {
                                 displayValue = defaultVal[ohlcType].toFixed(2);
                             }
