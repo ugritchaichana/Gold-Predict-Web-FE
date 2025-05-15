@@ -190,12 +190,30 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     if (!chartContainerRef.current) {
         return;
     }
-
     chartContainerRef.current.innerHTML = '';
-    const chart = createChart(chartContainerRef.current, {
+    
+    // Create container for legends that will be placed above the chart
+    const styledLegendContainer = document.createElement('div');
+    styledLegendContainer.style = `
+      position: relative; 
+      display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
+      font-family: sans-serif; line-height: 18px; font-weight: 300;
+      background: white; padding: 8px; border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 8px;
+    `;
+    
+    // Create a container for the actual chart
+    const chartElement = document.createElement('div');
+    chartElement.style = `position: relative; width: 100%; height: calc(100% - 40px);`;
+    
+    // Add the legend container first, followed by the chart container
+    chartContainerRef.current.appendChild(styledLegendContainer);
+    chartContainerRef.current.appendChild(chartElement);
+    
+    const chart = createChart(chartElement, {
       ...chartOptions,
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
+      width: chartElement.clientWidth,
+      height: chartElement.clientHeight,
     });
 
     const seriesInstances = {};
@@ -307,35 +325,27 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         chart.timeScale().fitContent();
     }    // Removed VertLine implementation
 
-const currentDateTimestamp = Math.floor(new Date(new Date().setHours(17, 0, 0, 0)).getTime() / 1000);
-// const lastestDateTimestampGoldTH = chartData?.barBuyData?.length ? chartData.barBuyData[chartData.barBuyData.length - 1].time : null; // Original line
-if (seriesInstances.barBuyPredictData) {
-    seriesInstances.barBuyPredictData.setMarkers([
-        {
-            time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
-            position: 'aboveBar',
-            color: '#23b8a6',
-            shape: 'arrowDown',
-            text: 'Current Day',
-            size: 1.3,
-        },
-        {
-            time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
-            position: 'inBar',
-            color: '#23b8a6',
-            shape: 'circle',
-            size: 0.2,
-        },
-    ]);
-}
-
-    const styledLegendContainer = document.createElement('div');
-    styledLegendContainer.style = `
-      position: absolute; left: 12px; top: 12px; z-index: 1001;
-      display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
-      font-family: sans-serif; line-height: 18px; font-weight: 300;
-      background: rgba(255, 255, 255, 0.85); padding: 8px; border-radius: 4px;
-    `;
+    const currentDateTimestamp = Math.floor(new Date(new Date().setHours(17, 0, 0, 0)).getTime() / 1000);
+    // const lastestDateTimestampGoldTH = chartData?.barBuyData?.length ? chartData.barBuyData[chartData.barBuyData.length - 1].time : null; // Original line
+    if (seriesInstances.barBuyPredictData) {
+        seriesInstances.barBuyPredictData.setMarkers([
+            {
+                time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
+                position: 'aboveBar',
+                color: '#23b8a6',
+                shape: 'arrowDown',
+                text: 'Current Day',
+                size: 1.3,
+            },
+            {
+                time: currentDateTimestamp, // Changed from lastestDateTimestampGoldTH
+                position: 'inBar',
+                color: '#23b8a6',
+                shape: 'circle',
+                size: 0.2,
+            },
+        ]);
+    }
 
     const dateLegendRow = document.createElement('div');
     dateLegendRow.style = `
@@ -424,11 +434,7 @@ if (seriesInstances.barBuyPredictData) {
         });
     };
         legendRow.addEventListener('click', legendItem.clickHandler);
-    });
-
-    chartContainerRef.current.appendChild(styledLegendContainer);
-
-    requestAnimationFrame(() => {
+    });    requestAnimationFrame(() => {
         if (!dateLegendRow || !dateLegendRow.isConnected) return;
         const dateLegendHeight = dateLegendRow.offsetHeight;
         if (dateLegendHeight > 0) {
@@ -597,7 +603,7 @@ if (seriesInstances.barBuyPredictData) {
         }
     };
   }, [chartData, category, chartStyle, effectiveChartStyle, dateRange, seriesVisibility]);
-  return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }} />;
+  return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} />;
 };
 
 export default Chart;

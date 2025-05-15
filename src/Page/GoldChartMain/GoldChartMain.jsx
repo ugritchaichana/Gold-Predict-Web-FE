@@ -184,7 +184,7 @@ const GoldChartMain = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 mx-2 my-4">
           <GoldChart
             category={selectedCategory}
             selectedModel={selectedModel}
