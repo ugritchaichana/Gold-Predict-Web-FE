@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+
 const CurrentTime = () => {
     const [time, setTime] = useState('');
     
@@ -21,8 +23,13 @@ const CurrentTime = () => {
         updateTime();
         const interval = setInterval(updateTime, 1000);
         return () => clearInterval(interval);
-    }, []);    return (
-        <div className="bg-gray-100 px-3 py-1 rounded-md border border-gray-300 text-sm text-muted-foreground">
+    }, []);    
+    
+    return (
+        <div className={cn(
+            "px-3 py-1 rounded-md border text-sm",
+            "bg-card/40 border-border text-muted-foreground"
+        )}>
             {time}
         </div>
     );
