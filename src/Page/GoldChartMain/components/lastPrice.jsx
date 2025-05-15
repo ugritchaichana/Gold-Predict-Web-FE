@@ -11,18 +11,21 @@ const LastPrice = ({
   priceChange = 0, 
   percentChange = 0, 
   date = new Date(), 
-  currency = 'THB' 
+  currency = 'THB',
+  showDecimals = false
 }) => {
   return (
     <Card className="flex-1">
       <CardHeader className="pb-2">
         <CardDescription>Latest Price</CardDescription>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl md:text-3xl">
+        <div className="flex items-center justify-between">          <CardTitle className="text-2xl md:text-3xl">
             {loading ? (
               <Skeleton className="h-8 w-36" />
             ) : (
-              `${price.toLocaleString(undefined, {maximumFractionDigits:2})} ${currency}`
+              `${price.toLocaleString(undefined, {
+                minimumFractionDigits: showDecimals ? 2 : 0,
+                maximumFractionDigits: showDecimals ? 2 : 0
+              })} ${currency}`
             )}
           </CardTitle>
           <Badge 
