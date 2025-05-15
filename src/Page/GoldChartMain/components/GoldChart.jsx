@@ -11,6 +11,7 @@ const GoldChart = ({
   onRetry = () => window.location.reload(),
   category = 'GOLD_TH',
   selectedModel = '7',
+  chartStyle = 'line', // Add chartStyle prop with default value 'line'
   dateRange,
   activeDateOption,
   onFullDataLoaded
@@ -22,9 +23,10 @@ console.log(
 dateRange=${ dateRange ? `${dateRange.from.toISOString()}
 to ${dateRange.to.toISOString()}` : 'none'}
 activeDateOption=${activeDateOption}
-model=${selectedModel}`
+model=${selectedModel}
+chartStyle=${chartStyle}`
 );
-  }, [category, dateRange, selectedModel, activeDateOption]); // Added activeDateOption to dependency array
+  }, [category, dateRange, selectedModel, activeDateOption, chartStyle]); // Added chartStyle to dependency array
 
   const todayTimestamp = addHours(startOfDay(new Date()), 17).getTime();
   
@@ -75,7 +77,12 @@ model=${selectedModel}`
         </div>
       ) : dataForChart ? (
         <div className="flex items-center justify-center h-full w-full">
-          <ChartWrapper chartData={dataForChart} category={category} dateRange={dateRange} />
+          <ChartWrapper 
+            chartData={dataForChart} 
+            category={category} 
+            chartStyle={chartStyle}
+            dateRange={dateRange} 
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full">

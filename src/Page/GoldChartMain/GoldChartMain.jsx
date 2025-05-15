@@ -5,6 +5,7 @@ import { endOfDay, startOfDay, subDays, subMonths, subYears, startOfYear, isVali
 import LastPrice from './components/lastPrice';
 import DataCategory from './components/dataCategory';
 import SelectPredictModel from './components/selectPredictModel';
+import SelectStyleChart from './components/selectStyleChart';
 import DateRangePicker, { PRESETS } from './components/dateRangePicker';
 import GoldChart from './components/GoldChart';
 import PredictionBadge from './components/predictionBadge';
@@ -45,6 +46,7 @@ const getEarliestAvailableDate = (allChartData) => {
 const GoldChartMain = () => {
   const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
   const [selectedModel, setSelectedModel] = useState('7');
+  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
 
   const initialDefaultRangePreset = PRESETS.find(p => p.label === "MAX") || PRESETS[0];
   const [activeDateOption, setActiveDateOption] = useState(initialDefaultRangePreset.range);
@@ -124,6 +126,13 @@ const GoldChartMain = () => {
     setActiveDateOption(newActiveOption);
   };
 
+  // Reset chart style to 'line' when selecting GOLD_TH category
+  useEffect(() => {
+    if (selectedCategory === 'GOLD_TH') {
+      setSelectedChartStyle('line');
+    }
+  }, [selectedCategory]);
+
   const mockPrice = selectedCategory === 'GOLD_US' ? 2380.45 : 38750.00;
   const mockPreviousPrice = selectedCategory === 'GOLD_US' ? 2350.20 : 38500.00;
   const mockChange = mockPrice - mockPreviousPrice;
@@ -159,6 +168,11 @@ const GoldChartMain = () => {
                   models={Models}
                 />
               )}
+              <SelectStyleChart
+                selectedCategory={selectedCategory}
+                selectedStyle={selectedChartStyle}
+                setSelectedStyle={setSelectedChartStyle}
+              />
               <DateRangePicker
                 currentRange={currentDateRange}
                 activeOption={activeDateOption}
@@ -175,7 +189,8 @@ const GoldChartMain = () => {
             category={selectedCategory}
             selectedModel={selectedModel}
             dateRange={currentDateRange}
-            activeDateOption={activeDateOption} // Ensure this line is present and correct
+            chartStyle={selectedChartStyle}
+            activeDateOption={activeDateOption}
             onFullDataLoaded={(allData) => {
                 const earliest = getEarliestAvailableDate(allData);
                 if (earliest && isValid(earliest)) {

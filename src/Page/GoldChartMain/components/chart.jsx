@@ -39,12 +39,28 @@ const baseSeriesConfigs = {
         { key: 'ornamentBuyData', color: 'green', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         { key: 'ornamentSellData', color: 'orange', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
     ],
-    GOLD_US: [
-        { key: 'ohlc', name: 'Gold US', addToChart: true, defaultVisible: true, type: 'candlestick' },
-    ],
-    USD_THB: [
-        { key: 'ohlc', name: 'USD/THB', addToChart: true, defaultVisible: true, type: 'candlestick' },
-    ],
+    GOLD_US: {
+        line: [
+            { key: 'openData', color: 'blue', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: 'green', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: 'red', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: 'orange', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        ],
+        candlestick: [
+            { key: 'ohlc', name: 'Gold US', addToChart: true, defaultVisible: true, type: 'candlestick' },
+        ]
+    },
+    USD_THB: {
+        line: [
+            { key: 'openData', color: 'blue', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: 'green', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: 'red', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: 'orange', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        ],
+        candlestick: [
+            { key: 'ohlc', name: 'USD/THB', addToChart: true, defaultVisible: true, type: 'candlestick' },
+        ]
+    },
 };
 
 const processTimeSeriesData = (data, isCandlestick = false) => {
@@ -73,14 +89,74 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
     return result.sort((a, b) => a.time - b.time);
 };
 
+// Convert OHLC data to line chart format
+const convertOhlcDataToLines = (ohlcData) => {
+    if (!Array.isArray(ohlcData) || ohlcData.length === 0) {
+        return {
+            openData: [],
+            highData: [],
+            lowData: [],
+            closeData: []
+        };
+    }
+    
+    const openData = [];
+    const highData = [];
+    const lowData = [];
+    const closeData = [];
+    
+    ohlcData.forEach(item => {
+        if (item && typeof item.time === 'number') {
+            const time = item.time;
+            if (typeof item.open === 'number') {
+                openData.push({ time, value: item.open });
+            }
+            if (typeof item.high === 'number') {
+                highData.push({ time, value: item.high });
+            }
+            if (typeof item.low === 'number') {
+                lowData.push({ time, value: item.low });
+            }
+            if (typeof item.close === 'number') {
+                closeData.push({ time, value: item.close });
+            }
+        }
+    });
+    
+    return {
+        openData: openData.sort((a, b) => a.time - b.time),
+        highData: highData.sort((a, b) => a.time - b.time),
+        lowData: lowData.sort((a, b) => a.time - b.time),
+        closeData: closeData.sort((a, b) => a.time - b.time)
+    };
+};
 
 
-const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => {
+
+const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'line', dateRange }) => {
   // Process and debug chart data before using it (use full data set)
   const chartData = debugChartData(rawChartData, category);
   
   const chartContainerRef = useRef(null);
-  const currentSeriesConfigs = baseSeriesConfigs[category] || [];
+  
+  // For GOLD_TH, we always use line style
+  const effectiveChartStyle = category === 'GOLD_TH' ? 'line' : chartStyle;
+  
+  // Get the appropriate series configs based on category and chart style
+  let currentSeriesConfigs = [];
+  if (category === 'GOLD_TH') {
+    currentSeriesConfigs = baseSeriesConfigs[category];
+  } else if (category === 'GOLD_US' || category === 'USD_THB') {
+    currentSeriesConfigs = baseSeriesConfigs[category][effectiveChartStyle];
+  }
+  
+  // Prepare line data if needed for GOLD_US or USD_THB
+  useEffect(() => {
+    if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'line' && chartData && chartData.ohlc) {
+      const lineData = convertOhlcDataToLines(chartData.ohlc);
+      Object.assign(chartData, lineData);
+    }
+  }, [category, effectiveChartStyle, chartData]);
 
   const [seriesVisibility, setSeriesVisibility] = useState(() => {
     const initial = {};
@@ -89,14 +165,13 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
     });
     return initial;
   });
-
   useEffect(() => {
     const initial = {};
     currentSeriesConfigs.forEach(config => {
         initial[config.key] = config.defaultVisible;
     });
     setSeriesVisibility(initial);
-  }, [category]);
+  }, [category, effectiveChartStyle]);
 
   useEffect(() => {
     if (!chartData) {
@@ -126,10 +201,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
             let rawSeriesData = [];
             let processedSeriesDataForChart = [];            if (category === 'GOLD_TH') {
                 rawSeriesData = chartData[config.key] || [];
-                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
-            } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
-                    if (Array.isArray(chartData.ohlc)) {
-
+                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);            } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
+                if (Array.isArray(chartData.ohlc)) {
                     rawSeriesData = chartData.ohlc.filter(item => 
                         item && typeof item.time === 'number' && 
                         typeof item.open === 'number' && 
@@ -139,9 +212,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', dateRange }) => 
                     );
                     
                     processedSeriesDataForChart = rawSeriesData;
-                    
                 }
             } else if (category === 'GOLD_US' || category === 'USD_THB') {
+                // For line chart style with OHLC data
                 rawSeriesData = chartData[config.key] || [];
                 processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
             }
@@ -270,9 +343,7 @@ if (seriesInstances.barBuyPredictData) {
     dateLegendRow.appendChild(dateRightBox);
     styledLegendContainer.appendChild(dateLegendRow);
 
-    const seriesLegendElements = [];
-
-    const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
+    const seriesLegendElements = [];    const updateLegendStyle = (legendElement, isVisibleConfig, configForStyle) => {
         const leftBox = legendElement.children[0];
         const valueBox = legendElement.children[1];
         const displayColor = configForStyle.type === 'candlestick' ? (isVisibleConfig ? '#26a69a' : 'grey') : (configForStyle.color || 'grey');
@@ -283,23 +354,21 @@ if (seriesInstances.barBuyPredictData) {
         
         if (valueBox) {
             valueBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
-            if (configForStyle.type !== 'candlestick') {
-                 valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
-                 valueBox.style.color = 'white';
-            } else {
-                valueBox.style.background = 'transparent';
-                valueBox.style.color = isVisibleConfig ? 'black' : 'grey';
-            }
+            // Consistent style for all legends (GoldTH, GoldUS, USDTHB)
+            valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
+            valueBox.style.color = 'white';
         }
     };
 
     currentSeriesConfigs.forEach(config => {
       let legendDataExists = false;
       if (category === 'GOLD_TH' && chartData[config.key]) {
-          legendDataExists = true;
-      } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
-          if (config.type === 'candlestick' && chartData.open) legendDataExists = true; // Check for ohlc data presence
-          else if (chartData[config.key] && config.type !== 'candlestick') legendDataExists = true;
+          legendDataExists = true;      } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
+          if (config.type === 'candlestick' && chartData.ohlc && chartData.ohlc.length > 0) {
+              legendDataExists = true; // Check for ohlc data presence
+          } else if (effectiveChartStyle === 'line' && chartData[config.key] && chartData[config.key].length > 0) {
+              legendDataExists = true; // Check for line data presence
+          }
       }
       if (!legendDataExists && config.key !== 'priceChangeData') return; // priceChangeData handled separately if needed
 
@@ -313,21 +382,18 @@ if (seriesInstances.barBuyPredictData) {
       const nameBox = document.createElement('div');
       nameBox.style = `background: transparent; padding: 4px 8px; text-align: left;`;
       nameBox.textContent = config.name;
-      legendRow.appendChild(nameBox);
-
-      const valueBox = document.createElement('div');
-      if (config.type !== 'candlestick' || category === 'GOLD_TH') {
-          valueBox.style = `
-            background: ${config.color || 'transparent'}; 
-            color: white; padding: 4px 8px; text-align: center; min-width: 75px;
-          `;
+      legendRow.appendChild(nameBox);      const valueBox = document.createElement('div');
+      // All legends should have the same style as GoldTH legends as requested
+      valueBox.style = `
+        background: ${config.color || (config.type === 'candlestick' ? '#26a69a' : 'transparent')}; 
+        color: white; padding: 4px 8px; text-align: center; min-width: 75px;
+      `;
+      
+      if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
+          // For candlestick, we'll update the text dynamically but keep the same style
+          valueBox.textContent = 'OHLC';
+      } else {
           valueBox.textContent = '0.00';
-      } else { // Candlestick legend for GOLD_US, USD_THB
-          valueBox.style = `
-            background: transparent; color: black; 
-            padding: 4px 8px; text-align: left; min-width: 160px; font-size: 10px; white-space: nowrap;
-          `;
-          valueBox.textContent = 'O: - H: - L: - C: -';
       }
       legendRow.appendChild(valueBox);
       styledLegendContainer.appendChild(legendRow);
@@ -360,13 +426,19 @@ if (seriesInstances.barBuyPredictData) {
                 }
             });
         }
-    });
-
-    let dataForDefaultDate = [];
+    });    let dataForDefaultDate = [];
     if (category === 'GOLD_TH' && chartData.barBuyData?.length) {
         dataForDefaultDate = chartData.barBuyData;
-    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartData.ohlc?.length) {
-        dataForDefaultDate = chartData.ohlc;
+    } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
+        if (effectiveChartStyle === 'candlestick' && chartData.ohlc?.length) {
+            dataForDefaultDate = chartData.ohlc;
+        } else if (effectiveChartStyle === 'line') {
+            // For line chart, use any available OHLC data series
+            if (chartData.closeData?.length) dataForDefaultDate = chartData.closeData;
+            else if (chartData.openData?.length) dataForDefaultDate = chartData.openData;
+            else if (chartData.highData?.length) dataForDefaultDate = chartData.highData;
+            else if (chartData.lowData?.length) dataForDefaultDate = chartData.lowData;
+        }
     } else if (chartData.barBuyPredictData?.length) {
         dataForDefaultDate = chartData.barBuyPredictData;
     } else if (category === 'GOLD_TH' && chartData.barSellData?.length) {
@@ -388,15 +460,15 @@ if (seriesInstances.barBuyPredictData) {
     const defaultDisplayValues = {};
     seriesLegendElements.forEach(item => {
         const config = item.config;
-        let val = null;
-        if (config.type === 'candlestick' && category !== 'GOLD_TH') {
+        let val = null;        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick' && (category === 'GOLD_US' || category === 'USD_THB')) {
             const ohlcArr = chartData.ohlc || [];
             const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
             if (last) {
-                const { open, high, low, close } = last;
-                item.valueBox.textContent = `O:${open.toFixed(2)} H:${high.toFixed(2)} L:${low.toFixed(2)} C:${close.toFixed(2)}`;
+                const { close } = last;
+                // Display only the close price to match the style of GoldTH legends
+                item.valueBox.textContent = close.toFixed(2);
             } else {
-                item.valueBox.textContent = 'O: - H: - L: - C: -';
+                item.valueBox.textContent = '-';
             }
             defaultDisplayValues[config.key] = last || {};
         } else {
@@ -437,13 +509,10 @@ if (seriesInstances.barBuyPredictData) {
             if (currentTimeAtCrosshair !== undefined) {
                 if (seriesInstance) {
                     const pointData = param.seriesData ? param.seriesData.get(seriesInstance) : null;
-                    if (pointData) {
-                        if (config.type === 'candlestick' && category !== 'GOLD_TH') {
-                            const open = pointData.open !== undefined ? pointData.open.toFixed(2) : '-';
-                            const high = pointData.high !== undefined ? pointData.high.toFixed(2) : '-';
-                            const low = pointData.low !== undefined ? pointData.low.toFixed(2) : '-';
+                    if (pointData) {                        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
+                            // For consistency with GoldTH legends, only show close price
                             const close = pointData.close !== undefined ? pointData.close.toFixed(2) : '-';
-                            displayValue = `O:${open} H:${high} L:${low} C:${close}`;
+                            displayValue = close;
                         } else if (pointData.value !== undefined) {
                             displayValue = pointData.value.toFixed(2);
                         }
@@ -452,13 +521,10 @@ if (seriesInstances.barBuyPredictData) {
             } else {
                 if (seriesVisibility[config.key]) {
                     const defaultVal = defaultDisplayValues[config.key];
-                    if (defaultVal !== null && defaultVal !== undefined) {
-                        if (config.type === 'candlestick' && typeof defaultVal === 'object') {
-                            const open = defaultVal.open !== undefined ? defaultVal.open.toFixed(2) : '-';
-                            const high = defaultVal.high !== undefined ? defaultVal.high.toFixed(2) : '-';
-                            const low = defaultVal.low !== undefined ? defaultVal.low.toFixed(2) : '-';
+                    if (defaultVal !== null && defaultVal !== undefined) {                        if (config.type === 'candlestick' && typeof defaultVal === 'object') {
+                            // For consistency with GoldTH legends, only show close price
                             const close = defaultVal.close !== undefined ? defaultVal.close.toFixed(2) : '-';
-                            displayValue = `O:${open} H:${high} L:${low} C:${close}`;
+                            displayValue = close;
                         } else if (typeof defaultVal === 'number') {
                             displayValue = defaultVal.toFixed(2);
                         }
@@ -489,7 +555,7 @@ if (seriesInstances.barBuyPredictData) {
             currentChart.remove();
         }
     };
-  }, [chartData, category, dateRange, seriesVisibility]);
+  }, [chartData, category, chartStyle, effectiveChartStyle, dateRange, seriesVisibility]);
   return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%' }} />;
 };
 
