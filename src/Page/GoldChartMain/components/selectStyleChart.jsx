@@ -1,43 +1,40 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 
 const CHART_STYLES = {
   LINE: 'line',
   CANDLESTICK: 'candlestick'
 };
 
-const SelectStyleChart = ({ selectedCategory, selectedStyle, setSelectedStyle }) => {
+const SelectStyleChart = ({ selectedCategory, selectedStyle, setSelectedStyle, loading = false }) => {
   // Disable candlestick option for GOLD_TH category
   const isCandlestickDisabled = selectedCategory === 'GOLD_TH';
+  
+  const chartStyles = [
+    { key: CHART_STYLES.LINE, label: 'Line' },
+    { key: CHART_STYLES.CANDLESTICK, label: 'Candlestick', disabled: isCandlestickDisabled }
+  ];
 
   return (
-    <div className="flex items-center border rounded-md overflow-hidden shadow-sm">
-      <Button
-        type="button"
-        variant={selectedStyle === CHART_STYLES.LINE ? 'default' : 'outline'}
-        className={`rounded-none border-0 ${
-          selectedStyle === CHART_STYLES.LINE ? 'bg-primary text-white' : 'bg-background'
-        }`}
-        onClick={() => setSelectedStyle(CHART_STYLES.LINE)}
-      >
-        Line
-      </Button>
-      <Button
-        type="button"
-        disabled={isCandlestickDisabled}
-        variant={selectedStyle === CHART_STYLES.CANDLESTICK ? 'default' : 'outline'}
-        className={`rounded-none border-0 ${
-          selectedStyle === CHART_STYLES.CANDLESTICK ? 'bg-primary text-white' : 'bg-background'
-        } ${isCandlestickDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-        onClick={() => !isCandlestickDisabled && setSelectedStyle(CHART_STYLES.CANDLESTICK)}
-      >
-        Candlestick
-      </Button>
-      {isCandlestickDisabled && (
-        <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs rounded p-1">
-          Candlestick not available for GOLD TH
-        </div>
-      )}
+    <div className="relative pt-3"> {/* Container with relative positioning for the label */}
+      <div className="absolute top-0 left-2 -translate-y-1/2 bg-background px-1 text-xs text-muted-foreground">
+        Chart Style
+      </div>
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm">
+        {chartStyles.map(({ key, label, disabled = false }) => (
+          <button
+            key={key}
+            title={disabled ? `${label} - Not available for ${selectedCategory}` : label}
+            onClick={() => !loading && !disabled && setSelectedStyle(key)}
+            disabled={loading || disabled}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 px-3 py-1 flex-grow sm:flex-grow-0
+              ${selectedStyle === key 
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
