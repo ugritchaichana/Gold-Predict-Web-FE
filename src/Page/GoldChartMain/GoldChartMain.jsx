@@ -46,14 +46,7 @@ const getEarliestAvailableDate = (allChartData) => {
 
 const GoldChartMain = () => {
   const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
-  const [selectedModel, setSelectedModel] = useState('7');
-  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
-  const [lastPriceData, setLastPriceData] = useState({
-    price: 0,
-    previousPrice: 0,
-    date: new Date(),
-    isLoading: true
-  });
+  const [selectedModel, setSelectedModel] = useState('7');  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
 
   const initialDefaultRangePreset = PRESETS.find(p => p.label === "MAX") || PRESETS[0];
   const [activeDateOption, setActiveDateOption] = useState(initialDefaultRangePreset.range);
@@ -131,93 +124,51 @@ const GoldChartMain = () => {
       setCurrentDateRange(calculateInitialRange(newActiveOption, earliestDataDate, latestDataDateFromApi));
     }
     setActiveDateOption(newActiveOption);
-  };
-
-  // Reset chart style to 'line' when selecting GOLD_TH category
+  };  // Reset chart style to 'line' and set loading state when selecting a different data category
   useEffect(() => {
+    // Reset to loading state when category changes and clear any previous price data
+    setIsLastPriceLoading(true);
+    setLastPrice(null);
+    setPreviousPrice(null);
+    setLastTime(null);
+    setPricePercentChange(null);
+    
     if (selectedCategory === 'GOLD_TH') {
       setSelectedChartStyle('line');
     }
   }, [selectedCategory]);
-
-  // Function to get the last price based on the selected category
-  const getLastPriceFromChartData = (chartData, category) => {
-    if (!chartData) return null;
-
-    let price = 0;
-    let previousPrice = 0;
-    let date = new Date();
-    
-    if (category === 'GOLD_TH') {
-      // Get Bar Buy price for GOLD_TH
-      const barBuyData = chartData.barBuyData || [];
-      if (barBuyData.length > 0) {
-        // Sort by time to ensure we get the most recent
-        const sortedData = [...barBuyData].sort((a, b) => b.time - a.time);
-        price = sortedData[0]?.value || 0;
-        previousPrice = sortedData[1]?.value || price;
-        date = new Date(sortedData[0]?.time * 1000);
-      }
-    } else if (category === 'GOLD_US' || category === 'USD_THB') {
-      // Get Close price for GOLD_US or USD_THB
-      const ohlcData = chartData.ohlc || [];
-      if (ohlcData.length > 0) {
-        // Sort by time to ensure we get the most recent
-        const sortedData = [...ohlcData].sort((a, b) => b.time - a.time);
-        price = sortedData[0]?.close || 0;
-        previousPrice = sortedData[1]?.close || price;
-        date = new Date(sortedData[0]?.time * 1000);
-      }
-    }
-
-    return {
-      price,
-      previousPrice,
-      date,
-      isLoading: false
-    };
-  };
-
-  // Fetch chart data using the useChartData hook
-  const { data: chartDataFull, isLoading: isChartDataLoading } = useChartData(selectedCategory, selectedModel);
   
-  // Update last price when chart data changes
-  useEffect(() => {
-    if (chartDataFull) {
-      const priceData = getLastPriceFromChartData(chartDataFull, selectedCategory);
-      if (priceData) {
-        setLastPriceData(priceData);
-      }
-    } else {
-      setLastPriceData(prev => ({ ...prev, isLoading: isChartDataLoading }));
+  // Define stateful variables for the last price data
+  const [lastPrice, setLastPrice] = useState(null);
+  const [previousPrice, setPreviousPrice] = useState(null);
+  const [lastTime, setLastTime] = useState(null);
+  const [pricePercentChange, setPricePercentChange] = useState(null);
+  const [isLastPriceLoading, setIsLastPriceLoading] = useState(true);
+  const handleLastPriceUpdate = useCallback(({ value, time, percentChange: newPercentChange, dataCategory }) => {
+    // Only update if the data category matches the currently selected category
+    if (dataCategory === selectedCategory) {
+      setPreviousPrice(lastPrice);
+      setLastPrice(value);
+      setLastTime(time);
+      setPricePercentChange(newPercentChange);
+      setIsLastPriceLoading(false); // Data loaded successfully
+      console.log(`Updated last price for ${dataCategory}: ${value}`);
     }
-  }, [chartDataFull, selectedCategory, isChartDataLoading]);
-
-  // Set loading state when changing categories
-  useEffect(() => {
-    setLastPriceData(prev => ({ ...prev, isLoading: true }));
-  }, [selectedCategory]);
-
-  // Calculate price change values
-  const priceChange = lastPriceData.price - lastPriceData.previousPrice;
-  const percentChange = lastPriceData.previousPrice ? (priceChange / lastPriceData.previousPrice) * 100 : 0;
-
-  // For fallback mock data  // For fallback mock data (used above)
-  const mockPrice = selectedCategory === 'GOLD_US' ? 2380.45 : 38750.00;
-  const mockPreviousPrice = selectedCategory === 'GOLD_US' ? 2350.20 : 38500.00;
-  const mockChange = mockPrice - mockPreviousPrice;
-  const mockPercentChange = (mockChange / mockPreviousPrice) * 100;
+  }, [lastPrice, selectedCategory]);
+  
+  const showDecimals = selectedCategory === 'GOLD_US';
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-col md:flex-row gap-4">        <LastPrice
-          loading={lastPriceData.isLoading}
-          price={lastPriceData.price || mockPrice}
-          priceChange={priceChange || mockChange}
-          percentChange={percentChange || mockPercentChange}
-          date={lastPriceData.date || new Date()}
+      <div className="flex flex-col md:flex-row gap-4">
+        <LastPrice
+          loading={isLastPriceLoading}
+          price={lastPrice}
+          priceChange={lastPrice != null && previousPrice != null ? lastPrice - previousPrice : 0}
+          percentChange={pricePercentChange}
+          date={lastTime ? new Date(lastTime * 1000) : new Date()}
           currency={selectedCategory === 'GOLD_US' ? 'USD' : 'THB'}
-          showDecimals={selectedCategory === 'GOLD_US' || selectedCategory === 'USD_THB'}
+          showDecimals={showDecimals}
         />
         <DataCategory
           selectedCategory={selectedCategory}
@@ -269,6 +220,7 @@ const GoldChartMain = () => {
                     }
                 }
             }}
+            onLastPriceUpdate={handleLastPriceUpdate}
           />
         </CardContent>
         <div className="flex justify-between items-center px-6 pb-4">

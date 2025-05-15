@@ -11,33 +11,21 @@ const GoldChart = ({
   onRetry = () => window.location.reload(),
   category = 'GOLD_TH',
   selectedModel = '7',
-  chartStyle = 'line', // Add chartStyle prop with default value 'line'
+  chartStyle = 'line',
   dateRange,
   activeDateOption,
-  onFullDataLoaded
+  onFullDataLoaded,
+  onLastPriceUpdate
 }) => {
   const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
   useEffect(() => {
-console.log(
-`category=${category}
-dateRange=${ dateRange ? `${dateRange.from.toISOString()}
-to ${dateRange.to.toISOString()}` : 'none'}
-activeDateOption=${activeDateOption}
-model=${selectedModel}
-chartStyle=${chartStyle}`
-);
-  }, [category, dateRange, selectedModel, activeDateOption, chartStyle]); // Added chartStyle to dependency array
-
-  const todayTimestamp = addHours(startOfDay(new Date()), 17).getTime();
+  }, [category, dateRange, selectedModel, activeDateOption, chartStyle]);
   
-
-
   useEffect(() => {
     if (chartDataFull && onFullDataLoaded) {
       onFullDataLoaded(chartDataFull);
     }
   }, [chartDataFull, onFullDataLoaded]);
-
   const dataForChart = useMemo(() => {
     
     if (!chartDataFull) {
@@ -48,6 +36,40 @@ chartStyle=${chartStyle}`
     
     return debuggedData;
   }, [chartDataFull, category]);
+  useEffect(() => {
+    if (chartDataFull != null) {
+      let lastValue = 0;
+      let lastTime = 0;
+      let percentChange = 0;
+      let lastDataPoint = null;
+      let previousDataPoint = null;
+      
+      if (category === 'GOLD_TH' && chartDataFull.barBuyData && chartDataFull.barBuyData.length > 0) {
+          lastDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 1];
+          previousDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 2];
+      } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartDataFull.close && chartDataFull.close.length > 0) {
+          lastDataPoint = chartDataFull.close[chartDataFull.close.length - 1];
+          previousDataPoint = chartDataFull.close[chartDataFull.close.length - 2];
+      }
+        if (lastDataPoint) {
+        lastValue = lastDataPoint.value;
+        lastTime = lastDataPoint.time;
+        percentChange = previousDataPoint ? ((lastValue - previousDataPoint.value) / previousDataPoint.value) * 100 : 0;
+        console.log(`Last data point for category ${category}: value=${lastValue}, time=${new Date(lastTime * 1000).toISOString()}, percentChange=${percentChange.toFixed(2)}%`);
+        
+        // Ensure we call onLastPriceUpdate with valid data
+        if (onLastPriceUpdate && lastValue && lastTime) {
+          console.log("Calling onLastPriceUpdate with values:", { value: lastValue, time: lastTime, percentChange, dataCategory: category });
+          onLastPriceUpdate({ 
+            value: lastValue, 
+            time: lastTime, 
+            percentChange: percentChange,
+            dataCategory: category 
+          });
+        }
+      }
+    }
+  }, [chartDataFull, category, onLastPriceUpdate]);
 
 
   return (
