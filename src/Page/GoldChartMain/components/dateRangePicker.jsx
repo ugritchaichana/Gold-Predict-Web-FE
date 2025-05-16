@@ -2,9 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { 
   format, subDays, subMonths, subYears, startOfYear, 
-  endOfDay, startOfDay, isEqual, isValid 
+  endOfDay, startOfDay, isEqual, isValid, getYear, setMonth, setYear,
+  getMonth, addYears, addMonths
 } from 'date-fns';
-import { DayPicker } from 'react-day-picker';
+import { DayPicker, useNavigation } from 'react-day-picker';
 
 export const PRESETS = [
   { label: "7D", range: "7D", tooltip: "7 Days" },
@@ -13,7 +14,7 @@ export const PRESETS = [
   { label: "6M", range: "6M", tooltip: "6 Months" },
   { label: "YTD", range: "YTD", tooltip: "Year to Date" },
   { label: "1Y", range: "1Y", tooltip: "1 Year" },
-  { label: "5Y", range: "5Y", tooltip: "5 Years" }, // Assuming 3Y was a typo for 5Y, or you can add 3Y
+  { label: "5Y", range: "5Y", tooltip: "5 Years" },
   { label: "MAX", range: "ALL", tooltip: "All Time" },
 ];
 
@@ -30,13 +31,16 @@ function DateRangePicker({
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isPopoverOpen = isOpen !== undefined ? isOpen : internalIsOpen;
   const setIsPopoverOpen = onOpenChange || setInternalIsOpen;
-  
   // Temporary state to hold range selection before confirming with OK button
   const [tempRange, setTempRange] = useState({
     from: undefined,
     to: new Date()
   });
-
+  // State for calendar view (days, months, years)
+  const [calendarView, setCalendarView] = useState('days');
+  const [viewDate, setViewDate] = useState(new Date());
+  const [decadeStart, setDecadeStart] = useState(Math.floor(getYear(new Date()) / 10) * 10);
+  
   // Update temp range when currentRange or popover opens
   useEffect(() => {
     if (isPopoverOpen) {
@@ -45,16 +49,19 @@ function DateRangePicker({
           from: startOfDay(currentRange.from),
           to: endOfDay(currentRange.to || new Date())
         });
+        setViewDate(currentRange.from); // Set view date to the start date
       } else {
         setTempRange({
           from: undefined,
           to: endOfDay(new Date())
         });
+        setViewDate(new Date());
       }
+      // Reset to default day view whenever popover opens
+      setCalendarView('days');
     }
   }, [isPopoverOpen, currentRange, activeOption]);
   
-
   const calculatePresetRange = useCallback((presetRange, endDate = latestDate) => {
     const end = endOfDay(endDate);
     let start;
@@ -152,8 +159,9 @@ function DateRangePicker({
           });
         }
       } else {
-        // Only from is selected
-        toDate = endOfDay(new Date());
+        // If only from is selected, keep the existing to date if it exists
+        // This prevents resetting the end date when selecting a new start date
+        toDate = tempRange.to ? tempRange.to : endOfDay(new Date());
         setTempRange({
           from: fromDate,
           to: toDate
@@ -161,19 +169,27 @@ function DateRangePicker({
       }
     }
   };
-
+  
   const handleConfirm = () => {
     if (tempRange.from) {
-      // Create fresh Date objects to avoid reference issues
+      // Create fresh Date objects to avoid reference issues and timezone issues
+      // IMPORTANT: Use the exact same method for both date range picker and chart components
+      const from = new Date(tempRange.from.getFullYear(), tempRange.from.getMonth(), tempRange.from.getDate(), 0, 0, 0);
+      const to = tempRange.to ? 
+        new Date(tempRange.to.getFullYear(), tempRange.to.getMonth(), tempRange.to.getDate(), 23, 59, 59, 999) :
+        new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999);
+      
       const validatedRange = {
-        from: new Date(startOfDay(tempRange.from)),
-        to: new Date(endOfDay(tempRange.to || new Date()))
+        from: from,
+        to: to
       };
       
       // Log the dates for debugging
       console.log('Confirming date range:', {
         from: validatedRange.from.toISOString(),
         to: validatedRange.to.toISOString(),
+        fromFormatted: validatedRange.from.toLocaleDateString('en-GB'),
+        toFormatted: validatedRange.to.toLocaleDateString('en-GB'),
         fromTime: validatedRange.from.getTime(),
         toTime: validatedRange.to.getTime()
       });
@@ -191,14 +207,13 @@ function DateRangePicker({
   };
   
   const handleClearInPopover = () => {
-    // Reverts to the 'ALL' preset when "Clear" is clicked in the popover
     const allPreset = PRESETS.find(p => p.range === 'ALL') || PRESETS[PRESETS.length -1];
     if (allPreset) {
       handlePresetClick(allPreset);
     }
     setIsPopoverOpen(false);
   };
-
+  
   const getCustomButtonLabel = () => {
     if (activeOption === 'CUSTOM' && currentRange?.from && isValid(currentRange.from)) {
       const fromDate = currentRange.from;
@@ -212,6 +227,147 @@ function DateRangePicker({
     return "Custom";
   };
 
+  // Month and year selection handlers
+  const handleMonthSelect = (month) => {
+    const newDate = setMonth(viewDate, month);
+    setViewDate(newDate);
+    setCalendarView('days');
+  };
+
+  const handleYearSelect = (year) => {
+    const newDate = setYear(viewDate, year);
+    setViewDate(newDate);
+    setCalendarView('months');
+  };
+
+  // Handler for caption clicks to toggle between views
+  const handleCaptionClick = (type) => {
+    if (type === 'months') {
+      setCalendarView('months');
+    } else if (type === 'years') {
+      setCalendarView('years');
+    }
+  };
+
+  // Custom Caption component for DayPicker - with fixed height to match other headers
+  const CustomCaption = ({ displayMonth }) => {
+    const { goToMonth, nextMonth, previousMonth } = useNavigation();
+    
+    const handlePreviousClick = () => {
+      if (previousMonth) goToMonth(previousMonth);
+    };
+    
+    const handleNextClick = () => {
+      if (nextMonth) goToMonth(nextMonth);
+    };
+
+    return (
+      <div className="flex justify-center items-center w-full relative h-12">
+        <button
+          className="absolute left-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          onClick={handlePreviousClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        
+        <div className="flex space-x-1 items-center">
+          <button
+            onClick={() => handleCaptionClick('months')}
+            className="text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md px-2 py-1"
+          >
+            {format(displayMonth, 'MMMM')}
+          </button>
+          <button
+            onClick={() => handleCaptionClick('years')}
+            className="text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md px-2 py-1"
+          >
+            {format(displayMonth, 'yyyy')}
+          </button>
+        </div>
+        
+        <button
+          className="absolute right-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          onClick={handleNextClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
+    );
+  };
+  
+  // Month picker component with consistent sizing and alignment
+  const MonthPicker = () => {
+    const months = Array.from({ length: 12 }, (_, i) => format(new Date(0, i), 'MMM'));
+    
+    return (
+      <div className="grid grid-cols-3 gap-2 p-2 flex-grow">
+        {months.map((month, i) => (
+          <button
+            key={i}
+            onClick={() => handleMonthSelect(i)}
+            className={`flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10
+              ${getMonth(viewDate) === i 
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
+          >
+            {month}
+          </button>
+        ))}
+      </div>
+    );
+  };
+  
+  // Year picker component with consistent sizing and alignment
+  const YearPicker = () => {
+    const years = Array.from({ length: 12 }, (_, i) => decadeStart + i - 1);
+    const currentYear = getYear(new Date());
+    
+    return (
+      <div className="flex-grow flex flex-col">
+        <div className="flex justify-between items-center h-12 px-2">
+          <button
+            className="inline-flex items-center justify-center rounded-md p-1 hover:bg-accent h-7 w-7"
+            onClick={() => setDecadeStart(decadeStart - 10)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span className="text-sm font-medium">
+            {decadeStart} - {decadeStart + 9}
+          </span>
+          <button
+            className="inline-flex items-center justify-center rounded-md p-1 hover:bg-accent h-7 w-7"
+            onClick={() => setDecadeStart(decadeStart + 10)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 p-2 flex-grow">
+          {years.map(year => (
+            <button
+              key={year}
+              onClick={() => handleYearSelect(year)}
+              className={`flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10
+                ${getYear(viewDate) === year 
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  : year === currentYear 
+                    ? 'bg-accent text-accent-foreground' 
+                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="relative pt-3"> 
@@ -261,39 +417,93 @@ function DateRangePicker({
                     {tempRange.to ? format(tempRange.to, " dd MMM yyyy") : " End: Today"}
                   </div>
                 )}
-                <DayPicker
-                  mode="range"
-                  selected={tempRange}
-                  onSelect={handleCalendarSelect}
-                  numberOfMonths={1}
-                  showOutsideDays
-                  disabled={(date) => 
-                    (earliestDate && isValid(earliestDate) && date < startOfDay(earliestDate)) ||
-                    (latestDate && isValid(latestDate) && date > endOfDay(latestDate))
-                  }
-                  fromDate={earliestDate ? startOfDay(earliestDate) : undefined}
-                  toDate={latestDate ? endOfDay(latestDate) : undefined}
-                  classNames={{
-                    caption: 'flex justify-center pt-1 relative items-center',
-                    caption_label: 'text-sm font-medium',
-                    nav: 'space-x-1 flex items-center',
-                    nav_button: 'rdp-button_reset rdp-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute',
-                    nav_button_previous: 'left-1',
-                    nav_button_next: 'right-1',
-                    table: 'w-full border-collapse space-y-1 mt-2', // Added mt-2 for spacing
-                    head_row: 'flex',
-                    head_cell: 'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]', // Adjusted width
-                    row: 'flex w-full mt-2',
-                    cell: 'h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20', // Adjusted size
-                    day: 'rdp-button_reset rdp-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 font-normal aria-selected:opacity-100', // Adjusted size
-                    day_range_end: 'day-range-end',
-                    day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-                    day_today: 'bg-accent text-accent-foreground',
-                    day_outside: 'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-100', // Ensure selected outside days are visible
-                    day_disabled: 'text-muted-foreground opacity-50',
-                    day_hidden: 'invisible',
-                  }}
-                />
+                
+                {/* Calendar View Container with consistent width and fixed height */}
+                <div className="w-[280px] h-[320px] flex flex-col">
+                  {calendarView === 'days' ? (
+                    <DayPicker
+                      mode="range"
+                      selected={tempRange}
+                      onSelect={handleCalendarSelect}
+                      numberOfMonths={1}
+                      showOutsideDays
+                      month={viewDate}
+                      onMonthChange={setViewDate}
+                      disabled={(date) => 
+                        (earliestDate && isValid(earliestDate) && date < startOfDay(earliestDate)) ||
+                        (latestDate && isValid(latestDate) && date > endOfDay(latestDate))
+                      }
+                      fromDate={earliestDate ? startOfDay(earliestDate) : undefined}
+                      toDate={latestDate ? endOfDay(latestDate) : undefined}
+                      components={{
+                        Caption: CustomCaption
+                      }}
+                      classNames={{
+                        root: 'w-full h-full flex flex-col',
+                        months: 'flex flex-col flex-grow',
+                        month: 'flex flex-col flex-grow',
+                        caption: 'flex justify-center relative items-center h-12',
+                        caption_label: 'text-sm font-medium',
+                        nav: 'space-x-1 flex items-center',
+                        nav_button: 'rdp-button_reset rdp-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute',
+                        nav_button_previous: 'left-1',
+                        nav_button_next: 'right-1',
+                        table: 'w-full border-collapse space-y-1 flex-grow', 
+                        head_row: 'flex w-full h-8',
+                        head_cell: 'text-muted-foreground rounded-md w-10 font-normal text-[0.8rem] flex items-center justify-center',
+                        row: 'flex w-full h-10',
+                        cell: 'h-10 w-10 text-center text-sm p-0 relative flex items-center justify-center [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                        day: 'rdp-button_reset rdp-button inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0 font-normal aria-selected:opacity-100',
+                        day_range_end: 'day-range-end',
+                        day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+                        day_today: 'bg-accent text-accent-foreground',
+                        day_outside: 'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-100',
+                        day_disabled: 'text-muted-foreground opacity-50',
+                        day_hidden: 'invisible',
+                        foot: 'mt-2',
+                        button_reset: 'rdp-button_reset'
+                      }}
+                    />
+                  ) : calendarView === 'months' ? (
+                    <div className="h-full flex flex-col">
+                      <div className="py-2 h-12">
+                        <button 
+                          onClick={() => setCalendarView('days')}
+                          className="flex items-center text-sm font-medium hover:underline"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                            <path d="M15 18l-6-6 6-6" />
+                          </svg>
+                          Back to Calendar
+                        </button>
+                        <div className="text-center text-sm font-medium">
+                          {getYear(viewDate)}
+                        </div>
+                      </div>
+                      <div className="flex-grow flex flex-col justify-center">
+                        <MonthPicker />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col">
+                      <div className="py-2 h-12">
+                        <button 
+                          onClick={() => setCalendarView('months')}
+                          className="flex items-center text-sm font-medium hover:underline"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                            <path d="M15 18l-6-6 6-6" />
+                          </svg>
+                          Back to Months
+                        </button>
+                      </div>
+                      <div className="flex-grow flex flex-col justify-center">
+                        <YearPicker />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex justify-between items-center mt-3 pt-2 border-t">
                   <button
                     onClick={handleReset}

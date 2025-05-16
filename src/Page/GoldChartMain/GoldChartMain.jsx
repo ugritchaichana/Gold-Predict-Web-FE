@@ -145,14 +145,18 @@ const GoldChartMain = () => {
     if (newRange && newRange.from instanceof Date && isValid(newRange.from) && 
         newRange.to instanceof Date && isValid(newRange.to)) {
       
+      // IMPORTANT: Use the direct date objects without any transformations
+      // This ensures the exact same dates are used as selected in the picker
       const cleanRange = {
-        from: startOfDay(newRange.from), // Use startOfDay for 'from'
-        to: endOfDay(newRange.to)       // Use endOfDay for 'to'
+        from: newRange.from,  // Use direct date object
+        to: newRange.to       // Use direct date object
       };
       
       console.log('Setting clean range:', {
         from: cleanRange.from.toISOString(),
-        to: cleanRange.to.toISOString()
+        to: cleanRange.to.toISOString(),
+        fromFormatted: cleanRange.from.toLocaleDateString('en-GB'),
+        toFormatted: cleanRange.to.toLocaleDateString('en-GB')
       });
       
       setCurrentDateRange(cleanRange);
@@ -164,7 +168,7 @@ const GoldChartMain = () => {
       setCurrentDateRange(calculateInitialRange(newActiveOption, validEarliest, validLatest));
     }
     setActiveDateOption(newActiveOption);
-  };  // Reset chart style to 'line' and set loading state when selecting a different data category
+  };// Reset chart style to 'line' and set loading state when selecting a different data category
   useEffect(() => {
     // Reset to loading state when category changes and clear any previous price data
     setIsLastPriceLoading(true);
