@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { addHours, startOfDay } from 'date-fns';
 import { ThreeDot } from 'react-loading-indicators';
 import { InfoIcon } from '@/components/icons';
@@ -11,7 +11,7 @@ const GoldChart = ({
   onRetry = () => window.location.reload(),
   category = 'GOLD_TH',
   selectedModel = '7',
-  chartStyle = 'line',
+  chartStyle = 'line', // This is now correctly receiving the "chartStyle" prop from GoldChartMain
   dateRange,
   activeDateOption,
   onFullDataLoaded,
@@ -19,69 +19,83 @@ const GoldChart = ({
 }) => {
   const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
   
+  // Track render cycles
+  const renderCount = useRef(0);
+  renderCount.current++;
+  
+  // Track the candlestick style selection
+  const chartStyleRef = useRef(chartStyle);
+  
   useEffect(() => {
-    console.log('GoldChart received dateRange:', dateRange ? {
-      from: dateRange.from?.toISOString(),
-      to: dateRange.to?.toISOString()
-    } : 'No date range');
-  }, [category, dateRange, selectedModel, activeDateOption, chartStyle]);
+    console.log('GoldChart component props:', {
+      renderId: renderCount.current,
+      category,
+      selectedModel,
+      chartStyle,
+      dateRange: dateRange ? {
+        from: dateRange.from?.toISOString(),
+        to: dateRange.to?.toISOString()
+      } : 'No date range'
+    });
+    
+    // Log when chart style changes
+    if (chartStyleRef.current !== chartStyle) {
+      console.log(`Chart style changed from ${chartStyleRef.current} to ${chartStyle}`);
+      chartStyleRef.current = chartStyle;
+    }
+  }, [category, dateRange, selectedModel, chartStyle]);
   
   useEffect(() => {
     if (chartDataFull && onFullDataLoaded) {
       onFullDataLoaded(chartDataFull);
     }
   }, [chartDataFull, onFullDataLoaded]);
+  
+  // Use useMemo more effectively
   const dataForChart = useMemo(() => {
-    
     if (!chartDataFull) {
       return null;
     }
     
-    const debuggedData = debugChartData(chartDataFull, category);
-    
-    return debuggedData;
+    console.log(`Processing chart data for ${category}, style: ${chartStyle}`);
+    // Use debugChartData to validate and process the data
+    return debugChartData(chartDataFull, category);
   }, [chartDataFull, category]);
+  
+  // Handle the last price update effect
   useEffect(() => {
-    if (chartDataFull != null) {
-      let lastValue = 0;
-      let lastTime = 0;
-      let percentChange = 0;
-      let lastDataPoint = null;
-      let previousDataPoint = null;
+    if (!chartDataFull) return;
+    
+    let lastValue = 0;
+    let lastTime = 0;
+    let percentChange = 0;
+    let lastDataPoint = null;
+    let previousDataPoint = null;
+    
+    if (category === 'GOLD_TH' && chartDataFull.barBuyData && chartDataFull.barBuyData.length > 0) {
+        lastDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 1];
+        previousDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 2];
+    } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartDataFull.close && chartDataFull.close.length > 0) {
+        lastDataPoint = chartDataFull.close[chartDataFull.close.length - 1];
+        previousDataPoint = chartDataFull.close[chartDataFull.close.length - 2];
+    }
       
-      if (category === 'GOLD_TH' && chartDataFull.barBuyData && chartDataFull.barBuyData.length > 0) {
-          lastDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 1];
-          previousDataPoint = chartDataFull.barBuyData[chartDataFull.barBuyData.length - 2];
-      } else if ((category === 'GOLD_US' || category === 'USD_THB') && chartDataFull.close && chartDataFull.close.length > 0) {
-          lastDataPoint = chartDataFull.close[chartDataFull.close.length - 1];
-          previousDataPoint = chartDataFull.close[chartDataFull.close.length - 2];
-      }
-        if (lastDataPoint) {
-        lastValue = lastDataPoint.value;
-        lastTime = lastDataPoint.time;
-        percentChange = previousDataPoint ? ((lastValue - previousDataPoint.value) / previousDataPoint.value) * 100 : 0;
-        // console.log(`Last data point for category ${category}: value=${lastValue}, time=${new Date(lastTime * 1000).toISOString()}, percentChange=${percentChange.toFixed(2)}%`);
-        
-        // Ensure we call onLastPriceUpdate with valid data
-        if (onLastPriceUpdate && lastValue && lastTime) {
-          // console.log("Calling onLastPriceUpdate with values:", { value: lastValue, time: lastTime, percentChange, dataCategory: category });
-          onLastPriceUpdate({ 
-            value: lastValue, 
-            time: lastTime, 
-            percentChange: percentChange,
-            dataCategory: category 
-          });
-        }
+    if (lastDataPoint) {
+      lastValue = lastDataPoint.value;
+      lastTime = lastDataPoint.time;
+      percentChange = previousDataPoint ? ((lastValue - previousDataPoint.value) / previousDataPoint.value) * 100 : 0;
+      
+      // Ensure we call onLastPriceUpdate with valid data
+      if (onLastPriceUpdate && lastValue && lastTime) {
+        onLastPriceUpdate({ 
+          value: lastValue, 
+          time: lastTime, 
+          percentChange: percentChange,
+          dataCategory: category 
+        });
       }
     }
-
-    // if (chartDataFull?.barBuyData?.length > 0) {
-    //   console.log('start date : ', new Date(chartDataFull.barBuyData[0].time * 1000).toISOString());
-    //   console.log('end date : ', new Date(chartDataFull.barBuyData[chartDataFull.barBuyData.length - 1].time * 1000).toISOString());
-    // }
-
   }, [chartDataFull, category, onLastPriceUpdate]);
-
 
   return (
     <div className="h-[450px]">
@@ -113,7 +127,7 @@ const GoldChart = ({
           <ChartWrapper 
             chartData={dataForChart} 
             category={category} 
-            chartStyle={chartStyle}
+            chartStyle={chartStyle} // Correct prop name
             dateRange={{
               from: dateRange?.from ? new Date(dateRange.from.getTime()) : undefined,
               to: dateRange?.to ? new Date(dateRange.to.getTime()) : undefined
@@ -129,4 +143,4 @@ const GoldChart = ({
   );
 };
 
-export default GoldChart;
+export default React.memo(GoldChart);

@@ -182,6 +182,15 @@ const GoldChartMain = () => {
     }
   }, [selectedCategory]);
   
+  // Log when chart style changes to help debug
+  useEffect(() => {
+    console.log('GoldChartMain: Chart style changed:', {
+      selectedChartStyle,
+      category: selectedCategory,
+      isCandlestickDisabled: selectedCategory === 'GOLD_TH'
+    });
+  }, [selectedChartStyle, selectedCategory]);
+  
   // Define stateful variables for the last price data
   const [lastPrice, setLastPrice] = useState(null);
   const [previousPrice, setPreviousPrice] = useState(null);
@@ -250,11 +259,10 @@ const GoldChartMain = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 m-0 h-[500px] w-full relative">
-          <GoldChart
+        <CardContent className="p-0 m-0 h-[500px] w-full relative">          <GoldChart
             category={selectedCategory}
             model={selectedModel}
-            style={selectedChartStyle}
+            chartStyle={selectedChartStyle} // Ensure consistent prop name
             dateRange={currentDateRange} // Ensure this is the correctly updated state
             onLastPriceUpdate={handleLastPriceUpdate}
             showDecimals={showDecimals}
