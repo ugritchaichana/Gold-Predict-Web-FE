@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { 
   format, subDays, subMonths, subYears, startOfYear, 
@@ -30,6 +30,30 @@ function DateRangePicker({
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isPopoverOpen = isOpen !== undefined ? isOpen : internalIsOpen;
   const setIsPopoverOpen = onOpenChange || setInternalIsOpen;
+  
+  // Temporary state to hold range selection before confirming with OK button
+  const [tempRange, setTempRange] = useState({
+    from: undefined,
+    to: new Date()
+  });
+
+  // Update temp range when currentRange or popover opens
+  useEffect(() => {
+    if (isPopoverOpen) {
+      if (activeOption === 'CUSTOM' && currentRange?.from) {
+        setTempRange({
+          from: startOfDay(currentRange.from),
+          to: endOfDay(currentRange.to || new Date())
+        });
+      } else {
+        setTempRange({
+          from: undefined,
+          to: endOfDay(new Date())
+        });
+      }
+    }
+  }, [isPopoverOpen, currentRange, activeOption]);
+  
 
   const calculatePresetRange = useCallback((presetRange, endDate = latestDate) => {
     const end = endOfDay(endDate);
@@ -97,32 +121,73 @@ function DateRangePicker({
   };
   
   const handleCalendarSelect = (selectedDateRange) => {
-    let finalRange = selectedDateRange;
-
-    if (finalRange?.from && finalRange?.to && finalRange.to < finalRange.from) {
-      finalRange = { from: finalRange.to, to: finalRange.from };
-    }
-    
-    if (finalRange?.from && isValid(finalRange.from)) {
-      finalRange.from = startOfDay(finalRange.from);
-    } else {
-      // If 'from' is cleared or invalid, treat as no range selected from calendar
-      onRangeChange(undefined, activeOption === 'CUSTOM' ? 'ALL' : activeOption); // Revert to ALL or current preset
-      setIsPopoverOpen(false);
+    // Handle no selection case
+    if (!selectedDateRange) {
+      setTempRange({
+        from: undefined,
+        to: endOfDay(new Date())
+      });
       return;
     }
     
-    if (finalRange?.to && isValid(finalRange.to)) {
-      finalRange.to = endOfDay(finalRange.to);
-    } else if (finalRange?.from) { // If only 'from' is selected, make 'to' the same day
-      finalRange.to = endOfDay(finalRange.from);
+    // If we have a selected date
+    if (selectedDateRange?.from) {
+      const fromDate = startOfDay(selectedDateRange.from);
+      let toDate;
+      
+      // If both dates are selected
+      if (selectedDateRange.to) {
+        // Make sure from < to
+        if (selectedDateRange.to < selectedDateRange.from) {
+          toDate = endOfDay(selectedDateRange.from);
+          setTempRange({ 
+            from: startOfDay(selectedDateRange.to),
+            to: toDate
+          });
+        } else {
+          toDate = endOfDay(selectedDateRange.to);
+          setTempRange({
+            from: fromDate,
+            to: toDate
+          });
+        }
+      } else {
+        // Only from is selected
+        toDate = endOfDay(new Date());
+        setTempRange({
+          from: fromDate,
+          to: toDate
+        });
+      }
     }
+  };
 
-    onRangeChange(finalRange, 'CUSTOM');
-
-    if (finalRange?.from && finalRange?.to) {
+  const handleConfirm = () => {
+    if (tempRange.from) {
+      // Create fresh Date objects to avoid reference issues
+      const validatedRange = {
+        from: new Date(startOfDay(tempRange.from)),
+        to: new Date(endOfDay(tempRange.to || new Date()))
+      };
+      
+      // Log the dates for debugging
+      console.log('Confirming date range:', {
+        from: validatedRange.from.toISOString(),
+        to: validatedRange.to.toISOString(),
+        fromTime: validatedRange.from.getTime(),
+        toTime: validatedRange.to.getTime()
+      });
+      
+      onRangeChange(validatedRange, 'CUSTOM');
       setIsPopoverOpen(false);
     }
+  };
+  
+  const handleReset = () => {
+    setTempRange({
+      from: undefined,
+      to: endOfDay(new Date())
+    });
   };
   
   const handleClearInPopover = () => {
@@ -140,19 +205,20 @@ function DateRangePicker({
       const toDate = currentRange.to && isValid(currentRange.to) ? currentRange.to : fromDate;
       
       if (isEqual(startOfDay(fromDate), startOfDay(toDate))) {
-        return format(fromDate, "dd MMM \'\'yy");
+        return format(fromDate, "dd MMM yy");
       }
-      return `${format(fromDate, "dd MMM \'\'yy")} - ${format(toDate, "dd MMM \'\'yy")}`;
+      return `${format(fromDate, "dd MMM yy")} - ${format(toDate, "dd MMM yy")}`;
     }
     return "Custom";
   };
 
+
   return (
-    <div className="relative pt-3"> {/* Added relative positioning and top padding */}
-      <div className="absolute top-0 left-2 -translate-y-1/2 bg-background px-1 text-xs text-muted-foreground"> {/* Label style */}
+    <div className="relative pt-3"> 
+      <div className="absolute top-0 left-2 -translate-y-1/2 bg-background px-1 text-xs text-muted-foreground">
         Date Range
       </div>
-      <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm"> {/* Changed border to border-border */}
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm">
         {PRESETS.map((preset) => (
           <button
             key={preset.label}
@@ -188,10 +254,16 @@ function DateRangePicker({
               sideOffset={5}
               align={align}
             >
-              <div className="p-3"> {/* Added padding around DayPicker and Clear button */}
+              <div className="p-3">
+                {tempRange?.from && (
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {tempRange.from ? format(tempRange.from, "dd MMM yyyy") : "Start: Not selected"} - 
+                    {tempRange.to ? format(tempRange.to, " dd MMM yyyy") : " End: Today"}
+                  </div>
+                )}
                 <DayPicker
                   mode="range"
-                  selected={activeOption === 'CUSTOM' ? currentRange : undefined} // Only show selection in picker if custom is active
+                  selected={tempRange}
                   onSelect={handleCalendarSelect}
                   numberOfMonths={1}
                   showOutsideDays
@@ -222,19 +294,22 @@ function DateRangePicker({
                     day_hidden: 'invisible',
                   }}
                 />
-                {/* Show clear button only if a custom range is being interacted with or selected */}
-                {(isPopoverOpen && currentRange?.from && activeOption === 'CUSTOM') && (
+                <div className="flex justify-between items-center mt-3 pt-2 border-t">
                   <button
-                    onClick={handleClearInPopover}
-                    className="w-full justify-center text-xs mt-2 pt-1 border-t flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={handleReset}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 px-3 py-1"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
-                      <path d="M18 6 6 18"></path>
-                      <path d="m6 6 12 12"></path>
-                    </svg>
-                    Clear Custom Range
+                    Reset
                   </button>
-                )}
+                  <button
+                    onClick={handleConfirm}
+                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 px-3 py-1 
+                    ${!tempRange.from ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+                    disabled={!tempRange.from}
+                  >
+                    OK
+                  </button>
+                </div>
               </div>
             </Popover.Content>
           </Popover.Portal>

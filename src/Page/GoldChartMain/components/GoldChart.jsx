@@ -18,7 +18,12 @@ const GoldChart = ({
   onLastPriceUpdate
 }) => {
   const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
+  
   useEffect(() => {
+    console.log('GoldChart received dateRange:', dateRange ? {
+      from: dateRange.from?.toISOString(),
+      to: dateRange.to?.toISOString()
+    } : 'No date range');
   }, [category, dateRange, selectedModel, activeDateOption, chartStyle]);
   
   useEffect(() => {
@@ -69,6 +74,12 @@ const GoldChart = ({
         }
       }
     }
+
+    // if (chartDataFull?.barBuyData?.length > 0) {
+    //   console.log('start date : ', new Date(chartDataFull.barBuyData[0].time * 1000).toISOString());
+    //   console.log('end date : ', new Date(chartDataFull.barBuyData[chartDataFull.barBuyData.length - 1].time * 1000).toISOString());
+    // }
+
   }, [chartDataFull, category, onLastPriceUpdate]);
 
 
@@ -103,7 +114,10 @@ const GoldChart = ({
             chartData={dataForChart} 
             category={category} 
             chartStyle={chartStyle}
-            dateRange={dateRange} 
+            dateRange={{
+              from: dateRange?.from ? new Date(dateRange.from.getTime()) : undefined,
+              to: dateRange?.to ? new Date(dateRange.to.getTime()) : undefined
+            }}
           />
         </div>
       ) : (

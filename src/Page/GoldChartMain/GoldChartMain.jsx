@@ -99,7 +99,29 @@ const GoldChartMain = () => {
     calculateInitialRange(activeDateOption, earliestDataDate, latestDataDateFromApi)
   );
 
+  // Effect to update earliestDataDate when allChartData is available
+  const { data: allChartData } = useChartData(); // Assuming useChartData provides all data sets
   useEffect(() => {
+    if (allChartData) {
+      const earliest = getEarliestAvailableDate(allChartData);
+      if (earliest && (!earliestDataDate || earliest.getTime() !== earliestDataDate.getTime())) {
+        setEarliestDataDate(earliest);
+      }
+    }
+  }, [allChartData, earliestDataDate]);
+
+
+  useEffect(() => {
+    // If activeDateOption is 'CUSTOM', the currentDateRange is authoritative and
+    // should have been set by handleDateRangeChange. This effect should not
+    // override it by attempting to calculate a preset-based range.
+    // Child components (DateRangePicker, GoldChart) receive earliest/latest dates
+    // and should adapt their behavior or displayed data accordingly if those boundaries change.
+    if (activeDateOption === 'CUSTOM') {
+      return;
+    }
+
+    // For preset activeDateOptions, calculate and apply the range.
     const newCalculatedRange = calculateInitialRange(activeDateOption, earliestDataDate, latestDataDateFromApi);
     
     const fromChanged = (!currentDateRange?.from && newCalculatedRange.from) || 
@@ -117,11 +139,29 @@ const GoldChartMain = () => {
 
 
   const handleDateRangeChange = (newRange, newActiveOption) => {
-    if (newRange && isValid(newRange.from) && isValid(newRange.to)) {
-      setCurrentDateRange({ from: newRange.from, to: newRange.to });
+    console.log('Received range:', newRange);
+    
+    // Ensure newRange and its properties are valid Date objects
+    if (newRange && newRange.from instanceof Date && isValid(newRange.from) && 
+        newRange.to instanceof Date && isValid(newRange.to)) {
+      
+      const cleanRange = {
+        from: startOfDay(newRange.from), // Use startOfDay for 'from'
+        to: endOfDay(newRange.to)       // Use endOfDay for 'to'
+      };
+      
+      console.log('Setting clean range:', {
+        from: cleanRange.from.toISOString(),
+        to: cleanRange.to.toISOString()
+      });
+      
+      setCurrentDateRange(cleanRange);
     } else {
       // Fallback to a calculated range based on the newActiveOption
-      setCurrentDateRange(calculateInitialRange(newActiveOption, earliestDataDate, latestDataDateFromApi));
+      // Ensure earliestDataDate and latestDataDateFromApi are valid before passing
+      const validEarliest = earliestDataDate instanceof Date && isValid(earliestDataDate) ? earliestDataDate : null;
+      const validLatest = latestDataDateFromApi instanceof Date && isValid(latestDataDateFromApi) ? latestDataDateFromApi : new Date();
+      setCurrentDateRange(calculateInitialRange(newActiveOption, validEarliest, validLatest));
     }
     setActiveDateOption(newActiveOption);
   };  // Reset chart style to 'line' and set loading state when selecting a different data category
@@ -152,11 +192,12 @@ const GoldChartMain = () => {
       setLastTime(time);
       setPricePercentChange(newPercentChange);
       setIsLastPriceLoading(false); // Data loaded successfully
-      console.log(`Updated last price for ${dataCategory}: ${value}`);
+      // console.log(`Updated last price for ${dataCategory}: ${value}`);
     }
   }, [lastPrice, selectedCategory]);
   
   const showDecimals = selectedCategory === 'GOLD_US';
+
 
   return (
     <div className="space-y-2">
@@ -205,22 +246,16 @@ const GoldChartMain = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 mx-2 my-4">
+        <CardContent className="p-0 m-0 h-[500px] w-full relative">
           <GoldChart
             category={selectedCategory}
-            selectedModel={selectedModel}
-            dateRange={currentDateRange}
-            chartStyle={selectedChartStyle}
-            activeDateOption={activeDateOption}
-            onFullDataLoaded={(allData) => {
-                const earliest = getEarliestAvailableDate(allData);
-                if (earliest && isValid(earliest)) {
-                    if (!earliestDataDate || earliest.getTime() !== earliestDataDate.getTime()) {
-                      setEarliestDataDate(earliest);
-                    }
-                }
-            }}
+            model={selectedModel}
+            style={selectedChartStyle}
+            dateRange={currentDateRange} // Ensure this is the correctly updated state
             onLastPriceUpdate={handleLastPriceUpdate}
+            showDecimals={showDecimals}
+            earliestDate={earliestDataDate} // Pass earliestDataDate
+            latestDate={latestDataDateFromApi} // Pass latestDataDateFromApi
           />
         </CardContent>
         <div className="flex justify-between items-center px-6 pb-4">
@@ -233,5 +268,6 @@ const GoldChartMain = () => {
     </div>
   );
 };
+
 
 export default GoldChartMain;
