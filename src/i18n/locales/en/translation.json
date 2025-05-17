@@ -26,7 +26,10 @@
       "title": "Chart Types",
       "line": "Line",
       "candlestick": "Candlestick",
-      "notAvailable": "Not available for"
+      "notAvailable": "Not available for",
+      "tooltip": "Select a chart type for data visualization",
+      "tooltip_line": "Line Chart: Displays data points connected by straight lines",
+      "tooltip_candlestick": "Candlestick Chart: Displays OHLC (Open, High, Low, Close) price data"
     },
     "dateRange": {
       "title": "Date Range",
@@ -83,7 +86,8 @@
         "October": "October",
         "November": "November",
         "December": "December"
-      },      "quickActions": {
+      },      
+      "quickActions": {
         "7D": "7 Days",
         "1M": "1 Month",
         "3M": "3 Months",
@@ -94,6 +98,18 @@
         "5Y": "5 Years",
         "Max": "Max",
         "MAX": "Max"
+      },
+      "tooltips": {
+        "7D": "Show data for the last 7 days",
+        "1M": "Show data for the last month",
+        "3M": "Show data for the last 3 months",
+        "6M": "Show data for the last 6 months",
+        "YTD": "Show data from the beginning of this year to now",
+        "1Y": "Show data for the last year",
+        "3Y": "Show data for the last 3 years",
+        "5Y": "Show data for the last 5 years",
+        "MAX": "Show all available historical data",
+        "custom": "Select a custom date range"
       },
       "formatDateRange": "{from} - {to}",
       "startDate": "Start Date",
@@ -111,9 +127,9 @@
       "6m": "6 Months",
       "1y": "1 Year",
       "all": "All"
-    },
-    "predictionModels": {
+    },    "predictionModels": {
       "title": "Prediction Models",
+      "tooltip": "Select a model to display the prediction results in advance",
       "lstm": "LSTM",
       "arima": "ARIMA",
       "prophet": "Prophet",
@@ -124,7 +140,18 @@
       "4": "4",
       "5": "5",
       "6": "6",
-      "7": "7"
+      "7": "7",
+      "tooltip_1": "Model 1: Predicts price 1 day in advance",
+      "tooltip_2": "Model 2: Predicts price 2 days in advance",
+      "tooltip_3": "Model 3: Predicts price 3 days in advance",
+      "tooltip_4": "Model 4: Predicts price 4 days in advance",
+      "tooltip_5": "Model 5: Predicts price 5 days in advance",
+      "tooltip_6": "Model 6: Predicts price 6 days in advance",
+      "tooltip_7": "Model 7: Predicts price 7 days in advance",
+      "tooltip_lstm": "LSTM: Deep learning model for time series forecasting",
+      "tooltip_arima": "ARIMA: Statistical model for time series analysis",
+      "tooltip_prophet": "Prophet: Forecasting tool designed for business data",
+      "tooltip_ensemble": "Ensemble: Combines multiple models for improved accuracy"
     },
     "currencies": {
       "THB": "THB",
