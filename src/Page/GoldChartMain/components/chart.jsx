@@ -74,24 +74,22 @@ const baseSeriesConfigs = {
         { key: 'barSellData', color: 'red', nameKey: 'barSell', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         { key: 'ornamentBuyData', color: 'green', nameKey: 'ornamentBuy', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         { key: 'ornamentSellData', color: 'orange', nameKey: 'ornamentSell', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-    ],    
-    GOLD_US: {
+    ],      GOLD_US: {
         line: [
-            { key: 'openData', color: 'blue', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'highData', color: 'green', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'lowData', color: 'red', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'closeData', color: '#26a69a', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'openData', color: '#0269e5', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: '#16a34a', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: '#dc2626', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: '#f59e0b', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         ],
         candlestick: [
             { key: 'ohlc', nameKey: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
         ]
-    },    
-    USD_THB: {
+    },      USD_THB: {
         line: [
-            { key: 'openData', color: 'blue', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'highData', color: 'green', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'lowData', color: 'red', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'closeData', color: '#26a69a', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'openData', color: '#0269e5', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: '#16a34a', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: '#dc2626', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: '#f59e0b', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         ],
         candlestick: [
             { key: 'ohlc', nameKey: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
@@ -314,7 +312,6 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       position: relative; 
       display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;
       font-family: sans-serif; line-height: 18px; font-weight: 300;
-      background: ${theme === 'dark' ? '#1a1a1a' : '#ffffff'}; 
       color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
       padding: 8px; 
       border-bottom: 1px solid ${theme === 'dark' ? '#444444' : '#e5e7eb'};
@@ -322,6 +319,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       visibility: visible;
       opacity: 1;
       z-index: 5;
+      justify-content: center;
     `;
     
     // Create a container for the actual chart
@@ -329,7 +327,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     chartElement.style = `
       position: relative; 
       width: 100%; 
-      height: calc(100% - 40px);
+      height: calc(100% - 55px);
     `;
     
     // Force immediate DOM update to ensure containers are properly mounted
@@ -654,15 +652,72 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
             valueBox.style.color = 'white';
         }
-    };    currentSeriesConfigs.forEach(config => {
+    };    // Create OHLC legends for candlestick mode
+    if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'candlestick' && chartDataToUse.ohlc && chartDataToUse.ohlc.length > 0) {
+        const ohlcComponents = [
+            { key: 'open', color: '#0269e5', nameKey: 'open', name: 'Open' },
+            { key: 'high', color: '#16a34a', nameKey: 'high', name: 'High' },
+            { key: 'low', color: '#dc2626', nameKey: 'low', name: 'Low' },
+            { key: 'close', color: '#f59e0b', nameKey: 'close', name: 'Close' }
+        ];
+        
+        ohlcComponents.forEach(ohlcItem => {
+            const legendRow = document.createElement('div');
+            legendRow.style = `
+                display: flex; align-items: center; border: 1px solid ${ohlcItem.color};
+                border-radius: 4px; overflow: hidden; box-sizing: border-box;
+                cursor: default; 
+                opacity: 1;
+                visibility: visible;
+                color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
+            `;
+            
+            const nameBox = document.createElement('div');
+            nameBox.style = `
+                background: transparent; 
+                padding: 4px 8px; 
+                text-align: left; 
+                color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
+            `;
+            nameBox.textContent = t(`goldChart.legendLabels.${ohlcItem.nameKey}`);
+            legendRow.appendChild(nameBox);
+            
+            const valueBox = document.createElement('div');
+            valueBox.style = `
+                background: ${ohlcItem.color}; 
+                color: white; padding: 4px 8px; text-align: center; min-width: 75px;
+            `;
+            
+            // Get last data point
+            const ohlcArr = chartDataToUse.ohlc || [];
+            const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
+            valueBox.textContent = last && last[ohlcItem.key] !== undefined ? last[ohlcItem.key].toFixed(2) : '0.00';
+            
+            legendRow.appendChild(valueBox);
+            styledLegendContainer.appendChild(legendRow);
+            
+            // Add to legend elements array for crosshair updates
+            seriesLegendElements.push({
+                element: legendRow,
+                config: { key: `ohlc_${ohlcItem.key}`, color: ohlcItem.color, nameKey: ohlcItem.nameKey },
+                nameBox,
+                valueBox,
+                clickHandler: null
+            });
+        });
+    }
+    
+    currentSeriesConfigs.forEach(config => {
         let legendDataExists = false;
         if (category === 'GOLD_TH' && chartDataToUse[config.key]) {
             legendDataExists = true;
         } else if ((category === 'GOLD_US' || category === 'USD_THB')) {
-            // In candlestick mode, only show the candlestick legend
+            // In candlestick mode, only show the candlestick legend if it's not OHLC
+            // We're handling OHLC separately now
             if (effectiveChartStyle === 'candlestick') {
-                if (config.type === 'candlestick' && chartDataToUse.ohlc && chartDataToUse.ohlc.length > 0) {
-                    legendDataExists = true;
+                if (config.type === 'candlestick') {
+                    // Skip the candlestick legend since we're showing individual OHLC components
+                    return;
                 } else {
                     // Skip non-candlestick items in candlestick mode
                     return;
@@ -700,12 +755,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       valueBox.style = `
         background: ${config.color || (config.type === 'candlestick' ? '#26a69a' : 'transparent')}; 
         color: white; padding: 4px 8px; text-align: center; min-width: 75px;
-      `;        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
-          valueBox.textContent = t('goldChart.legendLabels.ohlc');
-          valueBox.style.background = '#26a69a'; // Always green for candlestick
-      } else {
-          valueBox.textContent = '0.00';
-      }
+      `;
+      // No need for special handling for candlestick as we're skipping it now
+      valueBox.textContent = '0.00';
       legendRow.appendChild(valueBox);
       styledLegendContainer.appendChild(legendRow);
       
@@ -929,25 +981,42 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             }
         }
         
+        // For candlestick mode, get the OHLC data at current position
+        let ohlcData = null;
+        if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'candlestick') {
+            // Find the candlestick series
+            const candleSeries = seriesInstances['ohlc'];
+            if (candleSeries && param.seriesData) {
+                ohlcData = param.seriesData.get(candleSeries);
+            }
+        }
+        
         seriesLegendElements.forEach(item => {
             if (!item.valueBox || !item.valueBox.isConnected) return;
             
             const config = item.config;
             const seriesInstance = seriesInstances[config.key];
             let displayValue = '-';
-            if (currentTimeAtCrosshair !== undefined) {
-                if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
-                    const mainSeries = seriesInstances['ohlc'];
-                    if (mainSeries) {
-                        const pointData = param.seriesData ? param.seriesData.get(mainSeries) : null;
-                        if (pointData) {
-                            const ohlcType = config.key.split('_')[1];
-                            if (pointData[ohlcType] !== undefined) {
-                                displayValue = pointData[ohlcType].toFixed(2);
-                            }
-                        }
+            
+            // Handle OHLC component values specifically
+            if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
+                const ohlcType = config.key.split('_')[1]; // Extract 'open', 'high', 'low', or 'close'
+                
+                if (currentTimeAtCrosshair !== undefined && ohlcData) {
+                    // Use the OHLC data at crosshair
+                    if (ohlcData[ohlcType] !== undefined) {
+                        displayValue = ohlcData[ohlcType].toFixed(2);
                     }
-                } else if (seriesInstance) {
+                } else {
+                    // Use the last OHLC data point
+                    const ohlcArr = chartDataToUse.ohlc || [];
+                    const last = ohlcArr.length > 0 ? ohlcArr[ohlcArr.length - 1] : null;
+                    if (last && last[ohlcType] !== undefined) {
+                        displayValue = last[ohlcType].toFixed(2);
+                    }
+                }
+            } else if (seriesInstance) {
+                if (currentTimeAtCrosshair !== undefined) {
                     const pointData = param.seriesData ? param.seriesData.get(seriesInstance) : null;
                     if (pointData) {                        
                         if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
@@ -957,24 +1026,19 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                             displayValue = pointData.value.toFixed(2);
                         }
                     }
-                }
-            } else {
-                if (seriesVisibility[config.key]) {
-                    const defaultVal = defaultDisplayValues[config.key];
-                    if (defaultVal !== null && defaultVal !== undefined) {                        
-                        if (config.type === 'candlestick' && typeof defaultVal === 'object') {
-                            const close = defaultVal.close !== undefined ? defaultVal.close.toFixed(2) : '-';
-                            displayValue = close;
-                        } else if (config.key.startsWith('ohlc_') && typeof defaultVal === 'object') {
-                            const ohlcType = config.key.split('_')[1];
-                            if (defaultVal[ohlcType] !== undefined) {
-                                displayValue = defaultVal[ohlcType].toFixed(2);
+                } else {
+                    if (seriesVisibility[config.key]) {
+                        const defaultVal = defaultDisplayValues[config.key];
+                        if (defaultVal !== null && defaultVal !== undefined) {                        
+                            if (config.type === 'candlestick' && typeof defaultVal === 'object') {
+                                const close = defaultVal.close !== undefined ? defaultVal.close.toFixed(2) : '-';
+                                displayValue = close;
+                            } else if (typeof defaultVal === 'number') {
+                                displayValue = defaultVal.toFixed(2);
                             }
-                        } else if (typeof defaultVal === 'number') {
-                            displayValue = defaultVal.toFixed(2);
                         }
-                    }
-                } 
+                    } 
+                }
             }
 
             if (item.valueBox) {

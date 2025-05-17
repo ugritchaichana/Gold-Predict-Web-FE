@@ -90,8 +90,10 @@
         "6M": "6 Months",
         "YTD": "YTD",
         "1Y": "1 Year",
+        "3Y": "3 Years",
         "5Y": "5 Years",
-        "Max": "Max"
+        "Max": "Max",
+        "MAX": "Max"
       },
       "formatDateRange": "{from} - {to}",
       "startDate": "Start Date",
@@ -116,13 +118,13 @@
       "arima": "ARIMA",
       "prophet": "Prophet",
       "ensemble": "Ensemble",
-      "1": "Model 1",
-      "2": "Model 2",
-      "3": "Model 3",
-      "4": "Model 4",
-      "5": "Model 5",
-      "6": "Model 6",
-      "7": "Model 7"
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7"
     },
     "currencies": {
       "THB": "THB",

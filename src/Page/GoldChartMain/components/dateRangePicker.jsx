@@ -15,6 +15,7 @@ export const PRESETS = [
   { label: "6M", range: "6M" },
   { label: "YTD", range: "YTD" },
   { label: "1Y", range: "1Y" },
+  { label: "3Y", range: "3Y" },
   { label: "5Y", range: "5Y" },
   { label: "MAX", range: "ALL" },
 ];
@@ -130,9 +131,13 @@ function DateRangePicker({
         break;
       case '6M':
         start = startOfDay(subMonths(end, 6));
-        break;
-      case '1Y':
+        break;      case '1Y':
         start = startOfDay(subYears(end, 1));
+        break;
+      case '3Y':
+        // Fix for 3Y showing incorrect date range
+        // Should show data from 3 years ago, not 7 years ago
+        start = startOfDay(subYears(end, 3));
         break;
       case '5Y':
         start = startOfDay(subYears(end, 5));
@@ -159,9 +164,14 @@ function DateRangePicker({
 
     return { from: start, to: end };
   }, [earliestDate, latestDate]);
-
   const handlePresetClick = (preset) => {
     const newRange = calculatePresetRange(preset.range, latestDate);
+    console.log(`Preset ${preset.range} selected:`, {
+      from: newRange.from.toISOString(),
+      to: newRange.to.toISOString(),
+      fromDate: newRange.from.toLocaleDateString(),
+      toDate: newRange.to.toLocaleDateString()
+    });
     onRangeChange(newRange, preset.range);
     setIsPopoverOpen(false); // Close custom popover if it was open
   };
@@ -473,13 +483,12 @@ function DateRangePicker({
               ? t('goldChart.dateRange.quickActions.Max') 
               : t(`goldChart.dateRange.quickActions.${preset.label}`)}
           </button>
-        ))}
-        <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        ))}        <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <Popover.Trigger asChild>
             <button
               id="custom-date-range-trigger"
               aria-label="Select custom date range"
-              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 px-3 py-1 flex-grow sm:flex-grow-0
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 px-3 py-1 flex-grow sm:flex-grow-0 w-[150px]
                 ${activeOption === 'CUSTOM' 
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                   : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}

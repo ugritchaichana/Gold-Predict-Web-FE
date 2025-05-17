@@ -57,9 +57,11 @@ function DateRangePickerTH({
         break;
       case 'YTD':
         start = startOfYear(end);
-        break;
-      case '1Y':
+        break;      case '1Y':
         start = startOfDay(subYears(end, 1));
+        break;
+      case '3Y':
+        start = startOfDay(subYears(end, 3));
         break;
       case '5Y':
         start = startOfDay(subYears(end, 5));

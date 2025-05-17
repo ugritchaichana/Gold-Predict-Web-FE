@@ -98,7 +98,7 @@ const GoldChart = ({
   }, [chartDataFull, category, onLastPriceUpdate]);
 
   return (
-    <div className="h-[450px]">
+    <div className="h-full w-full">
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-full">
           <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />

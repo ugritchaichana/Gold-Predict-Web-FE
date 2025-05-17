@@ -71,10 +71,10 @@ const GoldChartMain = () => {
 
     switch (preset.range) {
       case '7D': start = startOfDay(subDays(end, 6)); break;
-      case '1M': start = startOfDay(subMonths(end, 1)); break;      case '3M': start = startOfDay(subMonths(end, 3)); break;
-      case '6M': start = startOfDay(subMonths(end, 6)); break;
+      case '1M': start = startOfDay(subMonths(end, 1)); break;      case '3M': start = startOfDay(subMonths(end, 3)); break;      case '6M': start = startOfDay(subMonths(end, 6)); break;
       case 'YTD': start = startOfYear(end); break;
       case '1Y': start = startOfDay(subYears(end, 1)); break;
+      case '3Y': start = startOfDay(subYears(end, 3)); break;
       case '5Y': start = startOfDay(subYears(end, 5)); break;
       case 'ALL':
       default:
@@ -140,9 +140,13 @@ const GoldChartMain = () => {
     }
   }, [activeDateOption, earliestDataDate, latestDataDateFromApi, calculateInitialRange, currentDateRange]);
 
-
   const handleDateRangeChange = (newRange, newActiveOption) => {
-    console.log('Received range:', newRange);
+    console.log('Received range:', {
+      range: newRange, 
+      option: newActiveOption,
+      from: newRange?.from ? newRange.from.toISOString() : 'none',
+      to: newRange?.to ? newRange.to.toISOString() : 'none'
+    });
     
     // Ensure newRange and its properties are valid Date objects
     if (newRange && newRange.from instanceof Date && isValid(newRange.from) && 
@@ -233,12 +237,10 @@ const GoldChartMain = () => {
           dataCategories={DataCategories}
           hasPredictionData={selectedCategory === 'GOLD_TH'}
         />
-      </div>
-      <Card>
-        <CardHeader className="p-0 pt-4 px-2">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <CardTitle className="mx-auto">{t('goldChart.title')}</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+      </div>      <Card className="flex flex-col h-[75vh] w-full">
+        <CardHeader className="p-0 pt-4 px-2 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 w-full">
+            <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
               {selectedCategory === 'GOLD_TH' && (
                 <SelectPredictModel
                   selectedModel={selectedModel}
@@ -246,11 +248,6 @@ const GoldChartMain = () => {
                   models={Models}
                 />
               )}
-              <SelectStyleChart
-                selectedCategory={selectedCategory}
-                selectedStyle={selectedChartStyle}
-                setSelectedStyle={setSelectedChartStyle}
-              />
               <DateRangePicker
                 currentRange={currentDateRange}
                 activeOption={activeDateOption}
@@ -258,22 +255,26 @@ const GoldChartMain = () => {
                 earliestDate={earliestDataDate}
                 latestDate={latestDataDateFromApi}
               />
-              
+              <SelectStyleChart
+                selectedCategory={selectedCategory}
+                selectedStyle={selectedChartStyle}
+                setSelectedStyle={setSelectedChartStyle}
+              />
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="p-0 m-0 h-[500px] w-full relative">          <GoldChart
+          </CardHeader>
+        <CardContent className="p-0 flex-grow overflow-hidden">
+          <GoldChart
             category={selectedCategory}
             model={selectedModel}
-            chartStyle={selectedChartStyle} // Ensure consistent prop name
-            dateRange={currentDateRange} // Ensure this is the correctly updated state
+            chartStyle={selectedChartStyle}
+            dateRange={currentDateRange}
             onLastPriceUpdate={handleLastPriceUpdate}
             showDecimals={showDecimals}
-            earliestDate={earliestDataDate} // Pass earliestDataDate
-            latestDate={latestDataDateFromApi} // Pass latestDataDateFromApi
-          />
-        </CardContent>
-        <div className="flex justify-between items-center px-6 pb-4">
+            earliestDate={earliestDataDate}
+            latestDate={latestDataDateFromApi}
+          />        </CardContent>
+        <div className="flex justify-between items-center px-6 py-2 flex-shrink-0">
           <div>
             {selectedCategory === 'GOLD_TH' && <PredictionBadge date={new Date()} />}
           </div>
