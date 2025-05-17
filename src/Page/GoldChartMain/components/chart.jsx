@@ -4,7 +4,7 @@ import { format as formatDateFns, isValid } from 'date-fns';
 import { debugChartData } from './chart.debug.js';
 import { useTheme } from '@/components/theme-provider';
 import { formatDate } from '@/lib/utils.js';
-
+import { useTranslation } from 'react-i18next';
 
 // Chart base options with theme support - no transitions
 const getChartOptions = (theme) => ({
@@ -34,11 +34,16 @@ const getChartOptions = (theme) => ({
         fixLeftEdge: true,
         fixRightEdge: true,
         borderVisible: false,
-        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
-        timeVisible: true,
-        tickMarkFormatter: (time, tickMarkType, locale) => {
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',        timeVisible: true,        tickMarkFormatter: (time, tickMarkType, locale) => {
             const date = new Date(time * 1000);
-            return formatDateFns(date, "dd MMM ''yy");
+            const days = t('goldChart.time.days', { returnObjects: true });
+            const dayOfWeek = date.getDay();
+            const dayName = days[dayOfWeek]; 
+            const day = date.getDate().toString().padStart(2, '0');
+            const months = t('goldChart.time.months', { returnObjects: true });
+            const month = months[date.getMonth()];
+            const year = date.getFullYear().toString().slice(-2);
+            return `${dayName} ${day} ${month} '${year}`;
         },
         allowTickMarksCompression: false,
     },
@@ -64,32 +69,32 @@ const getChartOptions = (theme) => ({
 
 const baseSeriesConfigs = {
     GOLD_TH: [
-        { key: 'barBuyData', color: 'blue', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'barBuyPredictData', color: '#42a5f5', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
-        { key: 'barSellData', color: 'red', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'ornamentBuyData', color: 'green', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'ornamentSellData', color: 'orange', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barBuyData', color: 'blue', nameKey: 'barBuy', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barBuyPredictData', color: '#42a5f5', nameKey: 'barBuyPredict', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
+        { key: 'barSellData', color: 'red', nameKey: 'barSell', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentBuyData', color: 'green', nameKey: 'ornamentBuy', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentSellData', color: 'orange', nameKey: 'ornamentSell', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
     ],    
     GOLD_US: {
         line: [
-            { key: 'openData', color: 'blue', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'highData', color: 'green', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'lowData', color: 'red', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'closeData', color: '#26a69a', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'openData', color: 'blue', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: 'green', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: 'red', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: '#26a69a', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         ],
         candlestick: [
-            { key: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
+            { key: 'ohlc', nameKey: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
         ]
     },    
     USD_THB: {
         line: [
-            { key: 'openData', color: 'blue', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'highData', color: 'green', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'lowData', color: 'red', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-            { key: 'closeData', color: '#26a69a', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'openData', color: 'blue', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'highData', color: 'green', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'lowData', color: 'red', nameKey: 'low', name: 'Low', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+            { key: 'closeData', color: '#26a69a', nameKey: 'close', name: 'Close', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
         ],
         candlestick: [
-            { key: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
+            { key: 'ohlc', nameKey: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
         ]
     },
 };
@@ -168,6 +173,7 @@ const convertOhlcDataToLines = (ohlcData) => {
 
 
 const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'line', dateRange }) => {
+  const { t } = useTranslation();
   // Process and debug chart data before using it (use full data set)
   const chartRenderIdRef = useRef(Math.random().toString(36).substr(2, 9));
   console.log('[CHART COMPONENT] Props received:', { 
@@ -347,10 +353,16 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         barSpacing: 10,
         fixLeftEdge: true,
         lockVisibleTimeRangeOnResize: true,
-        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
-        tickMarkFormatter: (time) => {
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',        tickMarkFormatter: (time) => {
           const date = new Date(time * 1000);
-          return formatDateFns(date, "dd MMM ''yy");
+          const days = t('goldChart.time.days', { returnObjects: true });
+          const dayOfWeek = date.getDay();
+          const dayName = days[dayOfWeek];
+          const day = date.getDate().toString().padStart(2, '0');
+          const months = t('goldChart.time.months', { returnObjects: true });
+          const month = months[date.getMonth()];
+          const year = date.getFullYear().toString().slice(-2);
+          return `${dayName} ${day} ${month} '${year}`;
         },
         rightBarStaysOnScroll: true,
       },
@@ -488,14 +500,20 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 // This section handles ensuring chartData is properly processed for legend logic
             }
         }
-    );
-
-    const formatDate = (timestamp) => {
+    );    const formatDate = (timestamp) => {
         if (!timestamp && timestamp !== 0) return 'N/A';
         const date = new Date(timestamp * 1000);
         if (!isValid(date)) return 'N/A';
 
-        return formatDateFns(date, 'EEE d MMM yy');
+        const days = t('goldChart.time.days', { returnObjects: true });
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayName = days[dayOfWeek];
+        const day = date.getDate();
+        const months = t('goldChart.time.months', { returnObjects: true });
+        const month = months[date.getMonth()];
+        const year = date.getFullYear().toString().slice(-2);
+        
+        return `${dayName} ${day} ${month} ${year}`;
     };
 
     let effectiveToTimestamp;
@@ -568,8 +586,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 time: currentDateTimestamp,
                 position: 'aboveBar',
                 color: '#23b8a6',
-                shape: 'arrowDown',
-                text: 'Current Day',
+                shape: 'arrowDown',                text: t('goldChart.currentDay'),
                 size: 1.3,
             },
             {
@@ -598,8 +615,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       padding: 4px 8px; 
       text-align: left; 
       color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
-    `;
-    dateLeftBox.textContent = 'Date';
+    `;    dateLeftBox.textContent = t('goldChart.dateLabel');
     
     const dateRightBox = document.createElement('div');
     dateRightBox.style = `
@@ -676,18 +692,16 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         background: transparent; 
         padding: 4px 8px; 
         text-align: left; 
-        color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};
-      `;
-      nameBox.textContent = config.name;
+        color: ${theme === 'dark' ? '#e1e1e1' : '#333333'};      `;
+      nameBox.textContent = config.nameKey ? t(`goldChart.legendLabels.${config.nameKey}`) : config.name;
       legendRow.appendChild(nameBox);
       
       const valueBox = document.createElement('div');
       valueBox.style = `
         background: ${config.color || (config.type === 'candlestick' ? '#26a69a' : 'transparent')}; 
         color: white; padding: 4px 8px; text-align: center; min-width: 75px;
-      `;      
-      if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
-          valueBox.textContent = 'OHLC';
+      `;        if (config.type === 'candlestick' && effectiveChartStyle === 'candlestick') {
+          valueBox.textContent = t('goldChart.legendLabels.ohlc');
           valueBox.style.background = '#26a69a'; // Always green for candlestick
       } else {
           valueBox.textContent = '0.00';

@@ -1,0 +1,174 @@
+{
+  "goldChart": {
+    "title": "Gold Price Chart",
+    "dateLabel": "Date",
+    "predictionAvailable": "Prediction data available",
+    "categories": {
+      "title": "Data Categories",
+      "goldTh": "Thai Gold",
+      "goldUs": "US Gold",
+      "usdThb": "USD/THB Exchange Rate",
+      "gold_th": "Thai Gold",
+      "gold_us": "US Gold",
+      "usd_thb": "USD/THB Exchange Rate",
+      "GOLD_TH": "Thai Gold",
+      "GOLD_US": "US Gold",
+      "USD_THB": "USD/THB Exchange Rate"
+    },
+    "dataTypes": {
+      "barBuy": "Gold Bar Buy",
+      "barSell": "Gold Bar Sell",
+      "ornamentBuy": "Gold Ornament Buy",
+      "ornamentSell": "Gold Ornament Sell",
+      "barBuyPredict": "Gold Bar Buy (Predicted)"
+    },
+    "chartTypes": {
+      "title": "Chart Types",
+      "line": "Line",
+      "candlestick": "Candlestick",
+      "notAvailable": "Not available for"
+    },
+    "dateRange": {
+      "title": "Date Range",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "reset": "Reset",
+      "custom": "Custom",
+      "backToCalendar": "Back to Calendar",
+      "backToMonths": "Back to Months",
+      "ok": "OK",
+      "weekDaysShort": {
+        "Su": "Su",
+        "Mo": "Mo",
+        "Tu": "Tu",
+        "We": "We",
+        "Th": "Th",
+        "Fr": "Fr",
+        "Sa": "Sa"
+      },
+      "weekDaysFull": {
+        "Sunday": "Sunday",
+        "Monday": "Monday",
+        "Tuesday": "Tuesday",
+        "Wednesday": "Wednesday",
+        "Thursday": "Thursday",
+        "Friday": "Friday",
+        "Saturday": "Saturday"
+      },
+      "monthsShort": {
+        "Jan": "Jan",
+        "Feb": "Feb",
+        "Mar": "Mar",
+        "Apr": "Apr",
+        "May": "May",
+        "Jun": "Jun",
+        "Jul": "Jul",
+        "Aug": "Aug",
+        "Sep": "Sep",
+        "Oct": "Oct",
+        "Nov": "Nov",
+        "Dec": "Dec"
+      },
+      "monthsFull": {
+        "January": "January",
+        "February": "February",
+        "March": "March",
+        "April": "April",
+        "May": "May",
+        "June": "June",
+        "July": "July",
+        "August": "August",
+        "September": "September",
+        "October": "October",
+        "November": "November",
+        "December": "December"
+      },      "quickActions": {
+        "7D": "7 Days",
+        "1M": "1 Month",
+        "3M": "3 Months",
+        "6M": "6 Months",
+        "YTD": "YTD",
+        "1Y": "1 Year",
+        "5Y": "5 Years",
+        "Max": "Max"
+      },
+      "formatDateRange": "{from} - {to}",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "selectMonth": "Select Month",
+      "selectYear": "Select Year",
+      "previousMonth": "Previous Month",
+      "nextMonth": "Next Month"
+    },
+    "timeframes": {
+      "1d": "1 Day",
+      "1w": "1 Week",
+      "1m": "1 Month",
+      "3m": "3 Months",
+      "6m": "6 Months",
+      "1y": "1 Year",
+      "all": "All"
+    },
+    "predictionModels": {
+      "title": "Prediction Models",
+      "lstm": "LSTM",
+      "arima": "ARIMA",
+      "prophet": "Prophet",
+      "ensemble": "Ensemble",
+      "1": "Model 1",
+      "2": "Model 2",
+      "3": "Model 3",
+      "4": "Model 4",
+      "5": "Model 5",
+      "6": "Model 6",
+      "7": "Model 7"
+    },
+    "currencies": {
+      "THB": "THB",
+      "THB_FULL": "Thai Baht (THB)",
+      "USD": "USD",
+      "USD_FULL": "United States Dollar (USD)"
+    },
+    "ohlc": {
+      "open": "Open",
+      "high": "High",
+      "low": "Low",
+      "close": "Close"
+    },
+    "currentDay": "Current Day",
+    "price": "Price",
+    "legendLabels": {
+      "barBuy": "Gold Bar Buy",
+      "barSell": "Gold Bar Sell",
+      "ornamentBuy": "Gold Ornament Buy",
+      "ornamentSell": "Gold Ornament Sell",
+      "barBuyPredict": "Gold Bar Buy (Predicted)",
+      "open": "Open",
+      "high": "High",
+      "low": "Low",
+      "close": "Close",
+      "ohlc": "OHLC"
+    },
+    "lastPrice": {
+      "title": "Last Price",
+      "updated": "Updated"
+    },
+    "time": {
+      "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    },
+    "prediction": {
+      "updateText": "Update Prediction"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error loading data",
+    "noData": "No data available"
+  },
+  "language": {
+    "en": "English",
+    "th": "Thai"
+  }
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 const DateRange = ({ 
   timeframe, 
@@ -8,10 +9,12 @@ const DateRange = ({
   timeFrames, 
   loading = false 
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Card className="relative">
       <div className="absolute top-0 left-4 px-2 bg-background text-xs font-medium -translate-y-1/2">
-        Date Range
+        {t('goldChart.dateRange.title')}
       </div>
       <CardContent className="pt-4 p-4 flex items-center gap-2">
         {Object.entries(timeFrames).map(([key, label]) => (
@@ -22,7 +25,7 @@ const DateRange = ({
             onClick={() => setTimeframe(key)}
             disabled={loading}
           >
-            {label}
+            {t(`goldChart.dateRange.timeframes.${key}`, label)}
           </Button>
         ))}
       </CardContent>

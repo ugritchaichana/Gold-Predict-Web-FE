@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { 
   format, subDays, subMonths, subYears, startOfYear, 
@@ -6,16 +6,17 @@ import {
   getMonth, addYears, addMonths
 } from 'date-fns';
 import { DayPicker, useNavigation } from 'react-day-picker';
+import { useTranslation } from 'react-i18next';
 
 export const PRESETS = [
-  { label: "7D", range: "7D", tooltip: "7 Days" },
-  { label: "1M", range: "1M", tooltip: "1 Month" },
-  { label: "3M", range: "3M", tooltip: "3 Months" },
-  { label: "6M", range: "6M", tooltip: "6 Months" },
-  { label: "YTD", range: "YTD", tooltip: "Year to Date" },
-  { label: "1Y", range: "1Y", tooltip: "1 Year" },
-  { label: "5Y", range: "5Y", tooltip: "5 Years" },
-  { label: "MAX", range: "ALL", tooltip: "All Time" },
+  { label: "7D", range: "7D" },
+  { label: "1M", range: "1M" },
+  { label: "3M", range: "3M" },
+  { label: "6M", range: "6M" },
+  { label: "YTD", range: "YTD" },
+  { label: "1Y", range: "1Y" },
+  { label: "5Y", range: "5Y" },
+  { label: "MAX", range: "ALL" },
 ];
 
 function DateRangePicker({ 
@@ -28,6 +29,8 @@ function DateRangePicker({
   isOpen, // For controlling custom popover visibility externally
   onOpenChange // For controlling custom popover visibility externally
 }) {
+  const { t, i18n } = useTranslation();
+  
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isPopoverOpen = isOpen !== undefined ? isOpen : internalIsOpen;
   const setIsPopoverOpen = onOpenChange || setInternalIsOpen;
@@ -40,6 +43,42 @@ function DateRangePicker({
   const [calendarView, setCalendarView] = useState('days');
   const [viewDate, setViewDate] = useState(new Date());
   const [decadeStart, setDecadeStart] = useState(Math.floor(getYear(new Date()) / 10) * 10);
+  
+  // Localization settings for react-day-picker
+  const localeSettings = useMemo(() => {
+    // Get day names from translations
+    const weekdays = t('goldChart.dateRange.weekDaysShort', { returnObjects: true });
+    const weekdayLabels = [
+      weekdays.Su, weekdays.Mo, weekdays.Tu, weekdays.We, 
+      weekdays.Th, weekdays.Fr, weekdays.Sa
+    ];
+    
+    // Get month names from translations
+    const months = t('goldChart.dateRange.monthsFull', { returnObjects: true });
+    const monthLabels = [
+      months.January, months.February, months.March, months.April,
+      months.May, months.June, months.July, months.August,
+      months.September, months.October, months.November, months.December
+    ];
+    
+    // Create shorthand month labels for the picker
+    const monthsShort = t('goldChart.dateRange.monthsShort', { returnObjects: true });
+    const monthShortLabels = [
+      monthsShort.Jan, monthsShort.Feb, monthsShort.Mar, monthsShort.Apr,
+      monthsShort.May, monthsShort.Jun, monthsShort.Jul, monthsShort.Aug,
+      monthsShort.Sep, monthsShort.Oct, monthsShort.Nov, monthsShort.Dec
+    ];
+    
+    return {
+      weekdays: weekdayLabels,
+      months: monthLabels,
+      monthsShort: monthShortLabels,
+      formatters: {
+        formatWeekdayName: (day) => weekdayLabels[day.getDay()],
+        formatMonthCaption: (date) => monthLabels[date.getMonth()],
+      }
+    };
+  }, [t, i18n.language]); // Recalculate when language changes
   
   // Update temp range when currentRange or popover opens
   useEffect(() => {
@@ -212,19 +251,33 @@ function DateRangePicker({
       handlePresetClick(allPreset);
     }
     setIsPopoverOpen(false);
-  };
-  
-  const getCustomButtonLabel = () => {
+  };  const getCustomButtonLabel = () => {
     if (activeOption === 'CUSTOM' && currentRange?.from && isValid(currentRange.from)) {
       const fromDate = currentRange.from;
       const toDate = currentRange.to && isValid(currentRange.to) ? currentRange.to : fromDate;
       
+      // Get localized month names
+      const months = t('goldChart.dateRange.monthsShort', { returnObjects: true });
+      const monthsArray = [
+        months.Jan, months.Feb, months.Mar, months.Apr,
+        months.May, months.Jun, months.Jul, months.Aug,
+        months.Sep, months.Oct, months.Nov, months.Dec
+      ];
+      
+      // Format dates with localized month names
+      const formatLocalDate = (date) => {
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = monthsArray[date.getMonth()];
+        const year = date.getFullYear().toString().slice(-2);
+        return `${day} ${month} ${year}`;
+      };
+      
       if (isEqual(startOfDay(fromDate), startOfDay(toDate))) {
-        return format(fromDate, "dd MMM yy");
+        return formatLocalDate(fromDate);
       }
-      return `${format(fromDate, "dd MMM yy")} - ${format(toDate, "dd MMM yy")}`;
+      return `${formatLocalDate(fromDate)} - ${formatLocalDate(toDate)}`;
     }
-    return "Custom";
+    return t('goldChart.dateRange.custom');
   };
 
   // Month and year selection handlers
@@ -248,7 +301,6 @@ function DateRangePicker({
       setCalendarView('years');
     }
   };
-
   // Custom Caption component for DayPicker - with fixed height to match other headers
   const CustomCaption = ({ displayMonth }) => {
     const { goToMonth, nextMonth, previousMonth } = useNavigation();
@@ -261,9 +313,18 @@ function DateRangePicker({
       if (nextMonth) goToMonth(nextMonth);
     };
 
+    // Get localized month names
+    const monthsFull = t('goldChart.dateRange.monthsFull', { returnObjects: true });
+    const monthNames = [
+      monthsFull.January, monthsFull.February, monthsFull.March, monthsFull.April,
+      monthsFull.May, monthsFull.June, monthsFull.July, monthsFull.August,
+      monthsFull.September, monthsFull.October, monthsFull.November, monthsFull.December
+    ];
+
     return (
       <div className="flex justify-center items-center w-full relative h-12">
         <button
+          title={t('goldChart.dateRange.previousMonth')}
           className="absolute left-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
           onClick={handlePreviousClick}
         >
@@ -275,19 +336,22 @@ function DateRangePicker({
         <div className="flex space-x-1 items-center">
           <button
             onClick={() => handleCaptionClick('months')}
+            title={t('goldChart.dateRange.selectMonth')}
             className="text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md px-2 py-1"
           >
-            {format(displayMonth, 'MMMM')}
+            {monthNames[displayMonth.getMonth()]}
           </button>
           <button
             onClick={() => handleCaptionClick('years')}
+            title={t('goldChart.dateRange.selectYear')}
             className="text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md px-2 py-1"
           >
-            {format(displayMonth, 'yyyy')}
+            {displayMonth.getFullYear()}
           </button>
         </div>
         
         <button
+          title={t('goldChart.dateRange.nextMonth')}
           className="absolute right-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
           onClick={handleNextClick}
         >
@@ -298,14 +362,19 @@ function DateRangePicker({
       </div>
     );
   };
-  
-  // Month picker component with consistent sizing and alignment
+    // Month picker component with consistent sizing and alignment
   const MonthPicker = () => {
-    const months = Array.from({ length: 12 }, (_, i) => format(new Date(0, i), 'MMM'));
+    // Get localized month names
+    const monthsShort = t('goldChart.dateRange.monthsShort', { returnObjects: true });
+    const localizedMonths = [
+      monthsShort.Jan, monthsShort.Feb, monthsShort.Mar, monthsShort.Apr,
+      monthsShort.May, monthsShort.Jun, monthsShort.Jul, monthsShort.Aug,
+      monthsShort.Sep, monthsShort.Oct, monthsShort.Nov, monthsShort.Dec
+    ];
     
     return (
       <div className="grid grid-cols-3 gap-2 p-2 flex-grow">
-        {months.map((month, i) => (
+        {localizedMonths.map((month, i) => (
           <button
             key={i}
             onClick={() => handleMonthSelect(i)}
@@ -368,24 +437,41 @@ function DateRangePicker({
       </div>
     );
   };
-
+  // Helper function to format dates with localized month names
+  const formatLocalDate = (date) => {
+    if (!date || !isValid(date)) return t('common.noData');
+    
+    // Get localized month names
+    const months = t('goldChart.dateRange.monthsShort', { returnObjects: true });
+    const monthsArray = [
+      months.Jan, months.Feb, months.Mar, months.Apr,
+      months.May, months.Jun, months.Jul, months.Aug,
+      months.Sep, months.Oct, months.Nov, months.Dec
+    ];
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = monthsArray[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
   return (
     <div className="relative pt-3"> 
       <div className="absolute top-0 left-2 -translate-y-1/2 bg-background px-1 text-xs text-muted-foreground">
-        Date Range
+        {t('goldChart.dateRange.title')}
       </div>
-      <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm">
-        {PRESETS.map((preset) => (
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm">        {PRESETS.map((preset) => (
           <button
             key={preset.label}
-            title={preset.tooltip}
+            title={t(`goldChart.dateRange.quickActions.${preset.label}`)}
             onClick={() => handlePresetClick(preset)}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-7 px-3 py-1 flex-grow sm:flex-grow-0
               ${activeOption === preset.range 
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                 : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
           >
-            {preset.label === 'MAX' ? 'Max' : preset.label}
+            {preset.label === 'MAX' 
+              ? t('goldChart.dateRange.quickActions.Max') 
+              : t(`goldChart.dateRange.quickActions.${preset.label}`)}
           </button>
         ))}
         <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -410,18 +496,16 @@ function DateRangePicker({
               sideOffset={5}
               align={align}
             >
-              <div className="p-3">
-                {tempRange?.from && (
+              <div className="p-3">                {tempRange?.from && (
                   <div className="text-xs text-muted-foreground mb-2">
-                    {tempRange.from ? format(tempRange.from, "dd MMM yyyy") : "Start: Not selected"} - 
-                    {tempRange.to ? format(tempRange.to, " dd MMM yyyy") : " End: Today"}
+                    {tempRange.from ? formatLocalDate(tempRange.from) : t('goldChart.dateRange.startDate') + ": " + t('common.noData')} - 
+                    {tempRange.to ? formatLocalDate(tempRange.to) : t('goldChart.dateRange.endDate') + ": " + t('common.noData')}
                   </div>
                 )}
                 
                 {/* Calendar View Container with consistent width and fixed height */}
                 <div className="w-[280px] h-[320px] flex flex-col">
-                  {calendarView === 'days' ? (
-                    <DayPicker
+                  {calendarView === 'days' ? (                    <DayPicker
                       mode="range"
                       selected={tempRange}
                       onSelect={handleCalendarSelect}
@@ -437,6 +521,13 @@ function DateRangePicker({
                       toDate={latestDate ? endOfDay(latestDate) : undefined}
                       components={{
                         Caption: CustomCaption
+                      }}
+                      formatters={{
+                        formatWeekdayName: (date) => {
+                          const weekdays = t('goldChart.dateRange.weekDaysShort', { returnObjects: true });
+                          const dayNames = [weekdays.Su, weekdays.Mo, weekdays.Tu, weekdays.We, weekdays.Th, weekdays.Fr, weekdays.Sa];
+                          return dayNames[date.getDay()];
+                        }
                       }}
                       classNames={{
                         root: 'w-full h-full flex flex-col',
@@ -470,11 +561,10 @@ function DateRangePicker({
                         <button 
                           onClick={() => setCalendarView('days')}
                           className="flex items-center text-sm font-medium hover:underline"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                        >                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
                             <path d="M15 18l-6-6 6-6" />
                           </svg>
-                          Back to Calendar
+                          {t('goldChart.dateRange.backToCalendar')}
                         </button>
                         <div className="text-center text-sm font-medium">
                           {getYear(viewDate)}
@@ -490,11 +580,10 @@ function DateRangePicker({
                         <button 
                           onClick={() => setCalendarView('months')}
                           className="flex items-center text-sm font-medium hover:underline"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                        >                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
                             <path d="M15 18l-6-6 6-6" />
                           </svg>
-                          Back to Months
+                          {t('goldChart.dateRange.backToMonths')}
                         </button>
                       </div>
                       <div className="flex-grow flex flex-col justify-center">
@@ -503,13 +592,12 @@ function DateRangePicker({
                     </div>
                   )}
                 </div>
-                
-                <div className="flex justify-between items-center mt-3 pt-2 border-t">
+                  <div className="flex justify-between items-center mt-3 pt-2 border-t">
                   <button
                     onClick={handleReset}
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 px-3 py-1"
                   >
-                    Reset
+                    {t('goldChart.dateRange.reset')}
                   </button>
                   <button
                     onClick={handleConfirm}
@@ -517,7 +605,7 @@ function DateRangePicker({
                     ${!tempRange.from ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
                     disabled={!tempRange.from}
                   >
-                    OK
+                    {t('goldChart.dateRange.apply')}
                   </button>
                 </div>
               </div>

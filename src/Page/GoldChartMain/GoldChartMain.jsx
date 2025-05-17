@@ -11,11 +11,12 @@ import GoldChart from './components/GoldChart';
 import PredictionBadge from './components/predictionBadge';
 import CurrentTime from './components/currentTime';
 import { useChartData } from './hook/fetchData';
+import { useTranslation } from 'react-i18next';
 
 const DataCategories = {
-  GOLD_TH: 'Gold TH',
-  GOLD_US: 'Gold US',
-  USD_THB: 'USD THB'
+  GOLD_TH: 'GOLD_TH',
+  GOLD_US: 'GOLD_US',
+  USD_THB: 'USD_THB'
 };
 
 const Models = {
@@ -46,8 +47,10 @@ const getEarliestAvailableDate = (allChartData) => {
 
 const GoldChartMain = () => {
   const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
-  const [selectedModel, setSelectedModel] = useState('7');  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
-
+  const [selectedModel, setSelectedModel] = useState('7');  
+  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
+  const { t } = useTranslation();
+  
   const initialDefaultRangePreset = PRESETS.find(p => p.label === "MAX") || PRESETS[0];
   const [activeDateOption, setActiveDateOption] = useState(initialDefaultRangePreset.range);
   const [earliestDataDate, setEarliestDataDate] = useState(null);
@@ -234,7 +237,7 @@ const GoldChartMain = () => {
       <Card>
         <CardHeader className="p-0 pt-4 px-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <CardTitle className="mx-auto">Gold Chart</CardTitle>
+            <CardTitle className="mx-auto">{t('goldChart.title')}</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {selectedCategory === 'GOLD_TH' && (
                 <SelectPredictModel

@@ -9,6 +9,10 @@ import DocumentPage from "@/components/DocumentPage";
 import ApiTesterPage from "@/components/ApiTesterPage";
 import GoldTH from "@/Page/GoldTH/GoldTH";
 import GoldChartMain from './Page/GoldChartMain/GoldChartMain';
+import { LanguageSelector } from '@/components/LanguageSelector';
+
+// Import i18n configuration
+import '@/i18n/i18n';
 
 function App() {
   return (
@@ -21,9 +25,9 @@ function App() {
                 <div className="flex items-center gap-4">
                   <Link to="/" className="text-2xl font-semibold bg-gradient-to-r from-yellow-500 to-amber-600 text-transparent bg-clip-text">
                     Gold Prediction
-                  </Link>
-                </div>
+                  </Link>                </div>
                 <div className="flex items-center gap-2">
+                  <LanguageSelector />
                   <ModeToggle />
                 </div>
               </div>

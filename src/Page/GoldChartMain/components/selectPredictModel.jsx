@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const SelectPredictModel = ({ 
   selectedModel, 
@@ -6,12 +7,13 @@ const SelectPredictModel = ({
   models,
   loading = false 
 }) => {
+  const { t } = useTranslation();
   const modelEntries = Object.entries(models);
 
   return (
     <div className="relative pt-3"> {/* Container with relative positioning for the label */}
       <div className="absolute top-0 left-2 -translate-y-1/2 bg-background px-1 text-xs text-muted-foreground">
-        Prediction Models
+        {t('goldChart.predictionModels.title')}
       </div>
       <div className="flex flex-wrap items-center gap-1 p-1 rounded-md border border-border bg-background shadow-sm"> {/* Changed border to border-border */}
         {modelEntries.map(([modelKey, modelLabel]) => (
@@ -24,8 +26,7 @@ const SelectPredictModel = ({
               ${selectedModel === modelKey 
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                 : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'}`}
-          >
-            {modelLabel}
+          >            {t(`goldChart.predictionModels.${modelKey}`, modelLabel)}
           </button>
         ))}
       </div>

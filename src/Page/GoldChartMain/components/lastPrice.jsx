@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format as formatDateFns } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const formatPrice = (price, showDecimals = false) => {
   if (price === null || price === undefined || isNaN(price)) {
@@ -39,26 +40,43 @@ const LastPrice = ({
   currency = 'THB',
   showDecimals = false
 }) => {
-  const isLoading = loading || price === null || price === 0;
-  // console.log(`LastPrice component - isLoading: ${isLoading}, price: ${price}, priceChange: ${priceChange}, percentChange: ${percentChange}, date: ${date}, currency: ${currency}`);
+  const isLoading = loading || price === null || price === 0;  const { t } = useTranslation();
   
   const isPriceUp = percentChange > 0;
   const isPriceDown = percentChange < 0;
   const priceDirection = isPriceUp ? '▲' : isPriceDown ? '▼' : '•';
   const badgeVariant = isPriceUp ? "success" : isPriceDown ? "destructive" : "outline";
   
+  // Get translated currency name
+  const getFormattedCurrency = (currencyCode) => {
+    return t(`goldChart.currencies.${currencyCode}`);
+  };
+  
+  const formatDate = (date) => {
+    const days = t('goldChart.time.days', { returnObjects: true });
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayName = days[dayOfWeek];
+    const day = date.getDate();
+    const months = t('goldChart.time.months', { returnObjects: true });
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${dayName} ${day} ${month} ${year}`;
+  };
+  
   return (
     <Card className="flex-1">
       <CardHeader className="pb-2">
-        <CardDescription>Latest Price</CardDescription>
+        <CardDescription>{t('goldChart.lastPrice.title')}</CardDescription>
         <div className="flex items-center justify-between">
           <CardTitle className="text-2xl md:text-3xl">
             {isLoading ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-8 w-36 rounded-md" />
                 <Skeleton className="h-6 w-24 rounded-md" />
-              </div>            ) : (
-              `${formatPrice(price, showDecimals)} ${currency}`
+              </div>
+            ) : (
+              `${formatPrice(price, showDecimals)} ${getFormattedCurrency(currency)}`
             )}
           </CardTitle>
           {isLoading ? (
@@ -82,7 +100,7 @@ const LastPrice = ({
               <Skeleton className="h-4 w-16 rounded-md" />
             </div>
           ) : (
-            `Updated: ${formatDateFns(date, 'dd MMM yyyy')}`
+            `${t('goldChart.lastPrice.updated')}: ${formatDate(date)}`
           )}
         </div>
       </CardHeader>
