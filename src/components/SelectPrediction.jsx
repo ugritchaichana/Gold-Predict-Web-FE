@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { fetchPredictionWeekDate, fetchPredictionWeekWithSingleDate } from '@/services/apiService';
 import { ThreeDot } from 'react-loading-indicators';
 import { Line } from 'react-chartjs-2';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,10 +44,12 @@ ChartJS.register(
   annotationPlugin
 );
 
+import { usePredictionErrorStats } from '../store/PredictionErrorStatsStore';
+
 const LEGEND_KEY = 'selectprediction-legend-visibility';
 const SELECTED_DATE_KEY = 'selectprediction-selected-date';
 
-const prepareChartData = (rows, legendVisibility, latestDate) => {
+const prepareChartData = (rows, legendVisibility, latestDate, t) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
   const labels = rows.map(row => {
@@ -55,7 +59,7 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
   
   const datasets = [
     {
-      label: 'Prediction Gold Bar (Buy)',
+      label: t('selectPrediction.chart.predictionGoldBar'),
       data: rows.map(row => row.predict),
       borderColor: '#FFD54F',
       // borderColor: 'rgb(34, 197, 94)',
@@ -67,7 +71,7 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
       hidden: legendVisibility && legendVisibility['Predicted Price'] === false,
     },
     {
-      label: 'Actual Gold Bar (Buy)',
+      label: t('selectPrediction.chart.actualGoldBar'),
       data: rows.map(row => row.actual),
       borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -97,7 +101,7 @@ const prepareChartData = (rows, legendVisibility, latestDate) => {
   };
 };
 
-const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate) => ({
+const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t) => ({
   responsive: true,
   maintainAspectRatio: false,  animation: {
     duration: 800,
@@ -153,7 +157,7 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
     },    y: {
       ticks: {
         callback: function(value) {
-          return value.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+          return value.toLocaleString(undefined, {maximumFractionDigits:2}) + ' ' + t('selectPrediction.currency');
         },
         font: {
           size: 11
@@ -177,10 +181,9 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
               xMax: chartData.lastActualDate,
               borderColor: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
               borderWidth: 2,
-              borderDash: [6, 6],
-              label: {
+              borderDash: [6, 6],              label: {
                 display: true,
-                content: 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0D\u00A0a\u00A0y',
+                content: t('selectPrediction.chart.currentDay'),
                 color: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
                 backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)',
                 position: 'start',
@@ -331,12 +334,11 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
           let label = context.dataset.label || '';
           if (label) {
             label += ': ';
-          }
-          if (context.parsed && context.parsed.y !== null && context.parsed.y !== undefined) {
+          }          if (context.parsed && context.parsed.y !== null && context.parsed.y !== undefined) {
             try {
-              label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+              label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' ' + t('selectPrediction.currency');
             } catch (error) {
-              label += context.parsed.y + ' THB';
+              label += context.parsed.y + ' ' + t('selectPrediction.currency');
             }
           }
           return label;
@@ -377,16 +379,19 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
 });
 
 const SelectPrediction = () => {
+  const { t } = useTranslation();
   const [availableDates, setAvailableDates] = useState([]);
   const [latestDate, setLatestDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);  const [predictionData, setPredictionData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [predictionData, setPredictionData] = useState(null);
   const [fetchingPrediction, setFetchingPrediction] = useState(false);
-  const [legendVisibility, setLegendVisibility] = useState({});
-  const [hoveredDate, setHoveredDate] = useState(null);
+  const [legendVisibility, setLegendVisibility] = useState({});  const [hoveredDate, setHoveredDate] = useState(null);
   const chartRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
   const tooltipTimeoutRef = useRef(null);
+    // เพิ่ม usePredictionErrorStats hook
+  const { setErrorStats, setPredictionData: storePredictionData, setSelectedDate: storeSelectedDate } = usePredictionErrorStats();
   
   const updateHoveredDate = useCallback((date) => {
     setHoveredDate(date);
@@ -516,11 +521,14 @@ const SelectPrediction = () => {
         date.getDate() === availableDay.getDate()
       );
     });
-  };
-  const handleDateSelect = (date) => {
+  };  const handleDateSelect = (date) => {
     if (!date) return;
     setFetchingPrediction(true);
     setPredictionData(null);
+    
+    // เก็บวันที่ที่เลือกใน store
+    storeSelectedDate(date);
+    
     if (selectedDate && dayjs(date).isSame(selectedDate, 'day')) {
       setSelectedDate(null);
       setTimeout(() => {
@@ -636,6 +644,45 @@ const SelectPrediction = () => {
     };
   }, [chartRef, hoveredDate, tooltipTimeoutRef, updateHoveredDate]);
   
+  useEffect(() => {
+    if (predictionData) {
+      // เมื่อได้รับข้อมูล prediction ให้อัปเดตข้อมูลไปยัง store
+      const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
+        ? getPredictionRows(predictionData)
+        : [];
+        // คำนวณค่าความแม่นยำจากข้อมูล prediction
+      if (rows.length > 0) {
+        const accuracyPercentages = rows
+          .filter(row => row.actual !== null && row.predict !== null)
+          .map(row => {
+            const actualValue = parseFloat(row.actual);
+            const predictValue = parseFloat(row.predict);
+            if (isNaN(actualValue) || isNaN(predictValue) || actualValue === 0) return null;
+            // คำนวณความแม่นยำ (100% - ค่าความผิดพลาด)
+            return 100 - (Math.abs((predictValue - actualValue) / actualValue) * 100);
+          })
+          .filter(accuracy => accuracy !== null);
+          
+        if (accuracyPercentages.length > 0) {
+          const average = accuracyPercentages.reduce((sum, accuracy) => sum + accuracy, 0) / accuracyPercentages.length;
+          const high = Math.max(...accuracyPercentages);
+          const low = Math.min(...accuracyPercentages);
+          
+          // อัปเดตข้อมูลไปยัง store
+          setErrorStats({
+            average: parseFloat(average.toFixed(2)),
+            high: parseFloat(high.toFixed(2)),
+            low: parseFloat(low.toFixed(2)),
+            date: new Date()
+          });
+          
+          // อัปเดตข้อมูล rows ไปยัง store
+          storePredictionData(rows);
+        }
+      }
+    }
+  }, [predictionData, setErrorStats, storePredictionData]);
+  
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
@@ -643,37 +690,34 @@ const SelectPrediction = () => {
       </div>
     );
   }
-  
-  const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
+    const rows = Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data 
     ? getPredictionRows(predictionData)
     : [];
   
-  const chartData = prepareChartData(rows, legendVisibility, latestDate);
+  const chartData = prepareChartData(rows, legendVisibility, latestDate, t);
     return (
-    <Card className="w-full mb-6 overflow-hidden border-amber-200/20 dark:border-amber-800/20">
-      <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
+    <Card className="w-full mb-6 overflow-hidden border-amber-200/20 dark:border-amber-800/20">      {/* <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-2">
-            <CardTitle>Select Prediction By Date</CardTitle>
+            <CardTitle>{t('selectPrediction.title')}</CardTitle>
           </div>
           <div className="flex items-center">
             <Badge 
               variant="outline" 
               className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20"
             >
-              Forecast
+              {t('selectPrediction.forecast')}
             </Badge>
           </div>
         </div>
-      </CardHeader>
+      </CardHeader> */}
       <CardContent className="pt-6 pb-4">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-3/6 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-medium flex items-center">
-                    Prediction Chart
+                <div className="flex justify-between items-center">                  <CardTitle className="text-base font-medium flex items-center">
+                    {t('selectPrediction.predictionChart')}
                   </CardTitle>
                 </div>
               </CardHeader>
@@ -682,11 +726,10 @@ const SelectPrediction = () => {
                   <div className="flex flex-col items-center justify-center h-[420px]">
                     <ThreeDot color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]} />
                   </div>                ) : rows.length > 0 ? (
-                  <div className="h-[420px]">
-                    <Line 
+                  <div className="h-[420px]">                    <Line 
                       ref={chartRef}
                       data={chartData} 
-                      options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate)} 
+                      options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t)} 
                     />
                   </div>
                 ) :(
@@ -697,7 +740,7 @@ const SelectPrediction = () => {
                         <path d="M12 8v4"></path>
                         <path d="M12 16h.01"></path>
                       </svg>
-                      <p>No chart data available</p>
+                      <p>{t('selectPrediction.noChartData')}</p>
                     </div>
                   </div>
                 )}
@@ -706,9 +749,8 @@ const SelectPrediction = () => {
           </div>
           <div className="md:w-3/6 flex-none">
             <Card className="h-full shadow-sm border-0 bg-card/50 backdrop-blur-sm hover:shadow-md transition-all">              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-base font-medium">
-                    Price Data
+                <div className="flex justify-between items-center">                  <CardTitle className="text-base font-medium">
+                    {t('selectPrediction.priceData')}
                   </CardTitle>
                   <div className="flex justify-end">
                     <Calendar 
@@ -726,19 +768,18 @@ const SelectPrediction = () => {
                 ) : (Array.isArray(predictionData) && predictionData[0] && predictionData[0].predict_data) ? (
                   <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
                     <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
+                      <thead>                        <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Date
+                            {t('selectPrediction.table.date')}
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Prediction Gold
+                            {t('selectPrediction.table.predictionGold')}
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Actual Gold
+                            {t('selectPrediction.table.actualGold')}
                           </th>
                           <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                            Error
+                            {t('selectPrediction.table.accuracy')}
                           </th>
                         </tr>
                       </thead>
@@ -797,17 +838,15 @@ const SelectPrediction = () => {
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                               {dayjs(row.date).format('DD-MM-YYYY')}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#FFD54F' }}>
-                              <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#22C55E' }}>
-                              <span className="font-mono">{row.actual ? `${row.actual.toLocaleString(undefined, {maximumFractionDigits:2})} THB` : '-'}</span>
+                            </td>                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#FFD54F' }}>
+                              <span className="font-mono">{row.predict ? `${row.predict.toLocaleString(undefined, {maximumFractionDigits:2})} ${t('selectPrediction.currency')}` : '-'}</span>
+                            </td>                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium" style={{ color: '#22C55E' }}>
+                              <span className="font-mono">{row.actual ? `${row.actual.toLocaleString(undefined, {maximumFractionDigits:2})} ${t('selectPrediction.currency')}` : '-'}</span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-black dark:text-white">
                               {row.actual && row.predict ? 
                                 <span className="font-mono">
-                                  {((Math.abs(row.actual - row.predict) / row.actual) * 100).toFixed(2)} %
+                                  {(100 - ((Math.abs(row.actual - row.predict) / row.actual) * 100)).toFixed(2)} %
                                 </span> : 
                                 '-'
                               }

@@ -5,15 +5,17 @@
     "predictionAvailable": "Prediction data available",
     "categories": {
       "title": "Data Categories",
-      "goldTh": "Thai Gold",
+      "goldTh": "TH Gold",
       "goldUs": "US Gold",
-      "usdThb": "USD/THB Exchange Rate",
-      "gold_th": "Thai Gold",
+      "usdThb": "USD/THB",
+      "gold_th": "TH Gold",
       "gold_us": "US Gold",
-      "usd_thb": "USD/THB Exchange Rate",
-      "GOLD_TH": "Thai Gold",
+      "usd_thb": "USD/THB",
+      "GOLD_TH": "TH Gold",
       "GOLD_US": "US Gold",
-      "USD_THB": "USD/THB Exchange Rate"
+      "USD_THB": "USD/THB",
+      "SELECT_PREDICTION": "Select Prediction Date",
+      "MONTHLY_PREDICTION": "Monthly Prediction"
     },
     "dataTypes": {
       "barBuy": "Gold Bar Buy",
@@ -86,7 +88,7 @@
         "October": "October",
         "November": "November",
         "December": "December"
-      },      
+      },
       "quickActions": {
         "7D": "7 Days",
         "1M": "1 Month",
@@ -127,7 +129,8 @@
       "6m": "6 Months",
       "1y": "1 Year",
       "all": "All"
-    },    "predictionModels": {
+    },
+    "predictionModels": {
       "title": "Prediction Models",
       "tooltip": "Select a model to display the prediction results in advance",
       "lstm": "LSTM",
@@ -181,7 +184,15 @@
     },
     "lastPrice": {
       "title": "Last Price",
-      "updated": "Updated"
+      "updated": "Updated",
+      "predictDate": "Predict Date",
+      "error": "Accuracy",
+      "predictionFor": "Prediction for",
+      "errorStats": {
+        "average": "Average",
+        "high": "High",
+        "low": "Low"
+      }
     },
     "time": {
       "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -190,6 +201,25 @@
     "prediction": {
       "updateText": "Update Prediction"
     }
+  },
+  "selectPrediction": {
+    "title": "Select Prediction By Date",
+    "forecast": "Forecast",
+    "predictionChart": "Prediction Chart",
+    "priceData": "Price Data",
+    "noChartData": "No chart data available",
+    "table": {
+      "date": "Date",
+      "predictionGold": "Prediction Gold",
+      "actualGold": "Actual Gold",
+      "accuracy": "Accuracy"
+    },
+    "chart": {
+      "predictionGoldBar": "Prediction Gold Bar (Buy)",
+      "actualGoldBar": "Actual Gold Bar (Buy)",
+      "currentDay": "Current Day"
+    },
+    "currency": "THB"
   },
   "common": {
     "loading": "Loading...",

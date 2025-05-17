@@ -28,7 +28,8 @@ function DateRangePicker({
   earliestDate,
   latestDate = new Date(),
   isOpen, // For controlling custom popover visibility externally
-  onOpenChange // For controlling custom popover visibility externally
+  onOpenChange, // For controlling custom popover visibility externally
+  singleDateMode = false // New prop for single date selection mode
 }) {
   const { t, i18n } = useTranslation();
   
@@ -175,8 +176,7 @@ function DateRangePicker({
     onRangeChange(newRange, preset.range);
     setIsPopoverOpen(false); // Close custom popover if it was open
   };
-  
-  const handleCalendarSelect = (selectedDateRange) => {
+    const handleCalendarSelect = (selectedDateRange) => {
     // Handle no selection case
     if (!selectedDateRange) {
       setTempRange({
@@ -191,6 +191,26 @@ function DateRangePicker({
       const fromDate = startOfDay(selectedDateRange.from);
       let toDate;
       
+      // If in single date mode, always set both from and to to the same date
+      if (singleDateMode) {
+        toDate = endOfDay(selectedDateRange.from);
+        setTempRange({
+          from: fromDate,
+          to: toDate
+        });
+        
+        // In single date mode, we can auto-confirm selection immediately
+        const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0);
+        const validatedRange = {
+          from: from,
+          to: from
+        };
+        onRangeChange(validatedRange, 'CUSTOM');
+        setIsPopoverOpen(false);
+        return;
+      }
+      
+      // For standard range picker, continue with normal behavior
       // If both dates are selected
       if (selectedDateRange.to) {
         // Make sure from < to
