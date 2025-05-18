@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 // Import subMonths and subYears
-import { endOfDay, startOfDay, subDays, subMonths, subYears, startOfYear, isValid } from 'date-fns';
+import { endOfDay, startOfDay, subDays, subMonths, subYears, startOfYear, isValid, format as formatDateFns, parse } from 'date-fns';
 import LastPrice from './components/lastPrice';
 import DataCategory from './components/dataCategory';
 import SelectPredictModel from './components/selectPredictModel';
@@ -16,6 +18,8 @@ import SelectPrediction from '@/components/SelectPrediction';
 import MonthlyPredictions from '@/components/MonthlyPredictions';
 import { PredictionContext } from '@/context/PredictionContext';
 import { usePredictionErrorStats } from '../../store/PredictionErrorStatsStore';
+import { fetchPredictionsMonth } from '@/services/apiService';
+import { formatCurrency } from '@/lib/utils';
 
 const DataCategories = {
   GOLD_TH: 'GOLD_TH',
@@ -51,11 +55,10 @@ const getEarliestAvailableDate = (allChartData) => {
 };
 
 
-const GoldChartMain = () => {
-  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
+const GoldChartMain = () => {  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
   const [selectedModel, setSelectedModel] = useState('7');  
   const [selectedChartStyle, setSelectedChartStyle] = useState('line');
-  const [monthlyChartTab, setMonthlyChartTab] = useState('chart');
+  const [monthlyChartTab, setMonthlyChartTab] = useState('table');
   const { t } = useTranslation();
   
   const initialDefaultRangePreset = PRESETS.find(p => p.label === "MAX") || PRESETS[0];
@@ -210,6 +213,7 @@ const GoldChartMain = () => {
   const [lastTime, setLastTime] = useState(null);
   const [pricePercentChange, setPricePercentChange] = useState(null);  const [isLastPriceLoading, setIsLastPriceLoading] = useState(true);
   const [monthlyPredictions, setMonthlyPredictions] = useState([]);
+  // console.log('monthlyPredictions for',monthlyPredictions[monthlyPredictions.length-1].month_predict);
   const [isMonthlyPredictionsLoading, setIsMonthlyPredictionsLoading] = useState(true);
   const { errorStats: predictionErrorStats, predictionData: storedPredictionData, selectedDate } = usePredictionErrorStats();
   const handleLastPriceUpdate = useCallback(({ value, time, percentChange: newPercentChange, dataCategory }) => {
@@ -224,49 +228,40 @@ const GoldChartMain = () => {
     }
   }, [lastPrice, selectedCategory]);
     const showDecimals = selectedCategory === 'GOLD_US';
-
-  // Mock monthly prediction data - replace with actual API calls in production
+  // Fetch monthly predictions data from API
   useEffect(() => {
-    // This would normally be an API call
-    setIsMonthlyPredictionsLoading(true);
-    
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      const mockData = [
-        {
-          month_predict: '2025-05',
-          open: 39850,
-          high: 40200,
-          low: 39200,
-          actual_open: 39750,
-          actual_high: 40100,
-          actual_low: 39300
-        },
-        {
-          month_predict: '2025-06',
-          open: 40100,
-          high: 40500,
-          low: 39600,
-          actual_open: null,
-          actual_high: null,
-          actual_low: null
-        },
-        {
-          month_predict: '2025-07',
-          open: 40300,
-          high: 40800,
-          low: 39800,
-          actual_open: null,
-          actual_high: null,
-          actual_low: null
+    const fetchMonthlyPredictions = async () => {
+      setIsMonthlyPredictionsLoading(true);
+      try {
+        const response = await fetchPredictionsMonth();
+        // console.log('Monthly predictions data:', response);
+        if (Array.isArray(response)) {
+          const sortedData = [...response].sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+              return a.timestamp - b.timestamp;
+            }
+            return new Date(a.date) - new Date(b.date);
+          });
+          setMonthlyPredictions(sortedData);
+        } else if (response.status === 'success' && response.months) {
+          const sortedMonths = [...response.months].sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+              return a.timestamp - b.timestamp;
+            }
+            return new Date(a.date) - new Date(b.date);
+          });
+          setMonthlyPredictions(sortedMonths);
+        } else {
+          console.warn('Unexpected response format from monthly predictions API:', response);
         }
-      ];
-      
-      setMonthlyPredictions(mockData);
-      setIsMonthlyPredictionsLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+      } catch (error) {
+        console.error('Error fetching monthly predictions:', error);
+      } finally {
+        setIsMonthlyPredictionsLoading(false);
+      }
+    };
+
+    fetchMonthlyPredictions();
   }, []);
   return (
     <div className="space-y-2">
@@ -284,7 +279,77 @@ const GoldChartMain = () => {
               showDecimals={false}
               textStyle="error"
               showPredictionDate={true}
-            />
+            />          ) : selectedCategory === 'MONTHLY_PREDICTION' ? (            <Card className="flex-1 h-full">
+              <div className="space-y-1.5 p-3 h-full flex flex-col justify-center">
+                <p className="text-muted-foreground text-xs">Monthly Predict</p>
+                <div className="flex items-center justify-between">
+                  {isMonthlyPredictionsLoading ? (
+                    <Skeleton className="h-8 w-36 rounded-md" />
+                  ) : monthlyPredictions && monthlyPredictions.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4 w-full">
+                        {(() => {
+                          const lastMonth = monthlyPredictions[monthlyPredictions.length-1];
+                          const prevMonth = monthlyPredictions.length > 1 ? monthlyPredictions[monthlyPredictions.length-2] : null;
+                          
+                          const highValue = lastMonth.high;
+                          const lowValue = lastMonth.low;
+                          
+                          let highChangePercent = 0;
+                          let lowChangePercent = 0;
+                          
+                          if (prevMonth) {
+                            highChangePercent = ((highValue - prevMonth.high) / prevMonth.high) * 100;
+                            lowChangePercent = ((lowValue - prevMonth.low) / prevMonth.low) * 100;
+                          }
+                          
+                          const highTrend = highChangePercent > 0 ? '▲' : highChangePercent < 0 ? '▼' : '•';
+                          const lowTrend = lowChangePercent > 0 ? '▲' : lowChangePercent < 0 ? '▼' : '•';
+                          
+                          return (
+                            <>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-muted-foreground">High</span>
+                                <div className="flex items-center">
+                                  <span className="font-semibold tracking-tight text-xl md:text-xl">
+                                    {formatCurrency(highValue, 'THB')}
+                                  </span>
+                                  <span className={`ml-2 text-sm font-medium flex items-center ${highChangePercent > 0 ? 'text-green-500' : highChangePercent < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {highTrend} {Math.abs(highChangePercent).toFixed(2)}%
+                                  </span>
+                                </div>
+                              </div>                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-muted-foreground">Low</span>
+                                <div className="flex items-center">
+                                  <span className="font-semibold tracking-tight text-xl md:text-xl">
+                                    {formatCurrency(lowValue, 'THB')}
+                                  </span>
+                                  <span className={`ml-2 text-sm font-medium flex items-center ${lowChangePercent > 0 ? 'text-green-500' : lowChangePercent < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {lowTrend} {Math.abs(lowChangePercent).toFixed(2)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full">
+                      <span className="font-semibold tracking-tight text-xl">No prediction data available</span>
+                    </div>
+                  )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-auto">
+                    <div className="mt-1">
+                    {monthlyPredictions && monthlyPredictions.length > 0 
+                      ? `Prediction for: ${formatDateFns(parse(monthlyPredictions[monthlyPredictions.length-1].month_predict, 'yyyy-MM', new Date()), 'MMMM yyyy')}`
+                      : `Prediction for: ${formatDateFns(new Date(), 'MMMM yyyy')}`
+                    }
+                  </div>
+                </div>
+              </div>
+            </Card>
           ) : (
             <LastPrice
               loading={isLastPriceLoading}
@@ -304,7 +369,7 @@ const GoldChartMain = () => {
             dataCategories={DataCategories}
             hasPredictionData={selectedCategory === 'GOLD_TH'}
           />
-          </div>
+        </div>
       </div>
       {selectedCategory === 'SELECT_PREDICTION' ? (
         <SelectPrediction />
