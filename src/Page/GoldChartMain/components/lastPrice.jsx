@@ -105,7 +105,7 @@ const LastPrice = ({
               "text-2xl md:text-3xl",
               textStyle === "error" && "text-red-500"
             )}>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
                 <Skeleton className="h-8 w-36 rounded-md" />
                 <Skeleton className="h-6 w-24 rounded-md" />
               </div>

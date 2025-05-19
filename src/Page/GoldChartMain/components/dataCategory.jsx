@@ -19,7 +19,7 @@ const DataCategory = ({
         <div className="flex justify-between items-center">
           <CardTitle>{t('goldChart.categories.title', 'Data Category')}</CardTitle>
           {hasPredictionData && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
+            <Badge variant="outline" className="py-0 bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
               {t('goldChart.predictionAvailable', 'Prediction data available')}
             </Badge>
           )}

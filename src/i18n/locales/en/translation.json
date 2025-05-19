@@ -194,6 +194,35 @@
         "low": "Low"
       }
     },
+    "monthlyPredict": {
+      "title": "Monthly Predict",
+      "high": "High",
+      "low": "Low",
+      "noData": "No prediction data available",
+      "predictionFor": "Prediction for",
+      "chart": "Chart",
+      "table": "Table",
+      "forecast": "Forecast",
+      "noPredictionData": "No prediction data available",
+      "forecastsWillAppear": "Forecasts will appear here when data is ready",
+      "month": "Month",
+      "predictOpen": "Predict Open",
+      "actualOpen": "Actual Open",
+      "predictHigh": "Predict High",
+      "actualHigh": "Actual High",
+      "predictLow": "Predict Low",
+      "actualLow": "Actual Low",
+      "page": "Page",
+      "of": "of",
+      "previous": "Previous",
+      "next": "Next",
+      "noChartData": "No chart data available",
+      "highPredict": "High Predict",
+      "openPredict": "Open Predict",
+      "lowPredict": "Low Predict",
+      "currentMonth": "C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0M\u00A0o\u00A0n\u00A0t\u00A0h",
+      "currency": "THB"
+    },
     "time": {
       "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
       "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import { formatCurrency } from '@/lib/utils';
-import { enUS } from 'date-fns/locale';
+import { enUS, th } from 'date-fns/locale';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import { useTranslation } from 'react-i18next';
 
 const LEGEND_KEY = 'monthly-predict-legend-visibility';
 
@@ -13,6 +14,7 @@ ChartJS.register(annotationPlugin);
 const MonthlyPredictionChart = ({ data }) => {
   const chartRef = useRef(null);
   const [legendVisibility, setLegendVisibility] = useState({});
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const saved = localStorage.getItem(LEGEND_KEY);
@@ -33,7 +35,7 @@ const MonthlyPredictionChart = ({ data }) => {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48">
-        <p className="text-amber-700 dark:text-amber-300">No chart data available</p>
+        <p className="text-amber-700 dark:text-amber-300">{t('goldChart.monthlyPredict.noChartData', 'No chart data available')}</p>
       </div>
     );
   }
@@ -68,7 +70,7 @@ const MonthlyPredictionChart = ({ data }) => {
 
   const datasets = [
     {
-      label: 'High Predict',
+      label: t('goldChart.monthlyPredict.highPredict', 'High Predict'),
       data: highValues,
       borderColor: 'rgb(34, 197, 94)',
       backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -78,7 +80,7 @@ const MonthlyPredictionChart = ({ data }) => {
       hidden: legendVisibility['High Predict'] === undefined ? false : legendVisibility['High Predict']
     },
     {
-      label: 'Actual High',
+      label: t('goldChart.monthlyPredict.actualHigh', 'Actual High'),
       data: actualHighValues,
       borderColor: 'rgb(16, 185, 129)',
       backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -90,7 +92,7 @@ const MonthlyPredictionChart = ({ data }) => {
       hidden: legendVisibility['Actual High'] === undefined ? false : legendVisibility['Actual High']
     },
     {
-      label: 'Open Predict',
+      label: t('goldChart.monthlyPredict.openPredict', 'Open Predict'),
       data: openValues,
       borderColor: 'rgb(59, 130, 246)',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -100,7 +102,7 @@ const MonthlyPredictionChart = ({ data }) => {
       hidden: legendVisibility['Open Predict'] === undefined ? true : legendVisibility['Open Predict']
     },
     {
-      label: 'Actual Open',
+      label: t('goldChart.monthlyPredict.actualOpen', 'Actual Open'),
       data: actualOpenValues,
       borderColor: 'rgb(37, 99, 235)',
       backgroundColor: 'rgba(37, 99, 235, 0.15)',
@@ -112,7 +114,7 @@ const MonthlyPredictionChart = ({ data }) => {
       hidden: legendVisibility['Actual Open'] === undefined ? true : legendVisibility['Actual Open']
     },
     {
-      label: 'Low Predict',
+      label: t('goldChart.monthlyPredict.lowPredict', 'Low Predict'),
       data: lowValues,
       borderColor: 'rgb(239, 68, 68)',
       backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -122,7 +124,7 @@ const MonthlyPredictionChart = ({ data }) => {
       hidden: legendVisibility['Low Predict'] === undefined ? true : legendVisibility['Low Predict']
     },
     {
-      label: 'Actual Low',
+      label: t('goldChart.monthlyPredict.actualLow', 'Actual Low'),
       data: actualLowValues,
       borderColor: 'rgb(220, 38, 38)',
       backgroundColor: 'rgba(220, 38, 38, 0.15)',
@@ -154,7 +156,7 @@ const MonthlyPredictionChart = ({ data }) => {
             borderDash: [6, 6],
             label: {
               display: true,
-              content: 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0M\u00A0o\u00A0n\u00A0t\u00A0h',
+              content: t('goldChart.monthlyPredict.currentMonth', 'C\u00A0u\u00A0r\u00A0r\u00A0e\u00A0n\u00A0t  \u00A0M\u00A0o\u00A0n\u00A0t\u00A0h'),
               color: document.documentElement.classList.contains('dark') ? '#fff' : '#222',
               backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(34,34,34,0.9)' : 'rgba(255,255,255,0.9)',
               position: 'start',
@@ -240,28 +242,38 @@ const MonthlyPredictionChart = ({ data }) => {
         cornerRadius: 6,
         mode: 'index',
         intersect: false,
-        callbacks: {
-          title: function(tooltipItems) {
-            // แปลงรูปแบบเดือนจาก YYYY-MM เป็น MMMM YYYY
+        callbacks: {          title: function(tooltipItems) {
+            // แปลงรูปแบบเดือนจาก YYYY-MM เป็น MMMM YYYY or MMM YYYY (abbreviated)
             if (tooltipItems.length > 0) {
               const month = tooltipItems[0].label;
               if (month && month.includes('-')) {
                 const [year, monthNum] = month.split('-');
                 if (year && monthNum) {
                   const date = new Date(year, monthNum - 1, 1);
-                  return date.toLocaleString('en-US', { month: 'long' }) + ' ' + date.getFullYear();
+                    // For Thai language, use abbreviated month names from translation
+                  if (i18n.language === 'th') {
+                    const thaiMonthsObj = t('goldChart.dateRange.monthsShort', { returnObjects: true });
+                    // Get the month key based on the current month index
+                    const monthKey = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
+                    return `${thaiMonthsObj[monthKey]} ${date.getFullYear() + 543}`;
+                  }
+                  
+                  // For other languages, use the browser's locale setting
+                  return date.toLocaleString(i18n.language === 'th' ? 'th-TH' : 'en-US', { 
+                    month: 'short',
+                    year: 'numeric'
+                  });
                 }
               }
             }
             return tooltipItems[0].label;
-          },          label: function(context) {
+          },label: function(context) {
             let label = context.dataset.label || '';
             if (label) {
               label += ': ';
-            }
-            if (context.parsed.y !== null) {
-              // แสดงราคาพร้อมกับสกุลเงิน THB ต่อท้ายตัวเลข
-              label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+            }            if (context.parsed.y !== null) {
+              // Format currency with the appropriate currency code
+              label += formatCurrency(context.parsed.y, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US');
             }
             return label;
           }
@@ -269,10 +281,9 @@ const MonthlyPredictionChart = ({ data }) => {
       }
     },    scales: {
       y: {
-        beginAtZero: false,
-        ticks: {
+        beginAtZero: false,        ticks: {
           callback: function(value) {
-            return value.toLocaleString(undefined, {maximumFractionDigits:2}) + ' THB';
+            return formatCurrency(value, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US');
           }
         },
         grid: {
@@ -280,17 +291,15 @@ const MonthlyPredictionChart = ({ data }) => {
         }
       },
       x: {
-        type: 'time',
-        time: {
+        type: 'time',        time: {
           unit: 'month',
           displayFormats: {
-            month: 'MMM yyyy'
+            month: i18n.language === 'th' ? 'MMM yyyy' : 'MMM yyyy'
           },
-          tooltipFormat: 'MMMM yyyy'
-        },
-        adapters: {
+          tooltipFormat: i18n.language === 'th' ? 'MMM yyyy' : 'MMM yyyy'
+        },adapters: {
           date: {
-            locale: enUS
+            locale: i18n.language === 'th' ? th : enUS
           }
         },
         grid: {

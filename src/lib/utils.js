@@ -17,20 +17,27 @@ export function cn(...inputs) {
  * @param {string} locale - The locale for formatting.
  * @returns {string} - The formatted currency string.
  */
-export function formatCurrency(value, currency = 'THB', locale = 'en-US') {
+export function formatCurrency(value, currency = 'THB', locale = undefined) {
   if (value === undefined || value === null) return '-';
   
   try {
     // Convert value to number
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     
-    // Format as currency
-    return new Intl.NumberFormat(locale, { 
-      style: 'currency', 
-      currency, 
+    // Use the current locale if available, otherwise fallback to 'en-US' or the provided locale
+    const currentLocale = locale || (window.i18n?.language === 'th' ? 'th-TH' : 'en-US');
+    
+    // Format the number only (without currency symbol)
+    const formattedNumber = new Intl.NumberFormat(currentLocale, { 
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(numValue);
+    
+    // Add the appropriate currency text after the number
+    const isThai = currentLocale.startsWith('th');
+    const currencyText = isThai ? 'บาท' : currency;
+    
+    return `${formattedNumber} ${currencyText}`;
   } catch (err) {
     console.error('Error formatting currency:', err);
     return '-';
