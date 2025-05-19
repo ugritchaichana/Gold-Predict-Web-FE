@@ -79,7 +79,7 @@ const getChartOptions = (theme, t) => ({
             if (tickMarkType === 0) {
                 return fullYear.toString();
             }
-            return `${dayName} ${day} ${month} '${year}`;
+            return `${day} ${month} '${year}`;
         },
         allowTickMarksCompression: true,
     },
