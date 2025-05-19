@@ -29,7 +29,8 @@ const getChartOptions = (theme, t) => ({
         },
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
         // Remove transition for instant theme change
-    },    crosshair: {
+    },
+    crosshair: {
         mode: CrosshairMode.Magnet,
         vertLine: {
             color: theme === 'dark' ? '#ff2d00' : '#e1e1e1',
@@ -82,12 +83,15 @@ const getChartOptions = (theme, t) => ({
             return `${day} ${month} '${year}`;
         },
         allowTickMarksCompression: true,
-    },
-    priceScale: {
+    },    priceScale: {
         autoScale: true,
         position: 'right',
         borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
-    },    
+        scaleMargins: {
+            top: 0.05,
+            bottom: 0.05,
+        },
+    },
     grid: {
         vertLines: {
             color: theme === 'dark' ? '#292929' : '#f0f0f0',
@@ -379,13 +383,41 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
           style: LineStyle.Dashed,
           visible: true,
         },
-      },
-      // Add localization options to override time format
+      },      // Add localization options to override time format
       localization: {
         timeFormatter: (time) => formatCrosshairTime(time, t),
         dateFormat: 'dd MMM \'yy',
+      },
+      // Ensure the price scale is properly fitted to the data
+      leftPriceScale: {
+        visible: false,
       }
     });
+      // Force proper scaling after data is loaded
+    setTimeout(() => {
+      try {
+        // ปรับแค่การซูมของแกน Y 
+        chart.priceScale('right').applyOptions({
+          autoScale: true,
+          scaleMargins: {
+            top: 0.02, 
+            bottom: 0.02,
+          },
+        });
+        
+        // ไม่เรียก fitContent เพื่อรักษาการซูมแกน Y เอาไว้
+        // ถ้าจำเป็นต้อง fit เฉพาะแกน X:
+        const visibleSeries = Object.values(seriesInstances).filter(s => s && s.applyOptions);
+        if (visibleSeries.length > 0 && !dateRange) {
+          // ปรับแกน X เฉพาะเมื่อไม่มี dateRange เท่านั้น
+          chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+        }
+        
+        console.log('Applied Y-axis auto-scaling to chart (preserved zoom level)');
+      } catch (err) {
+        console.error('Error applying auto-scaling:', err);
+      }
+    }, 300);
     
     const seriesInstances = {};
     
@@ -465,9 +497,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                             // Always create visible - controlled by style not by toggles
                             visible: effectiveChartStyle === 'candlestick',
                         };
-                        console.log('Candlestick options:', candleOptions);
-                        
-                        // Create the candlestick series
+                        console.log('Candlestick options:', candleOptions);                        // Create the candlestick series
                         seriesInstances[config.key] = chart.addCandlestickSeries(candleOptions);
                         
                         // Set data with logging
@@ -498,11 +528,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                         // Only create line series when in line chart mode
                         if (effectiveChartStyle !== 'candlestick') {
                             // For line series, standard visibility behavior
-                            let isVisible = seriesVisibility[config.key];
-                            
-                            seriesInstances[config.key] = chart.addLineSeries({
+                            let isVisible = seriesVisibility[config.key];                            seriesInstances[config.key] = chart.addLineSeries({
                                 color: config.color,
-                                lineWidth: 2,
+                                lineWidth: config.lineWidth || 2,
                                 visible: isVisible,
                                 lineStyle: config.lineStyle || LineStyle.Solid,
                             });
@@ -578,21 +606,32 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     } else {
         effectiveToTimestamp = null;
     }
-    
-    if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
+      if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
         const fromTimestamp = Math.floor(dateRange.from.getTime() / 1000);
         if (fromTimestamp <= effectiveToTimestamp) {
             try {
+                // ตั้งช่วงเวลาให้แสดงผลเฉพาะตามช่วงที่เลือก แต่ไม่รีเซ็ตการซูมแกน Y
                 chart.timeScale().setVisibleRange({ from: fromTimestamp, to: effectiveToTimestamp });
+                
+                // ทำให้แน่ใจว่าแกน Y ยังคงค่า scale margins ที่ต้องการ
+                chart.priceScale('right').applyOptions({
+                    autoScale: true,
+                    scaleMargins: {
+                        top: 0.02, 
+                        bottom: 0.02,
+                    },
+                });
             } catch (e) {
-                console.warn('Chart.jsx: setVisibleRange error, falling back to fitContent.', e);
-                chart.timeScale().fitContent();
+                console.warn('Chart.jsx: setVisibleRange error, adjusting time scale only.', e);
+                chart.timeScale().setVisibleLogicalRange({ from: 0, to: chartData && Object.keys(chartData).length ? Object.keys(chartData).length : 30 });
             }
         } else {
-            chart.timeScale().fitContent();
+            // แทนที่จะใช้ fitContent ซึ่งรีเซ็ตทั้งแกน X และ Y ให้ใช้การปรับแกน X อย่างเดียว
+            chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
         }
     } else {
-        chart.timeScale().fitContent();
+        // ขอแค่ปรับแกน X แต่รักษาการซูมแกน Y ไว้
+        chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
     }
     
     // Removed VertLine implementation

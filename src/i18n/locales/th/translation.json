@@ -18,11 +18,11 @@
       "MONTHLY_PREDICTION": "พยากรณ์รายเดือน"
     },
     "dataTypes": {
-      "barBuy": "รับซื้อทองคำแท่ง",
-      "barSell": "ขายออกทองคำแท่ง",
-      "ornamentBuy": "รับซื้อทองรูปพรรณ",
-      "ornamentSell": "ขายออกทองรูปพรรณ",
-      "barBuyPredict": "ราคารับซื้อทองคำแท่ง (พยากรณ์)"
+      "barBuy": "ทองคำแท่ง (ซื้อ)",
+      "barSell": "ทองคำแท่ง (ขาย)",
+      "ornamentBuy": "ทองรูปพรรณ (ซื้อ)",
+      "ornamentSell": "ทองรูปพรรณ (ขาย)",
+      "barBuyPredict": "ทองคำแท่ง (พยากรณ์)"
     },
     "chartTypes": {
       "title": "รูปแบบกราฟ",
@@ -171,11 +171,11 @@
     "currentDay": "วันปัจจุบัน",
     "price": "ราคา",
     "legendLabels": {
-      "barBuy": "รับซื้อทองคำแท่ง",
-      "barSell": "ขายออกทองคำแท่ง",
-      "ornamentBuy": "รับซื้อทองรูปพรรณ",
-      "ornamentSell": "ขายออกทองรูปพรรณ",
-      "barBuyPredict": "รับซื้อทองคำแท่ง (พยากรณ์)",
+      "barBuy": "ทองคำแท่ง (ซื้อ)",
+      "barSell": "ทองคำแท่ง (ขาย)",
+      "ornamentBuy": "ทองรูปพรรณ (ซื้อ)",
+      "ornamentSell": "ทองรูปพรรณ (ขาย)",
+      "barBuyPredict": "ทองคำแท่ง (พยากรณ์)",
       "open": "เปิด",
       "high": "สูงสุด",
       "low": "ต่ำสุด",
