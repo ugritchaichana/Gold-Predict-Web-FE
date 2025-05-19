@@ -37,12 +37,12 @@ function App() {  return (
             
             <main className="flex-1 container py-6">
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={<GoldChartMain />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/document" element={<DocumentPage />} />
                 <Route path="/api" element={<ApiTesterPage />} />
                 <Route path="/goldth" element={<GoldTH />} />
-                <Route path="/goldchart" element={<GoldChartMain />} />
+                <Route path="/goldchart" element={<Dashboard />} />
               </Routes>
             </main>
             
