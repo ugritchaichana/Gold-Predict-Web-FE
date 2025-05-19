@@ -105,12 +105,12 @@ const getChartOptions = (theme, t) => ({
 
 const baseSeriesConfigs = {
     GOLD_TH: [
-        { key: 'barBuyData', color: 'blue', nameKey: 'barBuy', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'barBuyPredictData', color: '#42a5f5', nameKey: 'barBuyPredict', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
-        { key: 'barSellData', color: 'red', nameKey: 'barSell', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'ornamentBuyData', color: 'green', nameKey: 'ornamentBuy', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-        { key: 'ornamentSellData', color: 'orange', nameKey: 'ornamentSell', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
-    ],      GOLD_US: {
+        { key: 'barBuyData', color: '#22c55e', nameKey: 'barBuy', name: 'Bar Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'barBuyPredictData', color: '#FFD54F', nameKey: 'barBuyPredict', name: 'Bar Buy (Predict)', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Dashed },
+        { key: 'barSellData', color: '#3b82f6', nameKey: 'barSell', name: 'Bar Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentBuyData', color: '#f59e0b', nameKey: 'ornamentBuy', name: 'Ornament Buy', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+        { key: 'ornamentSellData', color: '#ec4899', nameKey: 'ornamentSell', name: 'Ornament Sell', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
+    ],GOLD_US: {
         line: [
             { key: 'openData', color: '#0269e5', nameKey: 'open', name: 'Open', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
             { key: 'highData', color: '#16a34a', nameKey: 'high', name: 'High', addToChart: true, defaultVisible: true, lineStyle: LineStyle.Solid },
