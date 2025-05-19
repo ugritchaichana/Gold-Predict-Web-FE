@@ -1,0 +1,65 @@
+/* Custom styling for the chart legends */
+.chartjs-legend-item, .custom-legend-item, li.chartjs-legend-item, ul li.chartjs-legend-li span, .chartjs-legend-ul li {
+  cursor: pointer !important;
+  padding: 6px 10px !important;
+  margin: 3px 6px !important;
+  border-radius: 4px !important;
+  transition: background-color 0.1s ease !important;
+  min-width: 80px !important;
+  display: flex !important;
+  align-items: center !important;
+  user-select: none !important; /* ป้องกันการเลือกข้อความ */
+}
+
+.chartjs-legend-item:hover, .custom-legend-item:hover, .chartjs-legend-ul li:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Increase hit area for legends */
+canvas + .chartjs-legend ul li, .custom-chart-legend .custom-legend-item {
+  padding: 8px 12px !important;
+  margin: 3px 5px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  user-select: none !important;
+}
+
+canvas + .chartjs-legend ul li:hover, .custom-chart-legend .custom-legend-item:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Improve the visual appearance of the legend items */
+.chartjs-legend-item-text, .custom-legend-item span:last-child {
+  margin-left: 8px !important;
+  user-select: none !important;
+}
+
+/* Custom legend container */
+.custom-chart-legend {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  margin-top: 12px !important;
+  padding: 4px 0 !important;
+}
+
+/* Active/pressed state */
+.chartjs-legend-item:active, .custom-legend-item:active {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Make the whole legend item clickable */
+.custom-legend-item * {
+  pointer-events: none !important;
+}
+
+/* Make sure Chart.js adds these classes */
+.chartjs-tooltip {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+}

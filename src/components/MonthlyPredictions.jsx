@@ -86,9 +86,9 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
+            {/* <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 dark:bg-amber-950/20">
               {t('goldChart.monthlyPredict.forecast', 'Forecast')}
-            </Badge>
+            </Badge> */}
           </div>
         </div>
       </CardHeader>
