@@ -29,12 +29,14 @@ const getChartOptions = (theme) => ({
             labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
             style: LineStyle.Dashed,
         },
-    },
-    timeScale: {
-        fixLeftEdge: true,
-        fixRightEdge: true,
+    },    timeScale: {
+        fixLeftEdge: false, // เปลี่ยนเป็น false เพื่อให้สามารถดูข้อมูลย้อนหลังได้ทั้งหมด
+        fixRightEdge: false, // เปลี่ยนเป็น false เพื่อให้สามารถดูข้อมูลได้ทั้งหมด
         borderVisible: false,
-        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',        timeVisible: true,        tickMarkFormatter: (time, tickMarkType, locale) => {
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
+        timeVisible: true,
+        visibleLogicalRangeChange: true, // เพิ่มโหมดนี้เพื่อให้สามารถมองเห็นข้อมูลทั้งหมดได้
+        tickMarkFormatter: (time, tickMarkType, locale) => {
             const date = new Date(time * 1000);
             const days = t('goldChart.time.days', { returnObjects: true });
             const dayOfWeek = date.getDay();
@@ -43,9 +45,14 @@ const getChartOptions = (theme) => ({
             const months = t('goldChart.time.months', { returnObjects: true });
             const month = months[date.getMonth()];
             const year = date.getFullYear().toString().slice(-2);
+            const fullYear = date.getFullYear();
+            
+            if (tickMarkType === 0) { // ปี
+                return fullYear.toString(); // แสดงปีเต็มเพื่อให้อ่านง่ายขึ้น
+            }
             return `${dayName} ${day} ${month} '${year}`;
         },
-        allowTickMarksCompression: false,
+        allowTickMarksCompression: true, // เปลี่ยนเป็น true เพื่อให้แสดงข้อมูลได้มากขึ้น
     },
     priceScale: {
         autoScale: true,
@@ -344,23 +351,45 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       },
       handleScroll: {
         pressedMouseMove: true,
-      },
-      timeScale: {
+      },      timeScale: {
         timeVisible: true,
         rightOffset: 12,
         barSpacing: 10,
         fixLeftEdge: true,
         lockVisibleTimeRangeOnResize: true,
-        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',        tickMarkFormatter: (time) => {
+        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
+        tickMarkFormatter: (time, tickMarkType) => {
           const date = new Date(time * 1000);
           const days = t('goldChart.time.days', { returnObjects: true });
           const dayOfWeek = date.getDay();
           const dayName = days[dayOfWeek];
           const day = date.getDate().toString().padStart(2, '0');
           const months = t('goldChart.time.months', { returnObjects: true });
-          const month = months[date.getMonth()];
+          const monthIndex = date.getMonth();
+          const month = months[monthIndex];
           const year = date.getFullYear().toString().slice(-2);
-          return `${dayName} ${day} ${month} '${year}`;
+          
+          // ใช้รูปแบบที่แตกต่างกันขึ้นอยู่กับประเภทของ tick mark
+          // จะช่วยลด density ของ labels เมื่อซูมออก
+          switch (tickMarkType) {
+            case 0: // Year
+              return `'${year}`;
+            case 1: // Month
+              return `${month} '${year}`;
+            case 2: // Day of Month
+              return `${day} ${month}`;
+            case 3: // Time
+              // เวลา - คืนค่าเฉพาะ hour:minute
+              const hour = date.getHours().toString().padStart(2, '0');
+              const minute = date.getMinutes().toString().padStart(2, '0');
+              return `${hour}:${minute}`;
+            case 4: // Day of Week
+              // แสดงเฉพาะวันในสัปดาห์
+              return dayName;
+            default:
+              // รูปแบบปกติที่คุณชอบ
+              return `${dayName} ${day} ${month} '${year}`;
+          }
         },
         rightBarStaysOnScroll: true,
       },
