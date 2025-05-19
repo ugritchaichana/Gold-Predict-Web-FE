@@ -6,8 +6,21 @@ import { useTheme } from '@/components/theme-provider';
 import { formatDate } from '@/lib/utils.js';
 import { useTranslation } from 'react-i18next';
 
+// Utility function to format time without hours/minutes/seconds
+const formatCrosshairTime = (time, t) => {
+  if (!time) return '';
+  
+  const date = new Date(time * 1000);
+  const day = date.getDate().toString().padStart(2, '0');
+  const months = t('goldChart.time.months', { returnObjects: true });
+  const month = months[date.getMonth()];
+  const year = date.getFullYear().toString().slice(-2);
+  
+  return `${day} ${month} '${year}`;
+};
+
 // Chart base options with theme support - no transitions
-const getChartOptions = (theme) => ({
+const getChartOptions = (theme, t) => ({
     layout: {
         textColor: theme === 'dark' ? '#e1e1e1' : '#333333',
         background: { 
@@ -16,26 +29,42 @@ const getChartOptions = (theme) => ({
         },
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
         // Remove transition for instant theme change
-    },
-    crosshair: {
-        mode: CrosshairMode.Normal,
+    },    crosshair: {
+        mode: CrosshairMode.Magnet,
         vertLine: {
-            color: theme === 'dark' ? '#555555' : '#e1e1e1',
-            labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+            color: theme === 'dark' ? '#ff2d00' : '#e1e1e1',
+            labelBackgroundColor: theme === 'dark' ? '#ff2d00' : '#f0f0f0',
+            labelVisible: true,
+            labelFormatter: (time) => {
+                const date = new Date(time * 1000);
+                const day = date.getDate().toString().padStart(2, '0');
+                const months = t('goldChart.time.months', { returnObjects: true });
+                const month = months[date.getMonth()];
+                const year = date.getFullYear().toString().slice(-2);
+                
+                return `${day} ${month} '${year}`;
+            },
             style: LineStyle.Dashed,
+            visible: true,
         },
         horzLine: {
             color: theme === 'dark' ? '#555555' : '#e1e1e1',
             labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+            labelVisible: true,
+            labelFormatter: (price) => {
+                return price.toFixed(2);
+            },
             style: LineStyle.Dashed,
+            visible: true,
         },
-    },    timeScale: {
-        fixLeftEdge: false, // เปลี่ยนเป็น false เพื่อให้สามารถดูข้อมูลย้อนหลังได้ทั้งหมด
-        fixRightEdge: false, // เปลี่ยนเป็น false เพื่อให้สามารถดูข้อมูลได้ทั้งหมด
+    },
+    timeScale: {
+        fixLeftEdge: false,
+        fixRightEdge: false,
         borderVisible: false,
         borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
         timeVisible: true,
-        visibleLogicalRangeChange: true, // เพิ่มโหมดนี้เพื่อให้สามารถมองเห็นข้อมูลทั้งหมดได้
+        visibleLogicalRangeChange: true,
         tickMarkFormatter: (time, tickMarkType, locale) => {
             const date = new Date(time * 1000);
             const days = t('goldChart.time.days', { returnObjects: true });
@@ -47,12 +76,12 @@ const getChartOptions = (theme) => ({
             const year = date.getFullYear().toString().slice(-2);
             const fullYear = date.getFullYear();
             
-            if (tickMarkType === 0) { // ปี
-                return fullYear.toString(); // แสดงปีเต็มเพื่อให้อ่านง่ายขึ้น
+            if (tickMarkType === 0) {
+                return fullYear.toString();
             }
             return `${dayName} ${day} ${month} '${year}`;
         },
-        allowTickMarksCompression: true, // เปลี่ยนเป็น true เพื่อให้แสดงข้อมูลได้มากขึ้น
+        allowTickMarksCompression: true,
     },
     priceScale: {
         autoScale: true,
@@ -70,7 +99,7 @@ const getChartOptions = (theme) => ({
         },
     },
     animation: {
-        duration: 0, // set to zero for instant changes
+        duration: 0,
     },
 });
 
@@ -109,12 +138,10 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
         return [];
     }
     
-    // Normalize and sort data; assume API returns unique timestamps
     const result = data
       .filter(item => item && typeof item.time === 'number')
       .map(item => {
         if (isCandlestick) {
-          // For candlestick chart, ensure all OHLC properties are numbers
           return {
             time: item.time,
             open: typeof item.open === 'number' ? item.open : Number(item.open),
@@ -129,11 +156,9 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
         };
       });
       
-    // Sort by time
     return result.sort((a, b) => a.time - b.time);
 };
 
-// Convert OHLC data to line chart format
 const convertOhlcDataToLines = (ohlcData) => {
     if (!Array.isArray(ohlcData) || ohlcData.length === 0) {
         return {
@@ -188,7 +213,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     dateRangeTo: dateRange?.to ? dateRange.to.toISOString() : 'none',
     hasData: !!rawChartData,
     hasOHLC: rawChartData && rawChartData.ohlc ? `Yes (${rawChartData.ohlc.length} items)` : 'No',
-    renderId: chartRenderIdRef.current // Use a stable ID for tracking re-renders
+    renderId: chartRenderIdRef.current
   });
   
   const chartData = useMemo(() => {
@@ -198,28 +223,23 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
   
   const chartContainerRef = useRef(null);
   
-  // Get current theme from context
   const { theme } = useTheme();
-  // For GOLD_TH, we always use line style
   const effectiveChartStyle = category === 'GOLD_TH' ? 'line' : chartStyle;
   
-  // Log chart settings for debugging
-  console.log('Chart render settings:', { 
-    category, 
-    chartStyle, 
-    effectiveChartStyle,
-    isGoldThCategory: category === 'GOLD_TH',
-    willUseCandlesticks: effectiveChartStyle === 'candlestick'
-  });
+//   console.log('Chart render settings:', { 
+//     category, 
+//     chartStyle, 
+//     effectiveChartStyle,
+//     isGoldThCategory: category === 'GOLD_TH',
+//     willUseCandlesticks: effectiveChartStyle === 'candlestick'
+//   });
 
-  // Store chart settings in a ref to detect changes
   const chartSettingsRef = useRef({
     category,
     effectiveChartStyle,
     theme
   });
   
-  // Update the ref when settings change
   useEffect(() => {
     chartSettingsRef.current = {
       category,
@@ -228,29 +248,22 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     };
   }, [category, effectiveChartStyle, theme]);
   
-  // Get the appropriate series configs based on category and chart style
   let currentSeriesConfigs = [];
   if (category === 'GOLD_TH') {
     currentSeriesConfigs = baseSeriesConfigs[category];
   } else if (category === 'GOLD_US' || category === 'USD_THB') {
-    // For GOLD_US or USD_THB, use different configs based on chart style
     if (effectiveChartStyle === 'line') {
       currentSeriesConfigs = baseSeriesConfigs[category].line;    } else if (effectiveChartStyle === 'candlestick') {
-      // In candlestick mode, we only want to show the candlestick chart without line overlays
-      // So we'll only use the candlestick series configuration
       currentSeriesConfigs = [...baseSeriesConfigs[category].candlestick];
     }
   }
   
-  // Prepare data based on chart style
   useEffect(() => {
     if (!chartData) return;
     
-    // For line mode, convert OHLC data to line chart format
     if ((category === 'GOLD_US' || category === 'USD_THB')) {
       if (chartData.ohlc) {
         console.log('Processing OHLC data for chart display');
-        // Always convert OHLC data to line format for potential overlay
         const lineData = convertOhlcDataToLines(chartData.ohlc);
         Object.assign(chartData, lineData);
         
@@ -263,41 +276,35 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
   
   const seriesVisibilityRef = useRef({});
   
-  // Initialize seriesVisibility once when the configs change
   const seriesVisibility = useMemo(() => {
     console.log('Initializing series visibility state');
     const initial = {};
     currentSeriesConfigs.forEach(config => {
-      // Initialize visibility based on chart style
       if (effectiveChartStyle === 'candlestick') {
         if (config.type === 'candlestick') {
-          initial[config.key] = true; // Always show candlestick in candlestick mode
+          initial[config.key] = true;
         } else if (config.key.startsWith('ohlc_')) {
-          initial[config.key] = true; // Show OHLC legends in candlestick mode
+          initial[config.key] = true;
         } else {
-          initial[config.key] = false; // Hide line series in candlestick mode
+          initial[config.key] = false;
         }
       } else {
         initial[config.key] = config.defaultVisible;
       }
     });
     
-    // Update the ref - we'll use this for comparisons to avoid unnecessary state updates
     seriesVisibilityRef.current = initial;
     return initial;
   }, [currentSeriesConfigs, effectiveChartStyle]);
   
-  // Toggle visibility function (for use in click handlers)
   const toggleSeriesVisibility = useCallback((configKey) => {
     const newVisibility = !seriesVisibilityRef.current[configKey];
     
-    // Update the ref immediately
     seriesVisibilityRef.current = {
       ...seriesVisibilityRef.current,
       [configKey]: newVisibility
     };
     
-    // Return the new ref value - we'll use this in event handlers
     return seriesVisibilityRef.current;
   }, []);
   
@@ -339,11 +346,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     
     // Force immediate DOM update to ensure containers are properly mounted
     chartContainerRef.current.appendChild(styledLegendContainer);
-    chartContainerRef.current.appendChild(chartElement);
-    
-    // Apply the chart options based on the current theme
+    chartContainerRef.current.appendChild(chartElement);    // Apply the chart options based on the current theme
     const chart = createChart(chartElement, {
-      ...getChartOptions(theme),
+      ...getChartOptions(theme, t),
       width: chartElement.clientWidth,
       height: chartElement.clientHeight,
       handleScale: {
@@ -351,48 +356,35 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       },
       handleScroll: {
         pressedMouseMove: true,
-      },      timeScale: {
-        timeVisible: true,
-        rightOffset: 12,
-        barSpacing: 10,
-        fixLeftEdge: true,
-        lockVisibleTimeRangeOnResize: true,
-        borderColor: theme === 'dark' ? '#444444' : '#e1e1e1',
-        tickMarkFormatter: (time, tickMarkType) => {
-          const date = new Date(time * 1000);
-          const days = t('goldChart.time.days', { returnObjects: true });
-          const dayOfWeek = date.getDay();
-          const dayName = days[dayOfWeek];
-          const day = date.getDate().toString().padStart(2, '0');
-          const months = t('goldChart.time.months', { returnObjects: true });
-          const monthIndex = date.getMonth();
-          const month = months[monthIndex];
-          const year = date.getFullYear().toString().slice(-2);
-          
-          // ใช้รูปแบบที่แตกต่างกันขึ้นอยู่กับประเภทของ tick mark
-          // จะช่วยลด density ของ labels เมื่อซูมออก
-          switch (tickMarkType) {
-            case 0: // Year
-              return `'${year}`;
-            case 1: // Month
-              return `${month} '${year}`;
-            case 2: // Day of Month
-              return `${day} ${month}`;
-            case 3: // Time
-              // เวลา - คืนค่าเฉพาะ hour:minute
-              const hour = date.getHours().toString().padStart(2, '0');
-              const minute = date.getMinutes().toString().padStart(2, '0');
-              return `${hour}:${minute}`;
-            case 4: // Day of Week
-              // แสดงเฉพาะวันในสัปดาห์
-              return dayName;
-            default:
-              // รูปแบบปกติที่คุณชอบ
-              return `${dayName} ${day} ${month} '${year}`;
-          }
-        },
-        rightBarStaysOnScroll: true,
       },
+    });
+      // Apply crosshair options directly to ensure the formatter is used
+    chart.applyOptions({
+      crosshair: {
+        vertLine: {
+          color: theme === 'dark' ? '#555555' : '#e1e1e1',
+          labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+          labelVisible: true,
+          labelFormatter: (time) => formatCrosshairTime(time, t),
+          style: LineStyle.Dashed,
+          visible: true,
+        },
+        horzLine: {
+          color: theme === 'dark' ? '#555555' : '#e1e1e1',
+          labelBackgroundColor: theme === 'dark' ? '#444444' : '#f0f0f0',
+          labelVisible: true,
+          labelFormatter: (price) => {
+            return price.toFixed(2);
+          },
+          style: LineStyle.Dashed,
+          visible: true,
+        },
+      },
+      // Add localization options to override time format
+      localization: {
+        timeFormatter: (time) => formatCrosshairTime(time, t),
+        dateFormat: 'dd MMM \'yy',
+      }
     });
     
     const seriesInstances = {};
@@ -613,7 +605,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 time: currentDateTimestamp,
                 position: 'aboveBar',
                 color: '#23b8a6',
-                shape: 'arrowDown',                text: t('goldChart.currentDay'),
+                shape: 'arrowDown',
+                text: t('goldChart.currentDay'),
                 size: 1.3,
             },
             {
