@@ -21,6 +21,7 @@ import { PredictionContext } from '@/context/PredictionContext';
 import { usePredictionErrorStats } from '../../store/PredictionErrorStatsStore';
 import { fetchPredictionsMonth } from '@/services/apiService';
 import { formatCurrency } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 
 const DataCategories = {
   GOLD_TH: 'GOLD_TH',
@@ -56,7 +57,25 @@ const getEarliestAvailableDate = (allChartData) => {
 };
 
 
-const GoldChartMain = () => {  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');  const [selectedModel, setSelectedModel] = useState('7');  
+const GoldChartMain = () => {  
+  const queryClient = useQueryClient();
+  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
+  const [selectedModel, setSelectedModel] = useState('7');
+  // console.log('GoldChartMain: selectedModel:', selectedModel);
+  
+  // Handle model changes and invalidate cache
+  const handleModelChange = (newModel) => {
+    // console.log(`Changing model from ${selectedModel} to ${newModel}`);
+    
+    // Invalidate the predict query for the current model before changing
+    queryClient.invalidateQueries({ 
+      queryKey: ['predictData', 'GOLD_TH', selectedModel] 
+    });
+    
+    // Set the new model
+    setSelectedModel(newModel);
+  };
+  
   const [selectedChartStyle, setSelectedChartStyle] = useState('line');
   const [monthlyChartTab, setMonthlyChartTab] = useState('table');
   const { t, i18n } = useTranslation();
@@ -201,11 +220,12 @@ const GoldChartMain = () => {  const [selectedCategory, setSelectedCategory] = u
   
   // Log when chart style changes to help debug
   useEffect(() => {
-    console.log('GoldChartMain: Chart style changed:', {
-      selectedChartStyle,
-      category: selectedCategory,
-      isCandlestickDisabled: selectedCategory === 'GOLD_TH'
-    });  }, [selectedChartStyle, selectedCategory]);
+    // console.log('GoldChartMain: Chart style changed:', {
+    //   selectedChartStyle,
+    //   category: selectedCategory,
+    //   isCandlestickDisabled: selectedCategory === 'GOLD_TH'
+    // });
+  }, [selectedChartStyle, selectedCategory]);
   
   // Define stateful variables for the last price data
   const [lastPrice, setLastPrice] = useState(null);
@@ -407,11 +427,10 @@ const GoldChartMain = () => {  const [selectedCategory, setSelectedCategory] = u
         <Card className="flex flex-col h-[75vh] w-full">
           <CardHeader className="p-0 pt-4 px-2 flex-shrink-0">
             <div className="flex flex-col sm:flex-row justify-center items-center gap-2 w-full">
-              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                {selectedCategory === 'GOLD_TH' && (
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">                {selectedCategory === 'GOLD_TH' && (
                   <SelectPredictModel
                     selectedModel={selectedModel}
-                    setSelectedModel={setSelectedModel}
+                    setSelectedModel={handleModelChange}
                     models={Models}
                   />
                 )}
@@ -429,11 +448,10 @@ const GoldChartMain = () => {  const [selectedCategory, setSelectedCategory] = u
                 />
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-grow overflow-hidden">
+          </CardHeader>          <CardContent className="p-0 flex-grow overflow-hidden">
             <GoldChart
               category={selectedCategory}
-              model={selectedModel}
+              selectedModel={selectedModel} // Fixed! Changed from 'model' to 'selectedModel'
               chartStyle={selectedChartStyle}
               dateRange={currentDateRange}
               onLastPriceUpdate={handleLastPriceUpdate}

@@ -1,9 +1,9 @@
 // Debug utility for the Chart component
 export function debugChartData(chartData, category, options = {}) {
-  console.log(`Chart Debug: Processing data for ${category}`);
+  // console.log(`Chart Debug: Processing data for ${category}`);
 
   if (!chartData) {
-    console.warn(`Chart Debug: No chart data provided for ${category}`);
+    // console.warn(`Chart Debug: No chart data provided for ${category}`);
     return null;
   }
 
@@ -12,27 +12,27 @@ export function debugChartData(chartData, category, options = {}) {
   
   // Process OHLC data for GOLD_US or USD_THB
   if (category === 'GOLD_US' || category === 'USD_THB') {
-    console.log(`Chart Debug: Processing OHLC data for ${category}`, {
-      hasOhlcArray: !!data.ohlc,
-      ohlcArrayType: data.ohlc ? typeof data.ohlc : 'N/A',
-      isArray: data.ohlc ? Array.isArray(data.ohlc) : false,
-      length: data.ohlc ? data.ohlc.length : 0,
-      sampleItem: data.ohlc && data.ohlc.length > 0 ? data.ohlc[0] : 'No items'
-    });
+    // console.log(`Chart Debug: Processing OHLC data for ${category}`, {
+    //   hasOhlcArray: !!data.ohlc,
+    //   ohlcArrayType: data.ohlc ? typeof data.ohlc : 'N/A',
+    //   isArray: data.ohlc ? Array.isArray(data.ohlc) : false,
+    //   length: data.ohlc ? data.ohlc.length : 0,
+    //   sampleItem: data.ohlc && data.ohlc.length > 0 ? data.ohlc[0] : 'No items'
+    // });
 
     // Attempt to build OHLC if not present or empty
     if (!data.ohlc || !Array.isArray(data.ohlc) || data.ohlc.length === 0) {
-      console.log(`Chart Debug: OHLC array for ${category} is missing or empty. Attempting to build from components.`);      
+      // console.log(`Chart Debug: OHLC array for ${category} is missing or empty. Attempting to build from components.`);      
       if (data.open && data.high && data.low && data.close &&
           Array.isArray(data.open) && Array.isArray(data.high) &&
           Array.isArray(data.low) && Array.isArray(data.close)) {
         
-        console.log(`Chart Debug: Found component arrays for ${category}, will build OHLC from them:`, {
-          openLength: data.open.length,
-          highLength: data.high.length,
-          lowLength: data.low.length,
-          closeLength: data.close.length
-        });
+        // console.log(`Chart Debug: Found component arrays for ${category}, will build OHLC from them:`, {
+        //   openLength: data.open.length,
+        //   highLength: data.high.length,
+        //   lowLength: data.low.length,
+        //   closeLength: data.close.length
+        // });
         
         const minLength = Math.min(
           data.open.length || 0,
@@ -43,7 +43,7 @@ export function debugChartData(chartData, category, options = {}) {
         
         const builtOhlc = [];
         if (minLength > 0) {
-            console.log(`Chart Debug: Building OHLC for ${category} from ${minLength} component data points.`);
+            // console.log(`Chart Debug: Building OHLC for ${category} from ${minLength} component data points.`);
             
             // Group points by time to ensure data integrity
             const timeMap = new Map();
@@ -89,7 +89,7 @@ export function debugChartData(chartData, category, options = {}) {
             builtOhlc.sort((a, b) => a.time - b.time);
             
             data.ohlc = builtOhlc;
-            console.log(`Chart Debug: Successfully built OHLC array for ${category} with ${data.ohlc.length} items.`);
+            // console.log(`Chart Debug: Successfully built OHLC array for ${category} with ${data.ohlc.length} items.`);
             
             // Create individual OHLC line series data
             // Generate opening data array
@@ -117,14 +117,14 @@ export function debugChartData(chartData, category, options = {}) {
             }));
             
             if (data.ohlc.length > 0) {
-              console.log('Sample OHLC item:', data.ohlc[0]);
+              // console.log('Sample OHLC item:', data.ohlc[0]);
             }
         } else {
-            console.log(`Chart Debug: Component arrays for OHLC for ${category} are empty or have zero minLength.`);
+            // console.log(`Chart Debug: Component arrays for OHLC for ${category} are empty or have zero minLength.`);
             data.ohlc = []; // Ensure ohlc is an empty array if it couldn't be built
         }
       } else {
-        console.log(`Chart Debug: Missing one or more component arrays (open, high, low, close) for ${category}.`);
+        // console.log(`Chart Debug: Missing one or more component arrays (open, high, low, close) for ${category}.`);
         data.ohlc = []; // Ensure ohlc is an empty array
       }
     }
@@ -146,13 +146,13 @@ export function debugChartData(chartData, category, options = {}) {
       );
       
       if (data.ohlc.length !== originalLength) {
-        console.log(`Chart Debug: Filtered out ${originalLength - data.ohlc.length} invalid OHLC data points`);
+        // console.log(`Chart Debug: Filtered out ${originalLength - data.ohlc.length} invalid OHLC data points`);
       }
       
       // Check if high is always >= low (data integrity)
       const invalidHighLowItems = data.ohlc.filter(item => item.high < item.low);
       if (invalidHighLowItems.length > 0) {
-        console.warn(`Chart Debug: Found ${invalidHighLowItems.length} OHLC items where high < low, fixing them`);
+        // console.warn(`Chart Debug: Found ${invalidHighLowItems.length} OHLC items where high < low, fixing them`);
         // Fix high/low values if needed
         data.ohlc = data.ohlc.map(item => {
           if (item.high < item.low) {
@@ -196,8 +196,8 @@ export function debugChartData(chartData, category, options = {}) {
       data.ohlc = [];
     }
 
-    console.log(`Chart Debug: Final OHLC data for ${category} (${data.ohlc?.length || 0} items), sample:`, 
-      data.ohlc && data.ohlc.length > 0 ? data.ohlc.slice(0, 3) : 'No items');
+    // console.log(`Chart Debug: Final OHLC data for ${category} (${data.ohlc?.length || 0} items), sample:`, 
+    //   data.ohlc && data.ohlc.length > 0 ? data.ohlc.slice(0, 3) : 'No items');
 
   } else if (category === 'GOLD_TH') {
     // Process data for GOLD_TH category
@@ -216,7 +216,7 @@ export function debugChartData(chartData, category, options = {}) {
         data[key].sort((a, b) => a.time - b.time);
         
         if (data[key].length !== originalLength) {
-          console.log(`Chart Debug: Filtered out ${originalLength - data[key].length} invalid points from ${key}`);
+          // console.log(`Chart Debug: Filtered out ${originalLength - data[key].length} invalid points from ${key}`);
         }
       }
     }

@@ -10,7 +10,7 @@ const ChartWrapper = ({ chartData, category, dateRange, chartStyle = 'line' }) =
   const chartKey = useMemo(() => {
     const timestamp = Date.now();
     const uniqueKey = `chart-${category}-${chartStyle}-${timestamp}`;
-    console.log('Generated chartKey:', uniqueKey);
+    // console.log('Generated chartKey:', uniqueKey);
     return uniqueKey;
   }, [category, chartStyle]);
   
@@ -28,16 +28,16 @@ const ChartWrapper = ({ chartData, category, dateRange, chartStyle = 'line' }) =
     shouldUpdateChart.current = true;
   }
   
-  console.log('ChartWrapper received props:', {
-    category,
-    chartStyle,
-    chartKey,
-    hasChartData: !!chartData,
-    hasOHLC: chartData && chartData.ohlc ? `Yes (${chartData.ohlc.length} items)` : 'No',
-    dateRangeFrom: dateRange?.from ? dateRange.from.toISOString() : 'none',
-    dateRangeTo: dateRange?.to ? dateRange.to.toISOString() : 'none',
-    shouldUpdateChart: shouldUpdateChart.current
-  });
+  // console.log('ChartWrapper received props:', {
+  //   category,
+  //   chartStyle,
+  //   chartKey,
+  //   hasChartData: !!chartData,
+  //   hasOHLC: chartData && chartData.ohlc ? `Yes (${chartData.ohlc.length} items)` : 'No',
+  //   dateRangeFrom: dateRange?.from ? dateRange.from.toISOString() : 'none',
+  //   dateRangeTo: dateRange?.to ? dateRange.to.toISOString() : 'none',
+  //   shouldUpdateChart: shouldUpdateChart.current
+  // });
   
   // If in candlestick mode, log ohlc data details
   if (chartStyle === 'candlestick' && chartData && chartData.ohlc) {

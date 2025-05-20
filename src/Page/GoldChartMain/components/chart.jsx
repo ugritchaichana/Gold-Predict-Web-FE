@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useContext, useMemo, useCallback } from 'react';
 import { createChart, LineStyle, CrosshairMode, LineType } from 'lightweight-charts';
-import { format as formatDateFns, isValid } from 'date-fns';
+import { format as formatDateFns, isValid, fromUnixTime } from 'date-fns';
 import { debugChartData } from './chart.debug.js';
 import { useTheme } from '@/components/theme-provider';
 import { formatDate } from '@/lib/utils.js';
@@ -210,21 +210,27 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
   const { t } = useTranslation();
   // Process and debug chart data before using it (use full data set)
   const chartRenderIdRef = useRef(Math.random().toString(36).substr(2, 9));
-  console.log('[CHART COMPONENT] Props received:', { 
-    category, 
-    chartStyle, 
-    dateRangeFrom: dateRange?.from ? dateRange.from.toISOString() : 'none',
-    dateRangeTo: dateRange?.to ? dateRange.to.toISOString() : 'none',
-    hasData: !!rawChartData,
-    hasOHLC: rawChartData && rawChartData.ohlc ? `Yes (${rawChartData.ohlc.length} items)` : 'No',
-    renderId: chartRenderIdRef.current
-  });
+//   console.log('[CHART COMPONENT] Props received:', { 
+//     category, 
+//     chartStyle, 
+//     dateRangeFrom: dateRange?.from ? dateRange.from.toISOString() : 'none',
+//     dateRangeTo: dateRange?.to ? dateRange.to.toISOString() : 'none',
+//     hasData: !!rawChartData,
+//     hasOHLC: rawChartData && rawChartData.ohlc ? `Yes (${rawChartData.ohlc.length} items)` : 'No',
+//     renderId: chartRenderIdRef.current
+//   });
   
   const chartData = useMemo(() => {
-    console.log(`Calling debugChartData for ${category}...`);
+    // console.log(`Calling debugChartData for ${category}...`);
     return debugChartData(rawChartData, category);
   }, [rawChartData, category]);
-  
+
+    // console.log('[chartData.barBuyPredictData] Timestamp:', chartData.barBuyPredictData[chartData?.barBuyPredictData?.length - 1].time);
+    // console.log('[chartData.barBuyPredictData] Date:', fromUnixTime(chartData.barBuyPredictData[chartData?.barBuyPredictData?.length - 1].time));
+    // console.log('[CHART COMPONENT] Processed chart data:', chartData.barBuyPredictData[chartData?.barBuyPredictData?.length - 1].value);
+
+
+
   const chartContainerRef = useRef(null);
   
   const { theme } = useTheme();
@@ -281,7 +287,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
   const seriesVisibilityRef = useRef({});
   
   const seriesVisibility = useMemo(() => {
-    console.log('Initializing series visibility state');
+    // console.log('Initializing series visibility state');
     const initial = {};
     currentSeriesConfigs.forEach(config => {
       if (effectiveChartStyle === 'candlestick') {
@@ -413,7 +419,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
           chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
         }
         
-        console.log('Applied Y-axis auto-scaling to chart (preserved zoom level)');
+        // console.log('Applied Y-axis auto-scaling to chart (preserved zoom level)');
       } catch (err) {
         console.error('Error applying auto-scaling:', err);
       }

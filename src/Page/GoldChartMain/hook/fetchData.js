@@ -31,6 +31,12 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
     const historicalUrl = API_URLS[category]?.historical;
     const predictUrl = category === 'GOLD_TH' ? API_URLS[category]?.predict(selectedModel) : null;
 
+    // Add debug logging for predict URL
+    // console.log(`useChartData: Fetching data for category=${category}, ACTUAL model=${selectedModel}`, {
+    //     predictUrl: predictUrl,
+    //     model: selectedModel
+    // });
+
     const {
         data: historicalData,
         isLoading: isLoadingHistorical,
@@ -40,9 +46,7 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
         queryKey: ['historicalData', category],
         queryFn: () => fetchDataFromUrl(historicalUrl, `Historical data for ${category}`),
         enabled: !!historicalUrl, // Only run query if URL exists
-    });
-
-    const {
+    });    const {
         data: predictData,
         isLoading: isLoadingPredict,
         isError: isErrorPredict,
@@ -51,6 +55,9 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
         queryKey: ['predictData', category, selectedModel], // Query key depends on category and model
         queryFn: () => fetchDataFromUrl(predictUrl, `Prediction data for ${category} model ${selectedModel}`),
         enabled: !!predictUrl && category === 'GOLD_TH', // Only run if predict URL exists (i.e., for GOLD_TH)
+        // Add refetchOnMount and refetchOnWindowFocus to ensure fresh data
+        refetchOnMount: true,
+        staleTime: 0, // Data is immediately stale, forcing a refetch when dependencies change
     });
 
     const isLoading = isLoadingHistorical || (category === 'GOLD_TH' && isLoadingPredict);

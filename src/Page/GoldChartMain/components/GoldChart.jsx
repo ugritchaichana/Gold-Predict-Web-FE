@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { addHours, startOfDay } from 'date-fns';
+import { addHours, startOfDay, fromUnixTime } from 'date-fns';
 import { ThreeDot } from 'react-loading-indicators';
 import { InfoIcon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,7 @@ const GoldChart = ({
   activeDateOption,
   onFullDataLoaded,
   onLastPriceUpdate
-}) => {
-  const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
+}) => {  const { data: chartDataFull, isLoading, isError, error: chartError } = useChartData(category, selectedModel);
   
   // Track render cycles
   const renderCount = useRef(0);
@@ -26,24 +25,43 @@ const GoldChart = ({
   // Track the candlestick style selection
   const chartStyleRef = useRef(chartStyle);
   
+  // Track the model changes
+  const modelRef = useRef(selectedModel);
+  
   useEffect(() => {
-    console.log('GoldChart component props:', {
-      renderId: renderCount.current,
-      category,
-      selectedModel,
-      chartStyle,
-      dateRange: dateRange ? {
-        from: dateRange.from?.toISOString(),
-        to: dateRange.to?.toISOString()
-      } : 'No date range'
-    });
+    // console.log('GoldChart component props:', {
+    //   renderId: renderCount.current,
+    //   category,
+    //   selectedModel,
+    //   chartStyle,
+    //   dateRange: dateRange ? {
+    //     from: dateRange.from?.toISOString(),
+    //     to: dateRange.to?.toISOString()
+    //   } : 'No date range'
+    // });
+    
+    // Log model changes
+    if (modelRef.current !== selectedModel) {
+      console.log(`Model changed from ${modelRef.current} to ${selectedModel}`);
+      modelRef.current = selectedModel;
+    }
+    
+    // Log prediction data details if available
+    if (chartDataFull && chartDataFull.barBuyPredictData && chartDataFull.barBuyPredictData.length > 0) {
+      const lastPredictionPoint = chartDataFull.barBuyPredictData[chartDataFull.barBuyPredictData.length - 1];
+      // console.log(`Prediction data for model ${selectedModel}:`, {
+      //   timestamp: lastPredictionPoint.time,
+      //   formattedDate: fromUnixTime(lastPredictionPoint.time).toISOString(),
+      //   value: lastPredictionPoint.value,
+      // });
+    }
     
     // Log when chart style changes
     if (chartStyleRef.current !== chartStyle) {
       console.log(`Chart style changed from ${chartStyleRef.current} to ${chartStyle}`);
       chartStyleRef.current = chartStyle;
     }
-  }, [category, dateRange, selectedModel, chartStyle]);
+  }, [category, dateRange, selectedModel, chartStyle, chartDataFull]);
   
   useEffect(() => {
     if (chartDataFull && onFullDataLoaded) {
@@ -57,7 +75,7 @@ const GoldChart = ({
       return null;
     }
     
-    console.log(`Processing chart data for ${category}, style: ${chartStyle}`);
+    // console.log(`Processing chart data for ${category}, style: ${chartStyle}`);
     // Use debugChartData to validate and process the data
     return debugChartData(chartDataFull, category);
   }, [chartDataFull, category]);
