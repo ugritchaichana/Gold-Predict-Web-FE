@@ -18,11 +18,11 @@
       "MONTHLY_PREDICTION": "Monthly Prediction"
     },
     "dataTypes": {
-      "barBuy": "Gold Bar Buy",
-      "barSell": "Gold Bar Sell",
-      "ornamentBuy": "Gold Ornament Buy",
-      "ornamentSell": "Gold Ornament Sell",
-      "barBuyPredict": "Gold Bar Buy (Predicted)"
+      "barBuy": "Gold Bullion (Buy)",
+      "barSell": "Gold Bullion (Sell)",
+      "ornamentBuy": "Gold Ornament (Buy)",
+      "ornamentSell": "Gold Ornament (Sell)",
+      "barBuyPredict": "Gold Bullion Predicted (Buy)"
     },
     "chartTypes": {
       "title": "Chart Types",
@@ -171,11 +171,11 @@
     "currentDay": "Current Day",
     "price": "Price",
     "legendLabels": {
-      "barBuy": "Gold Bar Buy",
-      "barSell": "Gold Bar Sell",
-      "ornamentBuy": "Gold Ornament Buy",
-      "ornamentSell": "Gold Ornament Sell",
-      "barBuyPredict": "Gold Bar Buy (Predicted)",
+      "barBuy": "Gold Bullion (Buy)",
+      "barSell": "Gold Bullion (Sell)",
+      "ornamentBuy": "Gold Ornament (Buy)",
+      "ornamentSell": "Gold Ornament (Sell)",
+      "barBuyPredict": "Gold Bullion Predicted (Buy)",
       "open": "Open",
       "high": "High",
       "low": "Low",

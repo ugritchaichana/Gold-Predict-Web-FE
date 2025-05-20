@@ -22,7 +22,7 @@
       "barSell": "ทองคำแท่ง (ขาย)",
       "ornamentBuy": "ทองรูปพรรณ (ซื้อ)",
       "ornamentSell": "ทองรูปพรรณ (ขาย)",
-      "barBuyPredict": "ทองคำแท่ง (พยากรณ์)"
+      "barBuyPredict": "ทองคำแท่งพยากรณ์ (ซื้อ)"
     },
     "chartTypes": {
       "title": "รูปแบบกราฟ",
@@ -175,7 +175,7 @@
       "barSell": "ทองคำแท่ง (ขาย)",
       "ornamentBuy": "ทองรูปพรรณ (ซื้อ)",
       "ornamentSell": "ทองรูปพรรณ (ขาย)",
-      "barBuyPredict": "ทองคำแท่ง (พยากรณ์)",
+      "barBuyPredict": "ทองคำแท่งพยากรณ์ (ซื้อ)",
       "open": "เปิด",
       "high": "สูงสุด",
       "low": "ต่ำสุด",
