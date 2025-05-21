@@ -6,6 +6,11 @@ import { useTheme } from '@/components/theme-provider';
 import { formatDate } from '@/lib/utils.js';
 import { useTranslation } from 'react-i18next';
 
+// Helper function to safely check if a chart object can be manipulated
+const isChartObjectValid = (obj) => {
+  return obj && typeof obj === 'object' && !obj.isDisposed;
+};
+
 // Utility function to format time without hours/minutes/seconds
 const formatCrosshairTime = (time, t) => {
   if (!time) return '';
@@ -356,7 +361,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
     
     // Force immediate DOM update to ensure containers are properly mounted
     chartContainerRef.current.appendChild(styledLegendContainer);
-    chartContainerRef.current.appendChild(chartElement);    // Apply the chart options based on the current theme
+    chartContainerRef.current.appendChild(chartElement);    
+    
+    // Apply the chart options based on the current theme
     const chart = createChart(chartElement, {
       ...getChartOptions(theme, t),
       width: chartElement.clientWidth,
@@ -368,7 +375,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         pressedMouseMove: true,
       },
     });
-      // Apply crosshair options directly to ensure the formatter is used
+    
+    // Apply crosshair options directly to ensure the formatter is used
     chart.applyOptions({
       crosshair: {
         vertLine: {
@@ -389,7 +397,8 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
           style: LineStyle.Dashed,
           visible: true,
         },
-      },      // Add localization options to override time format
+      },      
+      // Add localization options to override time format
       localization: {
         timeFormatter: (time) => formatCrosshairTime(time, t),
         dateFormat: 'dd MMM \'yy',
@@ -399,27 +408,38 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         visible: false,
       }
     });
-      // Force proper scaling after data is loaded
-    setTimeout(() => {
+    
+    // ป้องกันการเรียกใช้ setTimeout หลาย ๆ ครั้ง
+    let timeoutId = null;
+    
+    // Flag to track if component is still mounted
+    let isMounted = true;
+    
+    // Force proper scaling after data is loaded
+    timeoutId = setTimeout(() => {
+      // Skip if component is no longer mounted
+      if (!isMounted) return;
+      
       try {
-        // ปรับแค่การซูมของแกน Y 
-        chart.priceScale('right').applyOptions({
-          autoScale: true,
-          scaleMargins: {
-            top: 0.02, 
-            bottom: 0.02,
-          },
-        });
-        
-        // ไม่เรียก fitContent เพื่อรักษาการซูมแกน Y เอาไว้
-        // ถ้าจำเป็นต้อง fit เฉพาะแกน X:
-        const visibleSeries = Object.values(seriesInstances).filter(s => s && s.applyOptions);
-        if (visibleSeries.length > 0 && !dateRange) {
-          // ปรับแกน X เฉพาะเมื่อไม่มี dateRange เท่านั้น
-          chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+        // Check if chart is still valid before attempting to use it
+        if (isChartObjectValid(chart)) {
+          // ปรับแค่การซูมของแกน Y 
+          chart.priceScale('right').applyOptions({
+            autoScale: true,
+            scaleMargins: {
+              top: 0.02, 
+              bottom: 0.02,
+            },
+          });
+          
+          // ไม่เรียก fitContent เพื่อรักษาการซูมแกน Y เอาไว้
+          // ถ้าจำเป็นต้อง fit เฉพาะแกน X:
+          const visibleSeries = Object.values(seriesInstances).filter(s => isChartObjectValid(s));
+          if (visibleSeries.length > 0 && !dateRange && isChartObjectValid(chart)) {
+            // ปรับแกน X เฉพาะเมื่อไม่มี dateRange เท่านั้น
+            chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+          }
         }
-        
-        // console.log('Applied Y-axis auto-scaling to chart (preserved zoom level)');
       } catch (err) {
         console.error('Error applying auto-scaling:', err);
       }
@@ -611,57 +631,249 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         effectiveToTimestamp = adjustedToTimestamp;
     } else {
         effectiveToTimestamp = null;
-    }
-      if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
+    }      if (dateRange && dateRange.from && isValid(dateRange.from) && effectiveToTimestamp) {
         const fromTimestamp = Math.floor(dateRange.from.getTime() / 1000);
         if (fromTimestamp <= effectiveToTimestamp) {
             try {
-                // ตั้งช่วงเวลาให้แสดงผลเฉพาะตามช่วงที่เลือก แต่ไม่รีเซ็ตการซูมแกน Y
-                chart.timeScale().setVisibleRange({ from: fromTimestamp, to: effectiveToTimestamp });
-                
-                // ทำให้แน่ใจว่าแกน Y ยังคงค่า scale margins ที่ต้องการ
-                chart.priceScale('right').applyOptions({
-                    autoScale: true,
-                    scaleMargins: {
-                        top: 0.02, 
-                        bottom: 0.02,
-                    },
-                });
+                // Check if chart is still valid before attempting to use it
+                if (isChartObjectValid(chart)) {
+                    // ตั้งช่วงเวลาให้แสดงผลเฉพาะตามช่วงที่เลือก แต่ไม่รีเซ็ตการซูมแกน Y
+                    chart.timeScale().setVisibleRange({ from: fromTimestamp, to: effectiveToTimestamp });
+                    
+                    // ทำให้แน่ใจว่าแกน Y ยังคงค่า scale margins ที่ต้องการ
+                    chart.priceScale('right').applyOptions({
+                        autoScale: true,
+                        scaleMargins: {
+                            top: 0.02, 
+                            bottom: 0.02,
+                        },
+                    });
+                }
             } catch (e) {
                 console.warn('Chart.jsx: setVisibleRange error, adjusting time scale only.', e);
-                chart.timeScale().setVisibleLogicalRange({ from: 0, to: chartData && Object.keys(chartData).length ? Object.keys(chartData).length : 30 });
-            }
-        } else {
+                if (isChartObjectValid(chart)) {
+                    chart.timeScale().setVisibleLogicalRange({ from: 0, to: chartData && Object.keys(chartData).length ? Object.keys(chartData).length : 30 });
+                }
+            }        } else {
             // แทนที่จะใช้ fitContent ซึ่งรีเซ็ตทั้งแกน X และ Y ให้ใช้การปรับแกน X อย่างเดียว
-            chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+            if (isChartObjectValid(chart)) {
+                chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+            }
         }
     } else {
         // ขอแค่ปรับแกน X แต่รักษาการซูมแกน Y ไว้
-        chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+        if (isChartObjectValid(chart)) {
+            chart.timeScale().setVisibleLogicalRange({ from: 0, to: 30 });
+        }
     }
-    
-    // Removed VertLine implementation
-
+      // Removed VertLine implementation
     const currentDateTimestamp = Math.floor(new Date(new Date().setHours(17, 0, 0, 0)).getTime() / 1000);
     
+    // สร้างตัวแปรเก็บข้อมูลสำหรับวันนี้
+    const today = new Date(); // วันที่ปัจจุบัน: May 21, 2025
+    today.setHours(0, 0, 0, 0);
+    const todayStart = Math.floor(today.getTime() / 1000);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStart = Math.floor(tomorrow.getTime() / 1000);
+    
+    // สร้าง flag เพื่อเช็คว่าเราได้สร้างข้อมูลใหม่แล้วหรือยัง
+    let markerTimestamp = currentDateTimestamp;
+      // 1. ตรวจสอบข้อมูล predict จำนวน 5 ชุดล่าสุด ว่ามีข้อมูลของวันนี้ไหม
     if (seriesInstances.barBuyPredictData) {
-        seriesInstances.barBuyPredictData.setMarkers([
-            {
-                time: currentDateTimestamp,
-                position: 'aboveBar',
-                color: '#23b8a6',
-                shape: 'arrowDown',
-                text: t('goldChart.currentDay'),
-                size: 1.3,
-            },
-            {
-                time: currentDateTimestamp,
-                position: 'inBar',
-                color: '#23b8a6',
-                shape: 'circle',
-                size: 0.2,
-            },
-        ]);
+        // console.log('เริ่มตรวจสอบข้อมูลวันปัจจุบัน');
+                
+        // ตรวจสอบว่ามีข้อมูลทั้งหมดไหม
+        if (chartDataToUse.barBuyPredictData && Array.isArray(chartDataToUse.barBuyPredictData) && chartDataToUse.barBuyPredictData.length > 0) {
+            // คัดกรองเฉพาะข้อมูลที่มี timestamp
+            let validData = chartDataToUse.barBuyPredictData.filter(item => item && typeof item.time === 'number');
+            
+            // เรียงลำดับข้อมูลตาม timestamp (เวลามากไปน้อย)
+            validData.sort((a, b) => b.time - a.time);
+            
+            // ดึง 5 ข้อมูลล่าสุด (ถ้ามี)
+            const recentData = validData.slice(0, 5);
+            
+            // console.log('5 most recent predictions:', recentData.map(p => 
+            //     `${new Date(p.time * 1000).toLocaleDateString()} - ${p.value}`));
+            
+            // 1.1 ตรวจสอบว่ามีข้อมูลของวันนี้หรือไม่
+            const todayData = recentData.find(data => 
+                data.time >= todayStart && data.time < tomorrowStart
+            );
+              if (todayData) {
+                // 1.1 ถ้ามีข้อมูลของวันนี้แล้ว ใช้ timestamp ของข้อมูลนั้น
+                // console.log('พบข้อมูลของวันนี้อยู่แล้ว:', {
+                //     date: new Date(todayData.time * 1000).toLocaleString(),
+                //     value: todayData.value
+                // });
+                markerTimestamp = todayData.time;
+            } else {                // 1.2 ถ้าไม่มีข้อมูลของวันนี้ ต้องสร้างและแทรกเข้าไป
+                // console.log('ไม่พบข้อมูลของวันนี้ จะสร้างข้อมูลใหม่');
+                
+                // ต้องมีข้อมูลอย่างน้อย 2 ชุดเพื่อทำการแทรก
+                if (validData.length >= 2) {
+                    // คำนวณ timestamp สำหรับเมื่อวาน (วันที่ 20 พฤษภาคม 2025)
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    yesterday.setHours(0, 0, 0, 0);
+                    const yesterdayStart = Math.floor(yesterday.getTime() / 1000);
+                    const yesterdayEnd = Math.floor(yesterday.getTime() / 1000) + (24 * 60 * 60);
+                    
+                    // เรียงข้อมูลตาม timestamp (จากเก่าไปใหม่) สำหรับการค้นหาข้อมูลที่ถูกต้อง
+                    validData.sort((a, b) => a.time - b.time);
+                    
+                    // ค้นหาข้อมูลของเมื่อวาน
+                    const yesterdayData = validData.find(data => 
+                        data.time >= yesterdayStart && data.time < yesterdayEnd
+                    );
+                    
+                    // ค้นหาข้อมูลย้อนหลัง 2 วัน (กรณีไม่มีข้อมูลเมื่อวาน)
+                    const twoDaysAgo = new Date(today);
+                    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+                    twoDaysAgo.setHours(0, 0, 0, 0);
+                    const twoDaysAgoStart = Math.floor(twoDaysAgo.getTime() / 1000);
+                    const twoDaysAgoEnd = Math.floor(twoDaysAgo.getTime() / 1000) + (24 * 60 * 60);
+                    
+                    const twoDaysAgoData = validData.find(data => 
+                        data.time >= twoDaysAgoStart && data.time < twoDaysAgoEnd
+                    );
+                    
+                    // เลือกใช้ข้อมูลเมื่อวาน หรือถ้าไม่มีให้ใช้ข้อมูล 2 วันก่อน หรือถ้าไม่มีทั้งคู่ใช้ข้อมูลล่าสุด
+                    const sourceData = yesterdayData || twoDaysAgoData || validData[validData.length - 1];
+                    
+                    // console.log('ข้อมูลที่จะใช้สร้างข้อมูลวันนี้:', 
+                    //     yesterdayData ? 'ข้อมูลเมื่อวาน' : 
+                    //     twoDaysAgoData ? 'ข้อมูล 2 วันที่แล้ว' : 
+                    //     'ข้อมูลล่าสุดที่มี', 
+                    //     new Date(sourceData.time * 1000).toLocaleDateString(), 
+                    //     sourceData.value
+                    // );
+                      const originalData = [...validData]; // สำรองข้อมูลดั้งเดิม
+                    
+                    // 1.2.1 สร้างข้อมูลใหม่สำหรับวันนี้ใช้ค่าของข้อมูลจากเมื่อวานหรือที่เก่าที่สุดที่มี
+                    const newTodayData = {
+                        time: currentDateTimestamp,
+                        value: sourceData.value // ใช้ค่าจากข้อมูลเมื่อวานหรือที่เลือกไว้
+                    };
+                      // ตำแหน่งที่จะแทรก คือ length-2 (ก่อนตัวสุดท้าย 1 ตำแหน่ง)
+                    // หรือต่อท้ายถ้ามีข้อมูลไม่พอ
+                    const insertPosition = originalData.length > 1 ? originalData.length - 1 : originalData.length;
+                    
+                    // console.log('สร้างข้อมูลสำหรับวันนี้:', {
+                    //     date: new Date(newTodayData.time * 1000).toLocaleString(),
+                    //     value: newTodayData.value,
+                    //     insertAt: `${insertPosition} (length-${originalData.length - insertPosition})`
+                    // });
+                    
+                    // เพิ่มข้อมูลใหม่เข้าไปที่ตำแหน่งที่ต้องการ
+                    originalData.splice(insertPosition, 0, newTodayData);
+                    
+                    // เรียงข้อมูลใหม่ตาม timestamp จากน้อยไปมาก (สำหรับการแสดงผลบนกราฟ)
+                    originalData.sort((a, b) => a.time - b.time);
+                    
+                    try {
+                        // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
+                        if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
+                            // อัพเดทข้อมูลในกราฟ
+                            seriesInstances.barBuyPredictData.setData(originalData);
+                            // console.log('อัพเดทข้อมูลกราฟเรียบร้อยแล้ว');
+                            
+                            // อัพเดทข้อมูลต้นฉบับด้วย
+                            chartDataToUse.barBuyPredictData = originalData;
+                            
+                            // ใช้ timestamp ของข้อมูลที่สร้างใหม่
+                            markerTimestamp = newTodayData.time;
+                        }
+                    } catch (err) {
+                        console.error('เกิดข้อผิดพลาดในการอัพเดทข้อมูล:', err);
+                    }
+                } else {
+                    // ถ้ามีข้อมูลไม่พอสำหรับการแทรก ใช้ timestamp ปัจจุบัน
+                    // console.log('มีข้อมูลไม่เพียงพอสำหรับการแทรก จะใช้เวลาปัจจุบันสำหรับ marker');
+                }
+            }
+              // 2. ทำการใช้ marker ชี้ไปที่ข้อมูลของวันนี้เสมอ
+            try {
+                // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
+                if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
+                    seriesInstances.barBuyPredictData.setMarkers([
+                        {
+                            time: markerTimestamp,
+                            position: 'aboveBar',
+                            color: '#23b8a6',
+                            shape: 'arrowDown',
+                            text: t('goldChart.currentDay'),
+                            size: 1.3
+                        },
+                        {
+                            time: markerTimestamp,
+                            position: 'inBar',
+                            color: '#23b8a6',
+                            shape: 'circle',
+                            size: 0.2
+                        }
+                    ]);
+                    // console.log('ตั้งค่า marker สำเร็จที่ timestamp:', markerTimestamp, new Date(markerTimestamp * 1000).toLocaleString());
+                }
+            } catch (err) {
+                console.error('เกิดข้อผิดพลาดในการตั้งค่า marker:', err);
+            }
+        } else {
+            // ถ้าไม่มีข้อมูลใดๆ เลย
+            // console.log('ไม่พบข้อมูล prediction ใดๆ');
+            try {
+                // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
+                if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
+                    seriesInstances.barBuyPredictData.setMarkers([
+                        {
+                            time: currentDateTimestamp,
+                            position: 'aboveBar',
+                            color: '#23b8a6',
+                            shape: 'arrowDown',
+                            text: t('goldChart.currentDay'),
+                            size: 1.3
+                        },
+                        {
+                            time: currentDateTimestamp,
+                            position: 'inBar',
+                            color: '#23b8a6',
+                            shape: 'circle',
+                            size: 0.2
+                        }
+                    ]);
+                }
+            } catch (err) {
+                console.error('เกิดข้อผิดพลาดในการตั้งค่า marker (ไม่มีข้อมูล):', err);
+            }
+        }
+    } else if (seriesInstances.barBuyData) {
+        // กรณีไม่มี barBuyPredictData แต่มี barBuyData
+        // console.log('ไม่พบ barBuyPredictData แต่พบ barBuyData');
+        try {
+            // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
+            if (isChartObjectValid(seriesInstances.barBuyData)) {
+                seriesInstances.barBuyData.setMarkers([
+                    {
+                        time: currentDateTimestamp,
+                        position: 'aboveBar',
+                        color: '#23b8a6',
+                        shape: 'arrowDown',
+                        text: t('goldChart.currentDay'),
+                        size: 1.3
+                    },
+                    {
+                        time: currentDateTimestamp,
+                        position: 'inBar',
+                        color: '#23b8a6',
+                        shape: 'circle',
+                        size: 0.2
+                    }
+                ]);
+            }
+        } catch (err) {
+            console.error('เกิดข้อผิดพลาดในการตั้งค่า marker (barBuyData):', err);
+        }
     }
 
     // Create legends with improved styling
@@ -718,8 +930,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             valueBox.style.textDecoration = isVisibleConfig ? 'none' : 'line-through';
             valueBox.style.background = isVisibleConfig ? displayColor : 'grey';
             valueBox.style.color = 'white';
-        }
-    };    // Create OHLC legends for candlestick mode
+        }    };
+    
+    // Create OHLC legends for candlestick mode
     if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'candlestick' && chartDataToUse.ohlc && chartDataToUse.ohlc.length > 0) {
         const ohlcComponents = [
             { key: 'open', color: '#0269e5', nameKey: 'open', name: 'Open' },
@@ -772,8 +985,7 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 clickHandler: null
             });
         });
-    }
-    
+    }    
     currentSeriesConfigs.forEach(config => {
         let legendDataExists = false;
         if (category === 'GOLD_TH' && chartDataToUse[config.key]) {
@@ -1029,41 +1241,43 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
             filterToTimestamp = Infinity;
         }
         return data.time >= fromTimestamp && data.time <= filterToTimestamp;
-    }).slice(0, 10) || [];    chart.subscribeCrosshairMove(param => {
-        const currentTimeAtCrosshair = param.time;
+    }).slice(0, 10) || [];    // Add crosshair move subscription with safety check
+    if (isChartObjectValid(chart)) {
+        chart.subscribeCrosshairMove(param => {
+            const currentTimeAtCrosshair = param.time;
 
-        if (dateRightBox && dateRightBox.isConnected) {
-            if (currentTimeAtCrosshair !== undefined) {
-                dateRightBox.textContent = formatDate(currentTimeAtCrosshair);
-            } else {
-                // When not hovering, show the selected end date
-                if (dateRange?.to) {
-                    dateRightBox.textContent = formatDate(Math.floor(dateRange.to.getTime() / 1000));
+            if (dateRightBox && dateRightBox.isConnected) {
+                if (currentTimeAtCrosshair !== undefined) {
+                    dateRightBox.textContent = formatDate(currentTimeAtCrosshair);
                 } else {
-                    // Only fall back to the last point if no date range selected
-                    const lastDataPointForDate = processedDataForDefaultDate.length > 0 ? 
-                        processedDataForDefaultDate[processedDataForDefaultDate.length - 1] : null;
-                    dateRightBox.textContent = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
+                    // When not hovering, show the selected end date
+                    if (dateRange?.to) {
+                        dateRightBox.textContent = formatDate(Math.floor(dateRange.to.getTime() / 1000));
+                    } else {
+                        // Only fall back to the last point if no date range selected
+                        const lastDataPointForDate = processedDataForDefaultDate.length > 0 ? 
+                            processedDataForDefaultDate[processedDataForDefaultDate.length - 1] : null;
+                        dateRightBox.textContent = lastDataPointForDate ? formatDate(lastDataPointForDate.time) : 'N/A';
+                    }
                 }
             }
-        }
         
-        // For candlestick mode, get the OHLC data at current position
-        let ohlcData = null;
-        if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'candlestick') {
-            // Find the candlestick series
-            const candleSeries = seriesInstances['ohlc'];
-            if (candleSeries && param.seriesData) {
-                ohlcData = param.seriesData.get(candleSeries);
+            // For candlestick mode, get the OHLC data at current position
+            let ohlcData = null;
+            if ((category === 'GOLD_US' || category === 'USD_THB') && effectiveChartStyle === 'candlestick') {
+                // Find the candlestick series
+                const candleSeries = seriesInstances['ohlc'];
+                if (candleSeries && param.seriesData) {
+                    ohlcData = param.seriesData.get(candleSeries);
+                }
             }
-        }
-        
-        seriesLegendElements.forEach(item => {
-            if (!item.valueBox || !item.valueBox.isConnected) return;
             
-            const config = item.config;
-            const seriesInstance = seriesInstances[config.key];
-            let displayValue = '-';
+            seriesLegendElements.forEach(item => {
+                if (!item.valueBox || !item.valueBox.isConnected) return;
+                
+                const config = item.config;
+                const seriesInstance = seriesInstances[config.key];
+                let displayValue = '-';
             
             // Handle OHLC component values specifically
             if (config.key.startsWith('ohlc_') && effectiveChartStyle === 'candlestick') {
@@ -1106,33 +1320,55 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                         }
                     } 
                 }
-            }
-
-            if (item.valueBox) {
-                item.valueBox.textContent = displayValue;
-            }
+            }                if (item.valueBox) {
+                    item.valueBox.textContent = displayValue;
+                }
+            });
         });
-    });
+    }
 
     // Save references for cleanup
     const currentChart = chart;
     const currentContainer = styledLegendContainer;
     const currentLegends = [...seriesLegendElements];
-
-    // Clean up function
-    return () => {
+    
+    // Make sure to clear any timeout when unmounting
+    const handleCleanup = () => {
+        // Clear any pending timeouts
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        
+        // Flag that component is unmounted
+        isMounted = false;
+        
         // Remove event listeners
-        currentLegends.forEach(legendItem => {
-            if (legendItem.clickHandler && legendItem.element) {
-                legendItem.element.removeEventListener('click', legendItem.clickHandler);
-            }
-        });
+        if (currentLegends && currentLegends.length) {
+            currentLegends.forEach(legendItem => {
+                if (legendItem && legendItem.clickHandler && legendItem.element) {
+                    try {
+                        legendItem.element.removeEventListener('click', legendItem.clickHandler);
+                    } catch (err) {
+                        // Ignore errors during cleanup
+                    }
+                }
+            });
+        }
         
         // Remove chart instance
         if (currentChart) {
-            currentChart.remove();
+            try {
+                if (isChartObjectValid(currentChart)) {
+                    currentChart.remove();
+                }
+            } catch (err) {
+                console.error('Error removing chart:', err);
+            }
         }
     };
+
+    // Clean up function
+    return handleCleanup;
   }, [chartData, category, chartStyle, effectiveChartStyle, dateRange, seriesVisibility, theme]);
   
   return <div ref={chartContainerRef} style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }} />;
