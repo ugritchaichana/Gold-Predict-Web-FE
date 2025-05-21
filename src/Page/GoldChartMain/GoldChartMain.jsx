@@ -22,6 +22,21 @@ import { usePredictionErrorStats } from '../../store/PredictionErrorStatsStore';
 import { fetchPredictionsMonth } from '@/services/apiService';
 import { formatCurrency } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+// Import localStorage utility functions
+import {
+  saveChartTypePreference,
+  getChartTypePreference,
+  saveDateRangePreference,
+  getDateRangePreference,
+  saveDateOptionPreference,
+  getDateOptionPreference,
+  saveSelectedModelPreference,
+  getSelectedModelPreference,
+  saveLegendVisibilityPreference,
+  getLegendVisibilityPreference,
+  saveSelectedCategoryPreference,
+  getSelectedCategoryPreference
+} from './utils/chartPreferences';
 
 const DataCategories = {
   GOLD_TH: 'GOLD_TH',
@@ -59,29 +74,47 @@ const getEarliestAvailableDate = (allChartData) => {
 
 const GoldChartMain = () => {  
   const queryClient = useQueryClient();
-  const [selectedCategory, setSelectedCategory] = useState('GOLD_TH');
-  const [selectedModel, setSelectedModel] = useState('7');
-  // console.log('GoldChartMain: selectedModel:', selectedModel);
+  // Use localStorage for initial state values
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    return getSelectedCategoryPreference('GOLD_TH');
+  });
   
-  // Handle model changes and invalidate cache
+  const [selectedModel, setSelectedModel] = useState(() => {
+    return getSelectedModelPreference('7');
+  });
+  
+  // Handle model changes, save to localStorage, and invalidate cache
   const handleModelChange = (newModel) => {
-    // console.log(`Changing model from ${selectedModel} to ${newModel}`);
-    
     // Invalidate the predict query for the current model before changing
     queryClient.invalidateQueries({ 
       queryKey: ['predictData', 'GOLD_TH', selectedModel] 
     });
     
-    // Set the new model
+    // Set the new model and save to localStorage
     setSelectedModel(newModel);
+    saveSelectedModelPreference(newModel);
   };
   
-  const [selectedChartStyle, setSelectedChartStyle] = useState('line');
+  // Initialize chart style from localStorage based on category
+  const [selectedChartStyle, setSelectedChartStyle] = useState(() => {
+    return getChartTypePreference(selectedCategory, 'line');
+  });
+  
+  // Handle chart style changes and save to localStorage
+  const handleChartStyleChange = (newStyle) => {
+    setSelectedChartStyle(newStyle);
+    saveChartTypePreference(selectedCategory, newStyle);
+  };
+  
   const [monthlyChartTab, setMonthlyChartTab] = useState('table');
   const { t, i18n } = useTranslation();
   
+  // Initialize date option from localStorage
   const initialDefaultRangePreset = PRESETS.find(p => p.label === "MAX") || PRESETS[0];
-  const [activeDateOption, setActiveDateOption] = useState(initialDefaultRangePreset.range);
+  const [activeDateOption, setActiveDateOption] = useState(() => {
+    return getDateOptionPreference(selectedCategory, initialDefaultRangePreset.range);
+  });
+  
   const [earliestDataDate, setEarliestDataDate] = useState(null);
   const latestDataDateFromApi = new Date(); // Placeholder, should be dynamic
 
@@ -100,7 +133,9 @@ const GoldChartMain = () => {
 
     switch (preset.range) {
       case '7D': start = startOfDay(subDays(end, 6)); break;
-      case '1M': start = startOfDay(subMonths(end, 1)); break;      case '3M': start = startOfDay(subMonths(end, 3)); break;      case '6M': start = startOfDay(subMonths(end, 6)); break;
+      case '1M': start = startOfDay(subMonths(end, 1)); break;      
+      case '3M': start = startOfDay(subMonths(end, 3)); break;      
+      case '6M': start = startOfDay(subMonths(end, 6)); break;
       case 'YTD': start = startOfYear(end); break;
       case '1Y': start = startOfDay(subYears(end, 1)); break;
       case '3Y': start = startOfDay(subYears(end, 3)); break;
@@ -127,9 +162,18 @@ const GoldChartMain = () => {
            // For now, assuming PRESETS is constant. The values it operates on (earliestAllowed, latestAllowed)
            // are passed as arguments, and the calling useEffect handles their changes.
 
-  const [currentDateRange, setCurrentDateRange] = useState(() => 
-    calculateInitialRange(activeDateOption, earliestDataDate, latestDataDateFromApi)
-  );
+  // Get saved date range or calculate default
+  const [currentDateRange, setCurrentDateRange] = useState(() => {
+    // Try to get saved date range from localStorage first
+    const savedRange = getDateRangePreference(selectedCategory);
+    
+    if (savedRange && savedRange.from && savedRange.to) {
+      return savedRange;
+    }
+    
+    // Otherwise calculate based on selected preset
+    return calculateInitialRange(activeDateOption, earliestDataDate, latestDataDateFromApi);
+  });
 
   // Effect to update earliestDataDate when allChartData is available
   const { data: allChartData } = useChartData(); // Assuming useChartData provides all data sets
@@ -143,6 +187,7 @@ const GoldChartMain = () => {
   }, [allChartData, earliestDataDate]);
 
 
+  // Effect to handle date option changes and update range
   useEffect(() => {
     // If activeDateOption is 'CUSTOM', the currentDateRange is authoritative and
     // should have been set by handleDateRangeChange. This effect should not
@@ -166,8 +211,10 @@ const GoldChartMain = () => {
 
     if (fromChanged || toChanged) {
       setCurrentDateRange(newCalculatedRange);
+      // Save to localStorage when date range changes
+      saveDateRangePreference(selectedCategory, newCalculatedRange);
     }
-  }, [activeDateOption, earliestDataDate, latestDataDateFromApi, calculateInitialRange, currentDateRange]);
+  }, [activeDateOption, earliestDataDate, latestDataDateFromApi, calculateInitialRange, currentDateRange, selectedCategory]);
 
   const handleDateRangeChange = (newRange, newActiveOption) => {
     console.log('Received range:', {
@@ -196,15 +243,50 @@ const GoldChartMain = () => {
       });
       
       setCurrentDateRange(cleanRange);
+      
+      // Save date range preference to localStorage
+      saveDateRangePreference(selectedCategory, cleanRange);
     } else {
       // Fallback to a calculated range based on the newActiveOption
       // Ensure earliestDataDate and latestDataDateFromApi are valid before passing
       const validEarliest = earliestDataDate instanceof Date && isValid(earliestDataDate) ? earliestDataDate : null;
       const validLatest = latestDataDateFromApi instanceof Date && isValid(latestDataDateFromApi) ? latestDataDateFromApi : new Date();
-      setCurrentDateRange(calculateInitialRange(newActiveOption, validEarliest, validLatest));
+      const calculatedRange = calculateInitialRange(newActiveOption, validEarliest, validLatest);
+      
+      setCurrentDateRange(calculatedRange);
+      
+      // Save date range preference to localStorage
+      saveDateRangePreference(selectedCategory, calculatedRange);
     }
+    
+    // Save date option preference
     setActiveDateOption(newActiveOption);
-  };// Reset chart style to 'line' and set loading state when selecting a different data category
+    saveDateOptionPreference(selectedCategory, newActiveOption);
+  };
+  
+  // Handle category change with preference saving
+  const handleCategoryChange = (newCategory) => {
+    setSelectedCategory(newCategory);
+    saveSelectedCategoryPreference(newCategory);
+    
+    // Load saved preferences for the new category
+    const savedChartType = getChartTypePreference(newCategory, 'line');
+    setSelectedChartStyle(savedChartType);
+    
+    const savedDateOption = getDateOptionPreference(newCategory, initialDefaultRangePreset.range);
+    setActiveDateOption(savedDateOption);
+    
+    // Either load saved date range or calculate based on preset
+    const savedRange = getDateRangePreference(newCategory);
+    if (savedRange && savedRange.from && savedRange.to) {
+      setCurrentDateRange(savedRange);
+    } else {
+      const newRange = calculateInitialRange(savedDateOption, earliestDataDate, latestDataDateFromApi);
+      setCurrentDateRange(newRange);
+    }
+  };
+  
+  // Reset chart style to 'line' and set loading state when selecting a different data category
   useEffect(() => {
     // Reset to loading state when category changes and clear any previous price data
     setIsLastPriceLoading(true);
@@ -213,13 +295,15 @@ const GoldChartMain = () => {
     setLastTime(null);
     setPricePercentChange(null);
     
-    if (selectedCategory === 'GOLD_TH') {
-      setSelectedChartStyle('line');
-    }
+    // Load appropriate chart style from localStorage based on category
+    // No need to save here, as this is triggered by category change, which is handled above
   }, [selectedCategory]);
   
   // Log when chart style changes to help debug
   useEffect(() => {
+    // When chart style changes, save to localStorage
+    saveChartTypePreference(selectedCategory, selectedChartStyle);
+    
     // console.log('GoldChartMain: Chart style changed:', {
     //   selectedChartStyle,
     //   category: selectedCategory,
@@ -408,7 +492,7 @@ const GoldChartMain = () => {
         </div>        <div className="w-full md:w-[65%] h-full">
           <DataCategory
             selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
+            setSelectedCategory={handleCategoryChange} // Use our new handler that saves to localStorage
             dataCategories={DataCategories}
             hasPredictionData={selectedCategory === 'GOLD_TH' || selectedCategory === 'SELECT_PREDICTION' || selectedCategory === 'MONTHLY_PREDICTION'}
           />
@@ -440,18 +524,16 @@ const GoldChartMain = () => {
                   onRangeChange={handleDateRangeChange}
                   earliestDate={earliestDataDate}
                   latestDate={latestDataDateFromApi}
-                />
-                <SelectStyleChart
+                />                <SelectStyleChart
                   selectedCategory={selectedCategory}
                   selectedStyle={selectedChartStyle}
-                  setSelectedStyle={setSelectedChartStyle}
+                  setSelectedStyle={handleChartStyleChange}
                 />
               </div>
             </div>
-          </CardHeader>          <CardContent className="p-0 flex-grow overflow-hidden">
-            <GoldChart
+          </CardHeader>          <CardContent className="p-0 flex-grow overflow-hidden">        <GoldChart
               category={selectedCategory}
-              selectedModel={selectedModel} // Fixed! Changed from 'model' to 'selectedModel'
+              selectedModel={selectedModel}
               chartStyle={selectedChartStyle}
               dateRange={currentDateRange}
               onLastPriceUpdate={handleLastPriceUpdate}

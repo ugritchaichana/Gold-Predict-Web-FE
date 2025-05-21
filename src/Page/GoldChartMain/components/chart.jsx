@@ -5,6 +5,9 @@ import { debugChartData } from './chart.debug.js';
 import { useTheme } from '@/components/theme-provider';
 import { formatDate } from '@/lib/utils.js';
 import { useTranslation } from 'react-i18next';
+// Import localStorage utilities
+import { getLegendVisibilityPreference, saveLegendVisibilityPreference } from '../utils/chartPreferences';
+import { useLegendVisibility } from './chart-with-localStorage';
 
 // Helper function to safely check if a chart object can be manipulated
 const isChartObjectValid = (obj) => {
@@ -288,40 +291,27 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
       }
     }
   }, [category, effectiveChartStyle, chartData]);
-  
   const seriesVisibilityRef = useRef({});
   
-  const seriesVisibility = useMemo(() => {
-    // console.log('Initializing series visibility state');
-    const initial = {};
-    currentSeriesConfigs.forEach(config => {
-      if (effectiveChartStyle === 'candlestick') {
-        if (config.type === 'candlestick') {
-          initial[config.key] = true;
-        } else if (config.key.startsWith('ohlc_')) {
-          initial[config.key] = true;
-        } else {
-          initial[config.key] = false;
-        }
-      } else {
-        initial[config.key] = config.defaultVisible;
-      }
-    });
-    
-    seriesVisibilityRef.current = initial;
-    return initial;
-  }, [currentSeriesConfigs, effectiveChartStyle]);
+  // Use our custom hook for localStorage persistence
+  const { initializeVisibilityState, toggleSeriesVisibility: toggleAndSaveSeriesVisibility } = useLegendVisibility(
+    category, 
+    currentSeriesConfigs,
+    effectiveChartStyle
+  );
   
-  const toggleSeriesVisibility = useCallback((configKey) => {
-    const newVisibility = !seriesVisibilityRef.current[configKey];
-    
-    seriesVisibilityRef.current = {
-      ...seriesVisibilityRef.current,
-      [configKey]: newVisibility
-    };
-    
-    return seriesVisibilityRef.current;
-  }, []);
+  const seriesVisibility = useMemo(() => {
+    // Initialize visibility state from localStorage
+    const initialState = initializeVisibilityState();
+    seriesVisibilityRef.current = initialState;
+    return initialState;
+  }, [currentSeriesConfigs, effectiveChartStyle, initializeVisibilityState]);
+    const toggleSeriesVisibility = useCallback((configKey) => {
+    // Use the localStorage-aware toggle function
+    const newVisibilityState = toggleAndSaveSeriesVisibility(configKey, seriesVisibilityRef.current);
+    seriesVisibilityRef.current = newVisibilityState;
+    return newVisibilityState;
+  }, [toggleAndSaveSeriesVisibility]);
   
   useEffect(() => {
     // ตรวจสอบว่ามี DOM element สำหรับกราฟหรือไม่
