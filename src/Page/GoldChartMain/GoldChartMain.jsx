@@ -531,7 +531,9 @@ const GoldChartMain = () => {
                 />
               </div>
             </div>
-          </CardHeader>          <CardContent className="p-0 flex-grow overflow-hidden">        <GoldChart
+          </CardHeader>
+          <CardContent className="p-0 flex-grow overflow-hidden">
+            <GoldChart
               category={selectedCategory}
               selectedModel={selectedModel}
               chartStyle={selectedChartStyle}
