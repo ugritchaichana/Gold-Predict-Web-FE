@@ -13,6 +13,7 @@ import DateRangePicker, { PRESETS } from './components/dateRangePicker';
 import GoldChart from './components/GoldChart';
 import PredictionBadge from './components/predictionBadge';
 import CurrentTime from './components/currentTime';
+import CacheStatus from './components/CacheStatus';
 import { useChartData } from './hook/fetchData';
 import { useTranslation } from 'react-i18next';
 import SelectPrediction from '@/components/SelectPrediction';
@@ -545,13 +546,15 @@ const GoldChartMain = () => {
             />
           </CardContent>
           <div className="flex justify-between items-center px-6 py-2 flex-shrink-0">
-            <div>
-              {selectedCategory === 'GOLD_TH' && <PredictionBadge date={new Date()} />}
+            <div>              {selectedCategory === 'GOLD_TH' && <PredictionBadge date={new Date()} />}
             </div>
             <CurrentTime />
           </div>
         </Card>
       )}
+      
+      {/* Cache Status Component for debugging */}
+      <CacheStatus />
     </div>
   );
 };

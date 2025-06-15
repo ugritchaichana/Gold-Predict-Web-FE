@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { getBaseUrl } from '@/config/apiConfig';
+import { useChartDataCache } from './useChartDataCache';
+import { validateChartData, processTimeSeriesDataSafe } from '../utils/chartDataValidation';
+import { logger } from '../../../utils/logger';
 
 // URLs for different categories
 const API_URLS = {
@@ -88,15 +91,17 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
     const adjustTimeToFivePM = (dataArray) => {
         if (!Array.isArray(dataArray)) return dataArray;
         
-        return dataArray.map(item => {
-            if (item && typeof item.time === 'number' && isFinite(item.time)) {
+        const adjustedData = dataArray
+            .filter(item => item && typeof item.time === 'number' && isFinite(item.time))
+            .map(item => {
                 const date = new Date(item.time * 1000);
                 date.setHours(17, 0, 0, 0); // Set to 5:00:00 PM
                 return { ...item, time: Math.floor(date.getTime() / 1000) };
-            }
-            return item;
-        });
-    };    // Structure the data based on category
+            });
+        
+        // Use the shared validation utility for deduplication and sorting
+        return validateChartData(adjustedData, 'adjustTimeToFivePM');
+    };// Structure the data based on category
     let structuredData = {};
     if (historicalData) {
         if (category === 'GOLD_TH') {
@@ -156,34 +161,24 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
                     }
                 }
                 ohlcDataToProcess = tempOhlc;
-            }
-
-            // Sort by time and filter out duplicates, keeping the first occurrence
-            const timeSet = new Set();
-            const uniqueSortedOhlc = ohlcDataToProcess
-                .filter(item => item && typeof item.time === 'number') // Ensure item and time are valid
-                .sort((a, b) => a.time - b.time) // Sort by time
-                .filter(item => {
-                    const isDuplicate = timeSet.has(item.time);
-                    if (!isDuplicate) {
-                        timeSet.add(item.time);
-                    }
-                    return !isDuplicate; // Keep only unique timestamps
-                })
-                .map(item => ({ // Ensure correct data types
-                    time: item.time,
-                    open: Number(item.open || 0),
-                    high: Number(item.high || 0),
-                    low: Number(item.low || 0),
-                    close: Number(item.close || 0)
-                }));
+            }            // Sort by time and filter out duplicates with improved validation
+            const ohlcData = ohlcDataToProcess.map(item => ({
+                time: item.time,
+                open: Number(item.open),
+                high: Number(item.high),
+                low: Number(item.low),
+                close: Number(item.close)
+            }));
+            
+            // Use the shared validation utility for OHLC data
+            const uniqueSortedOhlc = validateChartData(ohlcData, `${category}_OHLC`);
 
             structuredData = {
                 ...historicalData, // Spread other potential properties
                 ohlc: uniqueSortedOhlc
             };
             
-            // Add logging to debug data structure
+            console.log(`Processed ${category} OHLC data: ${ohlcDataToProcess.length} -> ${uniqueSortedOhlc.length} unique points`);
             console.log(`fetchData: Processed data for ${category}:`, {
                 hasOhlc: !!structuredData.ohlc,
                 ohlcLength: structuredData.ohlc ? structuredData.ohlc.length : 0,

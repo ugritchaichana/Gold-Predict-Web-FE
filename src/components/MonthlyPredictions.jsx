@@ -108,12 +108,10 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                 </div>
               )}
             </div>
-          </TabsContent>
-          <TabsContent value="table" className="mt-0">
+          </TabsContent>          <TabsContent value="table" className="mt-0">
             {monthlyPredictions.length > 0 ? (
               <>                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
+                  <table className="w-full border-collapse"><thead>
                       <tr className="bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-950/30 dark:to-amber-900/10">
                         <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
                           {t('goldChart.monthlyPredict.month', 'Month')}
@@ -134,15 +132,15 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                           {t('goldChart.monthlyPredict.predictLow', 'Predict Low')}
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider border-b border-amber-200/30 dark:border-amber-800/20">
-                          {t('goldChart.monthlyPredict.actualLow', 'Actual Low')}
-                        </th>
+                          {t('goldChart.monthlyPredict.actualLow', 'Actual Low')}                        </th>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
-                      {paginatedData.map((prediction, index) => (                        <tr 
+                    </thead><tbody className="divide-y divide-amber-100/50 dark:divide-amber-900/30">
+                      {paginatedData.map((prediction, index) => (
+                        <tr 
                           key={index} 
                           className="transition-colors hover:bg-amber-100/70 dark:hover:bg-amber-800/40"
-                        >                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-100 text-center">
                             {(() => {
                               try {
                                 if (prediction.month_predict) {
@@ -158,38 +156,30 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                                     return month + '-' + year;
                                   }
                                 }
-                                return prediction.month_predict;
-                              } catch (error) {
+                                return prediction.month_predict;                              } catch (error) {
                                 return prediction.month_predict;
                               }
                             })()}
-                          </td>                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                             <span className="font-mono">{prediction.open ? formatCurrency(prediction.open, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
                           </td>
-
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                            <span className="font-mono">{prediction.actual_open !== null ? formatCurrency(prediction.actual_open, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
-                          </td>
+                            <span className="font-mono">{prediction.actual_open !== null ? formatCurrency(prediction.actual_open, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
                             <span className="font-mono">{prediction.high ? formatCurrency(prediction.high, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
                           </td>
-
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-emerald-600 dark:text-emerald-400 font-medium">
                             <span className="font-mono">{prediction.actual_high !== null ? formatCurrency(prediction.actual_high, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
                           </td>
-
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 dark:text-red-400 font-medium">
                             <span className="font-mono">{prediction.low ? formatCurrency(prediction.low, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
                           </td>
-
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 dark:text-red-400 font-medium">
                             <span className="font-mono">{prediction.actual_low !== null ? formatCurrency(prediction.actual_low, 'THB', i18n.language === 'th' ? 'th-TH' : 'en-US') : '-'}</span>
                           </td>
-
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        </tr>                      ))}
+                    </tbody></table>
                 </div>
                 
                 {totalPages > 1 && (

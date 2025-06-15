@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 // Import localStorage utilities
 import { getLegendVisibilityPreference, saveLegendVisibilityPreference } from '../utils/chartPreferences';
 import { useLegendVisibility } from './chart-with-localStorage';
+import { validateChartData, processTimeSeriesDataSafe } from '../utils/chartDataValidation';
 
 // Helper function to safely check if a chart object can be manipulated
 const isChartObjectValid = (obj) => {
@@ -141,8 +142,7 @@ const baseSeriesConfigs = {
         ],
         candlestick: [
             { key: 'ohlc', nameKey: 'ohlc', name: 'Close', addToChart: true, defaultVisible: true, type: 'candlestick' },
-        ]
-    },
+        ]    },
 };
 
 const processTimeSeriesData = (data, isCandlestick = false) => {
@@ -151,7 +151,7 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
     }
     
     const result = data
-      .filter(item => item && typeof item.time === 'number')
+      .filter(item => item && typeof item.time === 'number' && isFinite(item.time))
       .map(item => {
         if (isCandlestick) {
           return {
@@ -166,9 +166,23 @@ const processTimeSeriesData = (data, isCandlestick = false) => {
           time: item.time,
           value: typeof item.value === 'number' ? item.value : Number(item.value),
         };
-      });
+      })
+      .sort((a, b) => a.time - b.time);
       
-    return result.sort((a, b) => a.time - b.time);
+    // Remove duplicate timestamps by keeping only the last occurrence of each timestamp
+    const uniqueResult = [];
+    const timeMap = new Map();
+    
+    result.forEach(item => {
+      timeMap.set(item.time, item);
+    });
+    
+    // Convert back to array, maintaining sorted order
+    timeMap.forEach((value) => {
+      uniqueResult.push(value);
+    });
+    
+    return uniqueResult.sort((a, b) => a.time - b.time);
 };
 
 const convertOhlcDataToLines = (ohlcData) => {
@@ -186,23 +200,35 @@ const convertOhlcDataToLines = (ohlcData) => {
     const lowData = [];
     const closeData = [];
     
+    // Use Map to remove duplicates by timestamp
+    const openMap = new Map();
+    const highMap = new Map();
+    const lowMap = new Map();
+    const closeMap = new Map();
+    
     ohlcData.forEach(item => {
-        if (item && typeof item.time === 'number') {
+        if (item && typeof item.time === 'number' && isFinite(item.time)) {
             const time = item.time;
-            if (typeof item.open === 'number') {
-                openData.push({ time, value: item.open });
+            if (typeof item.open === 'number' && isFinite(item.open)) {
+                openMap.set(time, { time, value: item.open });
             }
-            if (typeof item.high === 'number') {
-                highData.push({ time, value: item.high });
+            if (typeof item.high === 'number' && isFinite(item.high)) {
+                highMap.set(time, { time, value: item.high });
             }
-            if (typeof item.low === 'number') {
-                lowData.push({ time, value: item.low });
+            if (typeof item.low === 'number' && isFinite(item.low)) {
+                lowMap.set(time, { time, value: item.low });
             }
-            if (typeof item.close === 'number') {
-                closeData.push({ time, value: item.close });
+            if (typeof item.close === 'number' && isFinite(item.close)) {
+                closeMap.set(time, { time, value: item.close });
             }
         }
     });
+    
+    // Convert Maps back to arrays and sort
+    openMap.forEach(value => openData.push(value));
+    highMap.forEach(value => highData.push(value));
+    lowMap.forEach(value => lowData.push(value));
+    closeMap.forEach(value => closeData.push(value));
     
     return {
         openData: openData.sort((a, b) => a.time - b.time),
@@ -451,11 +477,9 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
         }
 
         let rawSeriesData = [];
-        let processedSeriesDataForChart = [];
-
-            if (category === 'GOLD_TH') {
+        let processedSeriesDataForChart = [];            if (category === 'GOLD_TH') {
                 rawSeriesData = chartDataToUse[config.key] || [];
-                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
+                processedSeriesDataForChart = processTimeSeriesDataSafe(rawSeriesData, false, config.key);
             } else if ((category === 'GOLD_US' || category === 'USD_THB') && config.type === 'candlestick') {
                 if (Array.isArray(chartDataToUse.ohlc)) {
                     console.log('Raw OHLC data:', chartDataToUse.ohlc.slice(0, 2));
@@ -492,11 +516,10 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                         processedSeriesDataForChart.length > 0 ? processedSeriesDataForChart[0] : 'none');
                 } else {
                     console.error('No OHLC array found in chartData!', chartDataToUse);
-                }
-            } else if (category === 'GOLD_US' || category === 'USD_THB') {
+                }            } else if (category === 'GOLD_US' || category === 'USD_THB') {
                 // For line chart style with OHLC data
                 rawSeriesData = chartDataToUse[config.key] || [];
-                processedSeriesDataForChart = processTimeSeriesData(rawSeriesData);
+                processedSeriesDataForChart = processTimeSeriesDataSafe(rawSeriesData, false, config.key);
             }
             
             if (config.addToChart && processedSeriesDataForChart && processedSeriesDataForChart.length > 0) {
@@ -515,12 +538,24 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                         };
                         console.log('Candlestick options:', candleOptions);                        // Create the candlestick series
                         seriesInstances[config.key] = chart.addCandlestickSeries(candleOptions);
-                        
-                        // Set data with logging
+                          // Set data with validation
                         if (processedSeriesDataForChart.length > 0) {
                             console.log('Setting candlestick data, sample:', processedSeriesDataForChart.slice(0, 2));
-                            seriesInstances[config.key].setData(processedSeriesDataForChart);
-                            console.log('Candlestick series created and data set successfully');
+                            
+                            // Validate candlestick data before setting
+                            const validatedCandleData = validateChartData(processedSeriesDataForChart, config.key);
+                            if (validatedCandleData.length === 0) {
+                                console.warn(`No valid candlestick data for ${config.key}`);
+                                return;
+                            }
+                            
+                            try {
+                                seriesInstances[config.key].setData(validatedCandleData);
+                                console.log('Candlestick series created and data set successfully');
+                            } catch (error) {
+                                console.error(`Error setting candlestick data for ${config.key}:`, error);
+                                console.log('Problematic candlestick data sample:', validatedCandleData.slice(0, 5));
+                            }
                             
                             // Ensure the chart can be manipulated properly with candlesticks
                             chart.applyOptions({
@@ -542,15 +577,29 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                             console.error('No processed data available for candlestick chart!');
                         }                    } else {
                         // Only create line series when in line chart mode
-                        if (effectiveChartStyle !== 'candlestick') {
-                            // For line series, standard visibility behavior
-                            let isVisible = seriesVisibility[config.key];                            seriesInstances[config.key] = chart.addLineSeries({
+                        if (effectiveChartStyle !== 'candlestick') {                            // For line series, standard visibility behavior
+                            let isVisible = seriesVisibility[config.key];
+                            
+                            // Validate data before setting to chart
+                            const validatedData = validateChartData(processedSeriesDataForChart, config.key);
+                            if (validatedData.length === 0) {
+                                console.warn(`No valid data for series ${config.key}`);
+                                return;
+                            }
+                            
+                            seriesInstances[config.key] = chart.addLineSeries({
                                 color: config.color,
                                 lineWidth: config.lineWidth || 2,
                                 visible: isVisible,
                                 lineStyle: config.lineStyle || LineStyle.Solid,
                             });
-                            seriesInstances[config.key].setData(processedSeriesDataForChart);
+                            
+                            try {
+                                seriesInstances[config.key].setData(validatedData);
+                            } catch (error) {
+                                console.error(`Error setting data for series ${config.key}:`, error);
+                                console.log('Problematic data sample:', validatedData.slice(0, 5));
+                            }
                         } else {
                             console.log(`Skipping line series ${config.key} in candlestick mode`);
                         }
