@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Calendar from '@/components/ui/calendar.jsx';
 import { format } from 'date-fns';
-import { enUS } from 'date-fns/locale';
+import { enUS, th } from 'date-fns/locale';
 import dayjs from 'dayjs';
 import {
   Card,
@@ -48,6 +48,11 @@ import { usePredictionErrorStats } from '../store/PredictionErrorStatsStore';
 
 const LEGEND_KEY = 'selectprediction-legend-visibility';
 const SELECTED_DATE_KEY = 'selectprediction-selected-date';
+
+// Helper function to dispatch custom localStorage change event
+const dispatchLocalStorageChange = () => {
+  window.dispatchEvent(new CustomEvent('localStorageChange'));
+};
 
 const prepareChartData = (rows, legendVisibility, latestDate, t) => {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
@@ -101,7 +106,7 @@ const prepareChartData = (rows, legendVisibility, latestDate, t) => {
   };
 };
 
-const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t) => ({
+const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t, currentLocale) => ({
   responsive: true,
   maintainAspectRatio: false,  animation: {
     duration: 800,
@@ -140,10 +145,9 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
           day: 'dd MMM'
         },
         tooltipFormat: 'dd MMMM yyyy'
-      },
-      adapters: {
+      },      adapters: {
         date: {
-          locale: enUS
+          locale: currentLocale
         }
       },
       grid: {
@@ -317,14 +321,13 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
         }
       },
       callbacks: {
-        title: function(tooltipItems) {
-          if (tooltipItems.length > 0) {
+        title: function(tooltipItems) {          if (tooltipItems.length > 0) {
             const dateStr = tooltipItems[0].label;
             if (dateStr) {
               const [year, month, day] = dateStr.split('-');
               if (year && month && day) {
                 const date = new Date(year, month - 1, day);
-                return date.getDate() + ' ' + date.toLocaleString('en-US', { month: 'long' }) + ' ' + date.getFullYear();
+                return format(date, 'd MMMM yyyy', { locale: currentLocale });
               }
             }
           }
@@ -379,7 +382,7 @@ const getChartOptions = (legendVisibility, setLegendVisibility, saveLegendVisibi
 });
 
 const SelectPrediction = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [availableDates, setAvailableDates] = useState([]);
   const [latestDate, setLatestDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -390,6 +393,9 @@ const SelectPrediction = () => {
   const chartRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
   const tooltipTimeoutRef = useRef(null);
+  
+  // Get current locale for date-fns
+  const currentLocale = i18n.language === 'th' ? th : enUS;
     // เพิ่ม usePredictionErrorStats hook
   const { setErrorStats, setPredictionData: storePredictionData, setSelectedDate: storeSelectedDate } = usePredictionErrorStats();
   
@@ -530,23 +536,23 @@ const SelectPrediction = () => {
     storeSelectedDate(date);
     
     if (selectedDate && dayjs(date).isSame(selectedDate, 'day')) {
-      setSelectedDate(null);
-      setTimeout(() => {
+      setSelectedDate(null);      setTimeout(() => {
         setSelectedDate(date);
         // บันทึกวันที่ที่ผู้ใช้เลือกลงใน localStorage
         try {
           const dateStr = dayjs(date).format('YYYY-MM-DD');
           localStorage.setItem(SELECTED_DATE_KEY, dateStr);
+          dispatchLocalStorageChange();
         } catch (error) {
           console.error('Error saving selected date to localStorage:', error);
         }
-      }, 0);
-    } else {
+      }, 0);    } else {
       setSelectedDate(date);
       // บันทึกวันที่ที่ผู้ใช้เลือกลงใน localStorage
       try {
         const dateStr = dayjs(date).format('YYYY-MM-DD');
         localStorage.setItem(SELECTED_DATE_KEY, dateStr);
+        dispatchLocalStorageChange();
       } catch (error) {
         console.error('Error saving selected date to localStorage:', error);
       }
@@ -729,7 +735,7 @@ const SelectPrediction = () => {
                   <div className="h-[420px]">                    <Line 
                       ref={chartRef}
                       data={chartData} 
-                      options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t)} 
+                      options={getChartOptions(legendVisibility, setLegendVisibility, saveLegendVisibility, chartData, hoveredDate, updateHoveredDate, t, currentLocale)} 
                     />
                   </div>
                 ) :(

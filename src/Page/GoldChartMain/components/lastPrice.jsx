@@ -53,8 +53,7 @@ const LastPrice = ({
   const { predictionData, selectedDate } = usePredictionErrorStats();
   const [selectedPrediction, setSelectedPrediction] = useState(null);
   const [localSelectedDate, setLocalSelectedDate] = useState(null);
-  
-  useEffect(() => {
+    useEffect(() => {
     try {
       const savedDateStr = localStorage.getItem(SELECTED_DATE_KEY);
       if (savedDateStr) {
@@ -64,6 +63,38 @@ const LastPrice = ({
       console.error('Error loading selected date from localStorage:', error);
     }
   }, []);
+
+  // Listen for changes in localStorage (when SelectPrediction updates the date)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const savedDateStr = localStorage.getItem(SELECTED_DATE_KEY);
+        if (savedDateStr) {
+          setLocalSelectedDate(dayjs(savedDateStr));
+        }
+      } catch (error) {
+        console.error('Error loading selected date from localStorage:', error);
+      }
+    };
+
+    // Listen for storage events (doesn't work for same-tab changes)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for same-tab localStorage changes
+    window.addEventListener('localStorageChange', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleStorageChange);
+    };
+  }, []);
+
+  // Also listen for changes in the store's selectedDate
+  useEffect(() => {
+    if (selectedDate) {
+      setLocalSelectedDate(selectedDate);
+    }
+  }, [selectedDate]);
   
   useEffect(() => {
     if (predictionData && predictionData.length > 0) {

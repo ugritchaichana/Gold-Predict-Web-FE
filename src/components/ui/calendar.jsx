@@ -8,12 +8,21 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { CircularProgress, Box } from '@mui/material';
 import { fetchPredictionWeekDate } from '@/services/apiService';
 import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import 'dayjs/locale/en';
 import { useTheme as useMuiTheme, createTheme, ThemeProvider } from '@mui/material/styles';
 import { useTheme } from '@/components/theme-provider';
+import { useTranslation } from 'react-i18next';
 
 function Calendar({ value, onChange }) {
   const { theme: appTheme } = useTheme();
+  const { i18n } = useTranslation();
   const datePickerRef = useRef(null);
+  
+  // Set dayjs locale based on current language
+  React.useEffect(() => {
+    dayjs.locale(i18n.language === 'th' ? 'th' : 'en');
+  }, [i18n.language]);
   
   const customMuiTheme = React.useMemo(() => createTheme({
     palette: {
@@ -69,7 +78,10 @@ function Calendar({ value, onChange }) {
 
   return (
     <ThemeProvider theme={customMuiTheme}>
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <LocalizationProvider 
+        dateAdapter={AdapterDayjs} 
+        adapterLocale={i18n.language === 'th' ? 'th' : 'en'}
+      >
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100%' }}>
             <CircularProgress 

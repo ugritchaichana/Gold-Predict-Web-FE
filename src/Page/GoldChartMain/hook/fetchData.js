@@ -9,6 +9,7 @@ const API_URLS = {
     GOLD_TH: {
         historical: `${getBaseUrl()}/finnomenaGold/get-gold-data/?db_choice=0&frame=all&display=chart2&cache=True`,
         predict: (model = '7') => `${getBaseUrl()}/predicts/week/get_week?display=chart2&model=${model}`,
+        lastPredictDate: `${getBaseUrl()}/predicts/week/get_predict_last_date`,
     },
     GOLD_US: {
         historical: `${getBaseUrl()}/finnomenaGold/get-gold-data/?db_choice=1&frame=all&display=chart2&cache=True`,
@@ -201,4 +202,32 @@ const useChartData = (category = 'GOLD_TH', selectedModel = '7') => {
     
 };
 
-export { useChartData, API_URLS }; // Export API_URLS if GoldChartMain needs it for category keys
+// Hook for fetching last prediction date
+const useLastPredictDate = () => {
+    const lastPredictDateUrl = API_URLS.GOLD_TH?.lastPredictDate;
+
+    const {
+        data: lastPredictData,
+        isLoading,
+        isError,
+        error,
+    } = useQuery({
+        queryKey: ['lastPredictDate'],
+        queryFn: () => fetchDataFromUrl(lastPredictDateUrl, 'Last prediction date'),
+        enabled: !!lastPredictDateUrl,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+    });
+
+    // Convert timestamp to Date object
+    const lastPredictDate = lastPredictData?.time ? new Date(lastPredictData.time * 1000) : null;
+
+    return {
+        lastPredictDate,
+        isLoading,
+        isError,
+        error,
+    };
+};
+
+export { useChartData, API_URLS, useLastPredictDate }; // Export API_URLS if GoldChartMain needs it for category keys

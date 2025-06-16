@@ -2,26 +2,35 @@ import { Badge } from '@/components/ui/badge';
 import { format as formatDateFns } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useLastPredictDate } from '../hook/fetchData';
 
 const PredictionBadge = ({ date = new Date() }) => {
   const { t, i18n } = useTranslation();
-    const formatDate = (date) => {
-    const day = date.getDate();
+  const { lastPredictDate, isLoading, isError } = useLastPredictDate();
+  const formatDate = (dateToFormat) => {
+    const day = dateToFormat.getDate();
     const months = t('goldChart.time.months', { returnObjects: true });
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
+    const days = t('goldChart.time.days', { returnObjects: true });
     
-    return `${day} ${month} ${year}`;
+    const dayOfWeek = days[dateToFormat.getDay()];
+    const month = months[dateToFormat.getMonth()];
+    const year = dateToFormat.getFullYear();
+    
+    return `${dayOfWeek} ${day} ${month} ${year}`;
   };
-  
-  return (
+    return (
     <div className={cn(
       "px-3 py-1 rounded-md border text-sm",
       "bg-card/40 border-border"
     )}>
-      <span className="text-muted-foreground">{t('goldChart.prediction.updateText')} : </span>
-      <span className="text-foreground font-medium">
-        {formatDate(date)}
+      <span className="text-muted-foreground">{t('goldChart.prediction.updateText')} : </span>      <span className="text-foreground font-medium">
+        {isLoading ? (
+          <span className="animate-pulse">Loading...</span>
+        ) : isError ? (
+          formatDate(date)
+        ) : (
+          formatDate(lastPredictDate || date)
+        )}
       </span>
     </div>
   );

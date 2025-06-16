@@ -554,7 +554,7 @@ const GoldChartMain = () => {
       )}
       
       {/* Cache Status Component for debugging */}
-      <CacheStatus />
+      {/* <CacheStatus /> */}
     </div>
   );
 };
