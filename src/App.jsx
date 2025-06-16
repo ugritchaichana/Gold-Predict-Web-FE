@@ -49,11 +49,11 @@ function App() {  return (
             <footer className="py-6 border-t">
               <div className="container flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
                 <p>© {new Date().getFullYear()} Gold Prediction. All rights reserved.</p>                <div className="flex gap-4">
-                  <Link to="/admin" className="hover:text-primary transition-colors">Admin</Link>
-                  <Link to="/document" className="hover:text-primary transition-colors">Document</Link>
-                  <Link to="/api" className="hover:text-primary transition-colors">API</Link>
-                  <Link to="/goldth" className="hover:text-primary transition-colors">GoldTH Price</Link>
-                  <Link to="/goldchart" className="hover:text-primary transition-colors">Gold Chart</Link>
+                  {/* <Link to="/admin" className="hover:text-primary transition-colors">Admin</Link> */}
+                  {/* <Link to="/document" className="hover:text-primary transition-colors">Document</Link> */}
+                  {/* <Link to="/api" className="hover:text-primary transition-colors">API</Link> */}
+                  {/* <Link to="/goldth" className="hover:text-primary transition-colors">GoldTH Price</Link> */}
+                  <Link to="/goldchart" className="hover:text-primary transition-colors">Gold Chart (old version)</Link>
                 </div>
               </div>
             </footer>
