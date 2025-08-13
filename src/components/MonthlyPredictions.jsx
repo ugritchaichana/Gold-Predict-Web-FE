@@ -145,12 +145,12 @@ const MonthlyPredictions = ({ monthlyPredictions, monthlyChartTab, setMonthlyCha
                               try {
                                 if (prediction.month_predict) {
                                   const [year, month] = prediction.month_predict.split('-');                                  if (i18n.language === 'th') {
-                                    // Format date for Thai language with abbreviated month names
+                                    // Format date for Thai language with abbreviated month names (using CE year)
                                     const date = parse(`${year}-${month}`, 'yyyy-MM', new Date());
                                     const thaiMonthsObj = t('goldChart.dateRange.monthsShort', { returnObjects: true });
                                     // Get the month key based on the current month index
                                     const monthKey = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-                                    return `${thaiMonthsObj[monthKey]} ${date.getFullYear() + 543}`;
+                                    return `${thaiMonthsObj[monthKey]} ${date.getFullYear()}`;
                                   } else {
                                     // Default English format
                                     return month + '-' + year;

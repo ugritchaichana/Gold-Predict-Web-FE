@@ -417,16 +417,16 @@ const MonthlyPredictionChart = ({ data }) => {
                 const [year, monthNum] = month.split('-');
                 if (year && monthNum) {
                   const date = new Date(year, monthNum - 1, 1);
-                    // For Thai language, use abbreviated month names from translation
+                    // For Thai language, use abbreviated month names from translation (using CE year)
                   if (i18n.language === 'th') {
                     const thaiMonthsObj = t('goldChart.dateRange.monthsShort', { returnObjects: true });
                     // Get the month key based on the current month index
                     const monthKey = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-                    return `${thaiMonthsObj[monthKey]} ${date.getFullYear() + 543}`;
+                    return `${thaiMonthsObj[monthKey]} ${date.getFullYear()}`;
                   }
                   
-                  // For other languages, use the browser's locale setting
-                  return date.toLocaleString(i18n.language === 'th' ? 'th-TH' : 'en-US', { 
+                  // For other languages, use the browser's locale setting (always use CE year)
+                  return date.toLocaleString('en-US', { 
                     month: 'short',
                     year: 'numeric'
                   });
