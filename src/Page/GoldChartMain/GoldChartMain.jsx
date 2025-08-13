@@ -454,7 +454,7 @@ const GoldChartMain = () => {
                                 const thaiMonthsObj = t('goldChart.dateRange.monthsShort', { returnObjects: true });
                                 // Convert to array or use the correct property for the month
                                 const monthKey = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-                                return `${thaiMonthsObj[monthKey]} ${date.getFullYear() + 543}`;
+                                return `${thaiMonthsObj[monthKey]} ${date.getFullYear()}`;
                               })()
                             : formatDateFns(
                                 parse(monthlyPredictions[monthlyPredictions.length-1].month_predict, 'yyyy-MM', new Date()), 
@@ -469,7 +469,7 @@ const GoldChartMain = () => {
                                 const thaiMonthsObj = t('goldChart.dateRange.monthsShort', { returnObjects: true });
                                 // Convert to array or use the correct property for the month
                                 const monthKey = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-                                return `${thaiMonthsObj[monthKey]} ${date.getFullYear() + 543}`;
+                                return `${thaiMonthsObj[monthKey]} ${date.getFullYear()}`;
                               })()
                             : formatDateFns(new Date(), 'MMM yyyy')
                         }`

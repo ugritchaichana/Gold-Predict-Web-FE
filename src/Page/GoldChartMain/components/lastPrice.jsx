@@ -127,7 +127,8 @@ const LastPrice = ({
     
     return `${dayName} ${day} ${month} ${year}`;
   };  return (
-    <Card className="flex-1 h-full">      <CardHeader className="p-3 h-full flex flex-col justify-center">
+    <Card className="flex-1 h-full">
+      <CardHeader className="p-3 h-full flex flex-col justify-center">
         <CardDescription className="text-xs">{errorStats ? t('goldChart.lastPrice.error') : (customLabel || t('goldChart.lastPrice.title'))}</CardDescription>
         
         {isLoading ? (
