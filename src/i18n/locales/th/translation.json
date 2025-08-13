@@ -132,7 +132,7 @@
     },
     "predictionModels": {
       "title": "โมเดลพยากรณ์",
-      "tooltip": "เลือกโมเดลเพื่อแสดงผลการทำนายล่วงหน้า",
+      "tooltip": "เลือกโมเดลเพื่อแสดงผลการพยากรณ์ล่วงหน้า",
       "lstm": "LSTM",
       "arima": "ARIMA",
       "prophet": "Prophet",
@@ -187,7 +187,7 @@
       "updated": "อัปเดตเมื่อ",
       "predictDate": "วันที่พยากรณ์",
       "error": "ความแม่นยำ",
-      "predictionFor": "การทำนายของ",
+      "predictionFor": "การพยากรณ์ของ",
       "errorStats": {
         "average": "ค่าเฉลี่ย",
         "high": "สูงสุด",
