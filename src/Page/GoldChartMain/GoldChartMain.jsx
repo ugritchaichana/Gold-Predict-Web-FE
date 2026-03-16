@@ -72,6 +72,42 @@ const getEarliestAvailableDate = (allChartData) => {
     return subYears(new Date(), 5);
 };
 
+// Helper function to get the latest available date from chart data
+const getLatestAvailableDate = (allChartData, category = 'GOLD_TH') => {
+    if (allChartData) {
+        // Priority: use barBuyData for GOLD_TH, ohlc for others
+        let dataArray = null;
+        
+        if (category === 'GOLD_TH' && Array.isArray(allChartData.barBuyData)) {
+            dataArray = allChartData.barBuyData;
+        } else if ((category === 'GOLD_US' || category === 'USD_THB') && Array.isArray(allChartData.ohlc)) {
+            dataArray = allChartData.ohlc;
+        }
+        
+        if (dataArray && dataArray.length > 0) {
+            const validTimestamps = dataArray
+                .map(point => point?.time)
+                .filter(time => typeof time === 'number' && isFinite(time));
+            if (validTimestamps.length > 0) {
+                const latestTimestamp = Math.max(...validTimestamps);
+                return new Date(latestTimestamp * 1000);
+            }
+        }
+        
+        // Fallback: try all arrays in the data
+        const allTimestamps = Object.values(allChartData)
+            .filter(Array.isArray)
+            .flat()
+            .map(point => point?.time)
+            .filter(time => typeof time === 'number' && isFinite(time));
+        if (allTimestamps.length > 0) {
+            const latestTimestamp = Math.max(...allTimestamps);
+            return new Date(latestTimestamp * 1000);
+        }
+    }
+    return new Date(); // Fallback to today if no data
+};
+
 
 const GoldChartMain = () => {  
   const queryClient = useQueryClient();
@@ -117,7 +153,7 @@ const GoldChartMain = () => {
   });
   
   const [earliestDataDate, setEarliestDataDate] = useState(null);
-  const latestDataDateFromApi = new Date(); // Placeholder, should be dynamic
+  const [latestDataDateFromApi, setLatestDataDateFromApi] = useState(null); // Dynamic based on actual data
 
   const calculateInitialRange = useCallback((presetRangeKey, earliestAllowed, latestAllowed) => {
     const preset = PRESETS.find(p => p.range === presetRangeKey);
@@ -176,16 +212,23 @@ const GoldChartMain = () => {
     return calculateInitialRange(activeDateOption, earliestDataDate, latestDataDateFromApi);
   });
 
-  // Effect to update earliestDataDate when allChartData is available
+  // Effect to update earliestDataDate and latestDataDateFromApi when allChartData is available
   const { data: allChartData } = useChartData(); // Assuming useChartData provides all data sets
   useEffect(() => {
     if (allChartData) {
+      // Update earliest data date
       const earliest = getEarliestAvailableDate(allChartData);
       if (earliest && (!earliestDataDate || earliest.getTime() !== earliestDataDate.getTime())) {
         setEarliestDataDate(earliest);
       }
+      
+      // Update latest data date from actual data (not prediction data)
+      const latest = getLatestAvailableDate(allChartData, selectedCategory);
+      if (latest && (!latestDataDateFromApi || latest.getTime() !== latestDataDateFromApi.getTime())) {
+        setLatestDataDateFromApi(latest);
+      }
     }
-  }, [allChartData, earliestDataDate]);
+  }, [allChartData, earliestDataDate, latestDataDateFromApi, selectedCategory]);
 
 
   // Effect to handle date option changes and update range
@@ -552,7 +595,6 @@ const GoldChartMain = () => {
           </div>
         </Card>
       )}
-      
       {/* Cache Status Component for debugging */}
       {/* <CacheStatus /> */}
     </div>

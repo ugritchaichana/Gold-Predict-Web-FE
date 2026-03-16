@@ -747,144 +747,45 @@ const Chart = ({ chartData: rawChartData, category = 'GOLD_TH', chartStyle = 'li
                 //     value: todayData.value
                 // });
                 markerTimestamp = todayData.time;
-            } else {                // 1.2 ถ้าไม่มีข้อมูลของวันนี้ ต้องสร้างและแทรกเข้าไป
-                // console.log('ไม่พบข้อมูลของวันนี้ จะสร้างข้อมูลใหม่');
-                
-                // ต้องมีข้อมูลอย่างน้อย 2 ชุดเพื่อทำการแทรก
-                if (validData.length >= 2) {
-                    // คำนวณ timestamp สำหรับเมื่อวาน (วันที่ 20 พฤษภาคม 2025)
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    yesterday.setHours(0, 0, 0, 0);
-                    const yesterdayStart = Math.floor(yesterday.getTime() / 1000);
-                    const yesterdayEnd = Math.floor(yesterday.getTime() / 1000) + (24 * 60 * 60);
-                    
-                    // เรียงข้อมูลตาม timestamp (จากเก่าไปใหม่) สำหรับการค้นหาข้อมูลที่ถูกต้อง
+            } else {
+                // ไม่มีข้อมูลของวันนี้ - ใช้ข้อมูลล่าสุดที่มีสำหรับ marker แทน
+                // ไม่สร้างข้อมูลใหม่อัตโนมัติอีกต่อไป
+                if (validData.length > 0) {
+                    // เรียงข้อมูลตาม timestamp (จากเก่าไปใหม่)
                     validData.sort((a, b) => a.time - b.time);
-                    
-                    // ค้นหาข้อมูลของเมื่อวาน
-                    const yesterdayData = validData.find(data => 
-                        data.time >= yesterdayStart && data.time < yesterdayEnd
-                    );
-                    
-                    // ค้นหาข้อมูลย้อนหลัง 2 วัน (กรณีไม่มีข้อมูลเมื่อวาน)
-                    const twoDaysAgo = new Date(today);
-                    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-                    twoDaysAgo.setHours(0, 0, 0, 0);
-                    const twoDaysAgoStart = Math.floor(twoDaysAgo.getTime() / 1000);
-                    const twoDaysAgoEnd = Math.floor(twoDaysAgo.getTime() / 1000) + (24 * 60 * 60);
-                    
-                    const twoDaysAgoData = validData.find(data => 
-                        data.time >= twoDaysAgoStart && data.time < twoDaysAgoEnd
-                    );
-                    
-                    // เลือกใช้ข้อมูลเมื่อวาน หรือถ้าไม่มีให้ใช้ข้อมูล 2 วันก่อน หรือถ้าไม่มีทั้งคู่ใช้ข้อมูลล่าสุด
-                    const sourceData = yesterdayData || twoDaysAgoData || validData[validData.length - 1];
-                    
-                    // console.log('ข้อมูลที่จะใช้สร้างข้อมูลวันนี้:', 
-                    //     yesterdayData ? 'ข้อมูลเมื่อวาน' : 
-                    //     twoDaysAgoData ? 'ข้อมูล 2 วันที่แล้ว' : 
-                    //     'ข้อมูลล่าสุดที่มี', 
-                    //     new Date(sourceData.time * 1000).toLocaleDateString(), 
-                    //     sourceData.value
-                    // );
-                      const originalData = [...validData]; // สำรองข้อมูลดั้งเดิม
-                    
-                    // 1.2.1 สร้างข้อมูลใหม่สำหรับวันนี้ใช้ค่าของข้อมูลจากเมื่อวานหรือที่เก่าที่สุดที่มี
-                    const newTodayData = {
-                        time: currentDateTimestamp,
-                        value: sourceData.value // ใช้ค่าจากข้อมูลเมื่อวานหรือที่เลือกไว้
-                    };
-                      // ตำแหน่งที่จะแทรก คือ length-2 (ก่อนตัวสุดท้าย 1 ตำแหน่ง)
-                    // หรือต่อท้ายถ้ามีข้อมูลไม่พอ
-                    const insertPosition = originalData.length > 1 ? originalData.length - 1 : originalData.length;
-                    
-                    // console.log('สร้างข้อมูลสำหรับวันนี้:', {
-                    //     date: new Date(newTodayData.time * 1000).toLocaleString(),
-                    //     value: newTodayData.value,
-                    //     insertAt: `${insertPosition} (length-${originalData.length - insertPosition})`
-                    // });
-                    
-                    // เพิ่มข้อมูลใหม่เข้าไปที่ตำแหน่งที่ต้องการ
-                    originalData.splice(insertPosition, 0, newTodayData);
-                    
-                    // เรียงข้อมูลใหม่ตาม timestamp จากน้อยไปมาก (สำหรับการแสดงผลบนกราฟ)
-                    originalData.sort((a, b) => a.time - b.time);
-                    
-                    try {
-                        // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
-                        if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
-                            // อัพเดทข้อมูลในกราฟ
-                            seriesInstances.barBuyPredictData.setData(originalData);
-                            // console.log('อัพเดทข้อมูลกราฟเรียบร้อยแล้ว');
-                            
-                            // อัพเดทข้อมูลต้นฉบับด้วย
-                            chartDataToUse.barBuyPredictData = originalData;
-                            
-                            // ใช้ timestamp ของข้อมูลที่สร้างใหม่
-                            markerTimestamp = newTodayData.time;
-                        }
-                    } catch (err) {
-                        console.error('เกิดข้อผิดพลาดในการอัพเดทข้อมูล:', err);
-                    }
-                } else {
-                    // ถ้ามีข้อมูลไม่พอสำหรับการแทรก ใช้ timestamp ปัจจุบัน
-                    // console.log('มีข้อมูลไม่เพียงพอสำหรับการแทรก จะใช้เวลาปัจจุบันสำหรับ marker');
+                    // ใช้ข้อมูลล่าสุดที่มีสำหรับ marker
+                    markerTimestamp = validData[validData.length - 1].time;
                 }
             }
-              // 2. ทำการใช้ marker ชี้ไปที่ข้อมูลของวันนี้เสมอ
+              // 2. ทำการใช้ marker ชี้ไปที่ข้อมูลล่าสุดที่มี (ไม่จำเป็นต้องเป็นวันนี้)
             try {
                 // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
-                if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
-                    seriesInstances.barBuyPredictData.setMarkers([
-                        {
-                            time: markerTimestamp,
-                            position: 'aboveBar',
-                            color: '#23b8a6',
-                            shape: 'arrowDown',
-                            text: t('goldChart.currentDay'),
-                            size: 1.3
-                        },
-                        {
-                            time: markerTimestamp,
-                            position: 'inBar',
-                            color: '#23b8a6',
-                            shape: 'circle',
-                            size: 0.2
-                        }
-                    ]);
+                if (isChartObjectValid(seriesInstances.barBuyPredictData) && validData.length > 0) {
+                    // seriesInstances.barBuyPredictData.setMarkers([
+                    //     {
+                    //         time: markerTimestamp,
+                    //         position: 'aboveBar',
+                    //         color: '#23b8a6',
+                    //         shape: 'arrowDown',
+                    //         text: t('goldChart.currentDay'),
+                    //         size: 1.3
+                    //     },
+                    //     {
+                    //         time: markerTimestamp,
+                    //         position: 'inBar',
+                    //         color: '#23b8a6',
+                    //         shape: 'circle',
+                    //         size: 0.2
+                    //     }
+                    // ]);
                     // console.log('ตั้งค่า marker สำเร็จที่ timestamp:', markerTimestamp, new Date(markerTimestamp * 1000).toLocaleString());
                 }
             } catch (err) {
                 console.error('เกิดข้อผิดพลาดในการตั้งค่า marker:', err);
             }
         } else {
-            // ถ้าไม่มีข้อมูลใดๆ เลย
+            // ถ้าไม่มีข้อมูลใดๆ เลย - ไม่ต้องสร้าง marker
             // console.log('ไม่พบข้อมูล prediction ใดๆ');
-            try {
-                // ตรวจสอบว่า series ยังใช้งานได้อยู่หรือไม่ก่อนที่จะเรียกใช้
-                if (isChartObjectValid(seriesInstances.barBuyPredictData)) {
-                    seriesInstances.barBuyPredictData.setMarkers([
-                        {
-                            time: currentDateTimestamp,
-                            position: 'aboveBar',
-                            color: '#23b8a6',
-                            shape: 'arrowDown',
-                            text: t('goldChart.currentDay'),
-                            size: 1.3
-                        },
-                        {
-                            time: currentDateTimestamp,
-                            position: 'inBar',
-                            color: '#23b8a6',
-                            shape: 'circle',
-                            size: 0.2
-                        }
-                    ]);
-                }
-            } catch (err) {
-                console.error('เกิดข้อผิดพลาดในการตั้งค่า marker (ไม่มีข้อมูล):', err);
-            }
         }
     } else if (seriesInstances.barBuyData) {
         // กรณีไม่มี barBuyPredictData แต่มี barBuyData
